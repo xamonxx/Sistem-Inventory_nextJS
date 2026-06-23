@@ -1,0 +1,227 @@
+@import "tailwindcss";
+
+/* ============================================================
+   PUTRA CORPORATION — Engineering Blueprint design system
+   Warm drafting paper · graphite ink · safety-rust accent
+   ============================================================ */
+
+:root {
+  --paper: #f4f1ea;
+  --paper-2: #efeadf;
+  --background: var(--paper);
+  --foreground: #1b1d1f;
+  --card: #ffffff;
+  --border: #e2dccf;
+  --line-strong: #d3ccbb;
+
+  --primary: #c2410c;        /* burnt safety rust */
+  --primary-strong: #9a3412;
+  --steel: #2f4a5a;          /* secondary, blueprint steel */
+
+  --success: #15803d;
+  --warning: #b45309;
+  --danger: #b91c1c;
+  --muted: #6c6f76;
+
+  --grid: rgba(47, 74, 90, 0.05);   /* blueprint grid lines */
+  --grid-strong: rgba(47, 74, 90, 0.08);
+
+  --shadow-card: 0 1px 0 rgba(27, 29, 31, 0.02), 0 2px 8px -4px rgba(27, 29, 31, 0.12);
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-border: var(--border);
+  --color-line-strong: var(--line-strong);
+  --color-primary: var(--primary);
+  --color-steel: var(--steel);
+  --color-success: var(--success);
+  --color-warning: var(--warning);
+  --color-danger: var(--danger);
+  --color-muted: var(--muted);
+
+  --font-sans: var(--font-plex-sans), ui-sans-serif, system-ui, sans-serif;
+  --font-mono: var(--font-plex-mono), ui-monospace, "SFMono-Regular", monospace;
+  --font-display: var(--font-archivo), var(--font-plex-sans), ui-sans-serif, sans-serif;
+}
+
+html,
+body {
+  background-color: var(--paper);
+  /* faint blueprint grid + warm vignette */
+  background-image:
+    linear-gradient(var(--grid) 1px, transparent 1px),
+    linear-gradient(90deg, var(--grid) 1px, transparent 1px),
+    radial-gradient(120% 80% at 100% 0%, rgba(194, 65, 12, 0.04), transparent 60%);
+  background-size: 26px 26px, 26px 26px, 100% 100%;
+  color: var(--foreground);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+/* Headings use the industrial display face */
+h1,
+h2,
+h3,
+.font-display {
+  font-family: var(--font-display);
+  letter-spacing: -0.01em;
+}
+
+/* Figures / codes: monospaced, tabular */
+.tnum,
+.font-mono {
+  font-variant-numeric: tabular-nums;
+}
+
+/* Uppercase micro-label — drafting annotation.
+   In @layer components so text-[...] utilities can override the default color. */
+@layer components {
+  .u-label {
+    font-family: var(--font-display);
+    text-transform: uppercase;
+    letter-spacing: 0.14em;
+    font-size: 0.64rem;
+    font-weight: 700;
+    color: var(--muted);
+  }
+}
+
+/* Card with surveyor corner ticks */
+.tick-card {
+  position: relative;
+}
+.tick-card::before,
+.tick-card::after {
+  content: "";
+  position: absolute;
+  width: 9px;
+  height: 9px;
+  border-color: var(--line-strong);
+  pointer-events: none;
+}
+.tick-card::before {
+  top: 7px;
+  left: 7px;
+  border-left: 1.5px solid;
+  border-top: 1.5px solid;
+}
+.tick-card::after {
+  bottom: 7px;
+  right: 7px;
+  border-right: 1.5px solid;
+  border-bottom: 1.5px solid;
+}
+
+/* Staggered entrance */
+@keyframes rise {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+.anim-rise {
+  animation: rise 0.5s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+@keyframes sheen {
+  from { background-position: 200% 0; }
+  to { background-position: -200% 0; }
+}
+.skel {
+  background: linear-gradient(90deg, var(--paper-2) 25%, #fff 50%, var(--paper-2) 75%);
+  background-size: 200% 100%;
+  animation: sheen 1.4s ease-in-out infinite;
+}
+
+::selection {
+  background: rgba(194, 65, 12, 0.18);
+}
+
+/* Thin custom scrollbar */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--line-strong) transparent;
+}
+
+/* Enterprise invoice document uses Inter per brand brief */
+.invoice-doc {
+  font-family: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+}
+.invoice-doc * {
+  -webkit-print-color-adjust: exact;
+  print-color-adjust: exact;
+}
+
+@page {
+  size: A4 portrait;
+  margin: 10mm;
+}
+
+@media print {
+  body {
+    background: #fff;
+  }
+  body:has(.print-area) .no-print {
+    display: none !important;
+  }
+  body:has(.print-area) aside,
+  body:has(.print-area) header.no-print,
+  body:has(.print-area) main > div > div:not(:has(.print-area)) {
+    display: none !important;
+  }
+  .print-area {
+    position: fixed;
+    inset: 0;
+    margin: 0 auto;
+    max-width: 380px;
+  }
+
+  /* ===== A4 enterprise invoice: reflow ke lebar halaman, tidak terpotong ===== */
+  body.print-format-a4 .print-area {
+    position: static !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    margin: 0 !important;
+    inset: auto !important;
+    box-shadow: none !important;
+    border: none !important;
+    zoom: 1 !important; /* abaikan zoom auto-fit preview saat cetak */
+  }
+  body.print-format-a4 .invoice-doc {
+    width: 100% !important;
+    box-shadow: none !important;
+    border: none !important;
+  }
+  /* rapatkan padding agar 8 kolom muat di lebar A4 */
+  body.print-format-a4 .inv-body {
+    padding-left: 14px !important;
+    padding-right: 14px !important;
+    padding-top: 10px !important;
+  }
+  /* tabel: jangan di-clip, biarkan kolom menyusut mengikuti lebar halaman */
+  body.print-format-a4 .inv-table-wrap {
+    overflow: visible !important;
+  }
+  body.print-format-a4 .inv-table {
+    min-width: 0 !important;
+    width: 100% !important;
+    table-layout: fixed;
+  }
+  body.print-format-a4 .inv-table th,
+  body.print-format-a4 .inv-table td {
+    padding-left: 5px !important;
+    padding-right: 5px !important;
+    word-break: break-word;
+    overflow-wrap: anywhere;
+  }
+  /* hindari satu baris tabel terpotong antar halaman */
+  body.print-format-a4 .inv-table tr { break-inside: avoid; }
+}

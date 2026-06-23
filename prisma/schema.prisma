@@ -1,0 +1,274 @@
+// Sistem Inventory & Kasir - PUTRA CORPORATION HARDWARE
+// Stok = turunan StockLedger. Uang pakai Decimal. Harga di-snapshot di detail.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+// ============ USER & ROLE ============
+enum Role {
+  ADMIN_KASIR
+  ADMIN_GUDANG
+}
+
+model User {
+  id        Int      @id @default(autoincrement())
+  username  String   @unique
+  nama      String
+  password  String // bcrypt hash
+  role      Role
+  aktif     Boolean  @default(true)
+  createdAt DateTime @default(now())
+
+  activityLogs ActivityLog[]
+  transactions Transaction[]
+  ledgers      StockLedger[]
+  returns      Return[]
+  @@map("users")
+}
+
+// ============ MASTER BARANG ============
+model Item {
+  id        Int      @id @default(autoincrement())
+  kode      String   @unique // PC-xxxxx, WAJIB UNIK
+  nama      String
+  hargaBeli Decimal  @default(0) @db.Decimal(15, 2) // hanya ADMIN_GUDANG
+  hargaJual Decimal  @default(0) @db.Decimal(15, 2) // hanya ADMIN_GUDANG
+  stokAwal  Int      @default(0) // hanya ADMIN_GUDANG
+  minStok   Int      @default(10)
+  aktif     Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  ledgers          StockLedger[]
+  transactionItems TransactionItem[]
+  returnsAsRetur   Return[]          @relation("ItemRetur")
+  returnsAsGanti   Return[]          @relation("ItemGanti")
+  @@index([nama])
+  @@map("items")
+}
+
+// ============ KARTU STOK (sumber kebenaran stok) ============
+enum LedgerType {
+  MASUK // barang masuk / restock
+  KELUAR // penjualan
+  RETUR // barang diretur masuk gudang (+)
+  KOREKSI // penyesuaian manual
+}
+
+model StockLedger {
+  id        Int        @id @default(autoincrement())
+  itemId    Int
+  tanggal   DateTime   @default(now())
+  tipe      LedgerType
+  qty       Int // signed: + masuk/retur, - keluar; koreksi bisa +/-
+  keterangan String?
+  refType   String? // "TRANSACTION" | "RETURN" | "MANUAL"
+  refId     Int?
+  userId    Int?
+
+  item Item  @relation(fields: [itemId], references: [id])
+  user User? @relation(fields: [userId], references: [id])
+  @@index([itemId])
+  @@index([tanggal])
+  @@map("stock_ledger")
+}
+
+// ============ CLIENT / WORKSHOP / PROJECT ============
+model Client {
+  id       Int     @id @default(autoincrement())
+  nama     String
+  alamat   String?
+  telepon  String?
+
+  transactions Transaction[]
+  invoices     Invoice[]
+  @@index([nama])
+  @@map("clients")
+}
+
+model Workshop {
+  id     Int     @id @default(autoincrement())
+  nama   String
+  alamat String?
+
+  transactions Transaction[]
+  @@index([nama])
+  @@map("workshops")
+}
+
+model ProjectGroup {
+  id   Int    @id @default(autoincrement())
+  nama String
+
+  projects Project[]
+  @@map("project_groups")
+}
+
+model Project {
+  id             Int           @id @default(autoincrement())
+  nama           String
+  projectGroupId Int?
+
+  projectGroup ProjectGroup? @relation(fields: [projectGroupId], references: [id])
+  transactions Transaction[]
+  invoices     Invoice[]
+  @@map("projects")
+}
+
+// ============ TRANSAKSI ============
+enum TransactionType {
+  RETAIL
+  PROJECT
+}
+
+model Transaction {
+  id          Int             @id @default(autoincrement())
+  noTransaksi String          @unique // PC02459
+  tanggal     DateTime        @default(now())
+  tipe        TransactionType @default(RETAIL)
+
+  clientId   Int?
+  workshopId Int?
+  projectId  Int?
+
+  // snapshot supaya nota historis tetap benar
+  namaClient String?
+  alamat     String?
+  namaWs     String?
+
+  grandTotal Decimal @default(0) @db.Decimal(15, 2)
+  userId     Int?
+  createdAt  DateTime @default(now())
+
+  client   Client?           @relation(fields: [clientId], references: [id])
+  workshop Workshop?         @relation(fields: [workshopId], references: [id])
+  project  Project?          @relation(fields: [projectId], references: [id])
+  user     User?             @relation(fields: [userId], references: [id])
+  items    TransactionItem[]
+  returns  Return[]
+  invoices Invoice[]
+  @@index([tanggal])
+  @@map("transactions")
+}
+
+model TransactionItem {
+  id            Int     @id @default(autoincrement())
+  transactionId Int
+  itemId        Int
+  namaSnapshot  String
+  hargaSnapshot Decimal @db.Decimal(15, 2) // harga jual saat transaksi
+  hargaBeliSnapshot Decimal @default(0) @db.Decimal(15, 2)
+  qty           Int
+  subtotal      Decimal @db.Decimal(15, 2)
+
+  transaction Transaction @relation(fields: [transactionId], references: [id], onDelete: Cascade)
+  item        Item        @relation(fields: [itemId], references: [id])
+  @@index([itemId])
+  @@map("transaction_items")
+}
+
+// ============ RETUR / TUKAR BARANG ============
+enum ReturnType {
+  RETUR // retur biasa
+  TUKAR // tukar barang A -> B, bayar selisih
+}
+
+model Return {
+  id            Int        @id @default(autoincrement())
+  noReturn      String     @unique // RET-xxxxx
+  tanggal       DateTime   @default(now())
+  tipe          ReturnType @default(RETUR)
+  transactionId Int?
+  alasan        String?
+
+  // barang yang dikembalikan (A)
+  itemReturId    Int
+  qtyRetur       Int
+  hargaReturSnapshot Decimal @db.Decimal(15, 2)
+
+  // barang pengganti (B) - hanya untuk TUKAR
+  itemGantiId    Int?
+  qtyGanti       Int?
+  hargaGantiSnapshot Decimal? @db.Decimal(15, 2)
+
+  // selisih = (hargaGanti*qtyGanti) - (hargaRetur*qtyRetur)
+  // > 0 = tagihan ke pelanggan, < 0 = refund
+  selisih Decimal @default(0) @db.Decimal(15, 2)
+
+  namaClient String?
+  alamat     String?
+  namaWs     String?
+  userId     Int?
+
+  transaction Transaction? @relation(fields: [transactionId], references: [id])
+  itemRetur   Item         @relation("ItemRetur", fields: [itemReturId], references: [id])
+  itemGanti   Item?        @relation("ItemGanti", fields: [itemGantiId], references: [id])
+  user        User?        @relation(fields: [userId], references: [id])
+  invoices    Invoice[]
+  @@index([tanggal])
+  @@map("returns")
+}
+
+// ============ INVOICE / TAGIHAN / PIUTANG ============
+enum InvoiceStatus {
+  DRAFT
+  PENDING
+  LUNAS
+}
+
+model Invoice {
+  id            Int           @id @default(autoincrement())
+  noInvoice     String        @unique // INV-xxxxx
+  tanggal       DateTime      @default(now())
+  status        InvoiceStatus @default(PENDING)
+
+  clientId      Int?
+  projectId     Int?
+  transactionId Int?
+  returnId      Int?
+
+  namaClient   String?
+  alamat       String?
+  namaWs       String?
+
+  total        Decimal @db.Decimal(15, 2)
+  totalDibayar Decimal @default(0) @db.Decimal(15, 2)
+  // sisaPiutang dihitung = total - totalDibayar (di aplikasi)
+
+  client      Client?      @relation(fields: [clientId], references: [id])
+  project     Project?     @relation(fields: [projectId], references: [id])
+  transaction Transaction? @relation(fields: [transactionId], references: [id])
+  return      Return?      @relation(fields: [returnId], references: [id])
+  @@index([status])
+  @@index([tanggal])
+  @@map("invoices")
+}
+
+// ============ AUDIT ============
+model ActivityLog {
+  id        Int      @id @default(autoincrement())
+  userId    Int?
+  aksi      String // "UPDATE_HARGA", "CREATE_TRANSAKSI", dll
+  entitas   String // "Item", "Transaction", ...
+  entitasId String?
+  detail    String?  @db.Text // nilai lama -> baru (JSON)
+  createdAt DateTime @default(now())
+
+  user User? @relation(fields: [userId], references: [id])
+  @@index([createdAt])
+  @@map("activity_logs")
+}
+
+// ============ COUNTER (nomor dokumen transaksional) ============
+model Counter {
+  id     String @id // "transaksi" | "return" | "invoice"
+  prefix String
+  value  Int    @default(0)
+  @@map("counters")
+}
