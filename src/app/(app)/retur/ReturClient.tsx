@@ -1,26 +1,50 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { Fragment, useState, useTransition, useMemo, useRef, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { createReturn, findTransactionByCode } from "./actions";
-import { Button, Card, Input, Label, Select, Table, Th, Td, Badge } from "@/components/ui";
+import { Button, Card, Input, Label, Select, Table, Th, Td } from "@/components/ui";
 import { formatRupiah } from "@/lib/utils";
-import { Search, Printer, MessageCircle, ArrowRight, ArrowLeft, ArrowUpCircle, ArrowDownCircle, CheckCircle2, Trash2, Minus, Plus, FileText } from "lucide-react";
+import {
+  Search,
+  Printer,
+  MessageCircle,
+  ArrowUpCircle,
+  ArrowDownCircle,
+  Trash2,
+  Minus,
+  Plus,
+  FileText,
+  Check,
+  ArrowRight,
+  ArrowLeft,
+  ReceiptText,
+  PackageSearch,
+  Repeat2,
+  Wallet,
+} from "lucide-react";
 import { Nota, type NotaData } from "@/components/Nota";
+import { printArea } from "@/lib/print";
 import { toast } from "sonner";
 
 type ItemOption = { id: number; kode: string; nama: string; hargaJual: number };
-type OriginalItem = { itemId: number; nama: string; kode: string; qty: number; harga: number };
-type SelectedReturn = { itemId: number; qty: number; harga: number; nama: string; kode: string };
+type OriginalItem = { transactionItemId: number; itemId: number; nama: string; kode: string; qty: number; alreadyReturned: number; availableForReturn: number; harga: number };
+type SelectedReturn = { transactionItemId: number; itemId: number; qty: number; harga: number; nama: string; kode: string };
 type SelectedReplacement = { itemId: number; qty: number; harga: number; nama: string; kode: string };
 
-export function ReturClient({ items }: { items: ItemOption[] }) {
+export function ReturClient({
+  items,
+  transactions = [],
+}: {
+  items: ItemOption[];
+  transactions?: { noTransaksi: string; namaClient: string | null }[];
+}) {
   const router = useRouter();
-  
+
   // Stepper State (1, 2, 3, 4)
   const [step, setStep] = useState(1);
   const [tipe, setTipe] = useState<"RETUR" | "TUKAR">("TUKAR");
-  
+
   // Step 1: Find transaction
   const [searchCode, setSearchCode] = useState("");
   const [searching, setSearching] = useState(false);
@@ -32,6 +56,32 @@ export function ReturClient({ items }: { items: ItemOption[] }) {
     namaWs: string;
     items: OriginalItem[];
   } | null>(null);
+
+  // Suggestions state & auto-suggest logic
+  const [showSuggestions, setShowSuggestions] = useState(false);
+  const suggestionRef = useRef<HTMLDivElement>(null);
+
+  const filteredSuggestions = useMemo(() => {
+    const query = searchCode.trim().toLowerCase();
+    if (!query) return [];
+    return transactions
+      .filter(
+        (tx) =>
+          tx.noTransaksi.toLowerCase().includes(query) ||
+          (tx.namaClient && tx.namaClient.toLowerCase().includes(query))
+      )
+      .slice(0, 8);
+  }, [searchCode, transactions]);
+
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (suggestionRef.current && !suggestionRef.current.contains(event.target as Node)) {
+        setShowSuggestions(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
 
   // Step 2: Return select
   const [retItems, setRetItems] = useState<SelectedReturn[]>([]);
@@ -50,12 +100,8 @@ export function ReturClient({ items }: { items: ItemOption[] }) {
   const repFiltered = useMemo(() => {
     if (!repQuery.trim()) return [];
     const s = repQuery.toLowerCase();
-    return items.filter((i) => i.nama.toLowerCase().includes(s) || i.kode.toLowerCase().includes(s)).slice(0, 5);
+    return items.filter((i) => i.nama.toLowerCase().includes(s) || i.kode.toLowerCase().includes(s)).slice(0, 6);
   }, [repQuery, items]);
-
-  function useMemo<T>(fn: () => T, deps: any[]): T {
-    return fn();
-  }
 
   // Action: step 1 search original invoice
   async function handleFindTrx() {
@@ -76,7 +122,6 @@ export function ReturClient({ items }: { items: ItemOption[] }) {
           namaWs: res.namaWs!,
           items: res.items!,
         });
-        // Pre-populate empty returns
         setRetItems([]);
         setStep(2);
       }
@@ -92,21 +137,19 @@ export function ReturClient({ items }: { items: ItemOption[] }) {
     if (isChecked) {
       setRetItems((prev) => [
         ...prev,
-        { itemId: item.itemId, qty: 1, harga: item.harga, nama: item.nama, kode: item.kode },
+        { transactionItemId: item.transactionItemId, itemId: item.itemId, qty: 1, harga: item.harga, nama: item.nama, kode: item.kode },
       ]);
     } else {
-      setRetItems((prev) => prev.filter((x) => x.itemId !== item.itemId));
+      setRetItems((prev) => prev.filter((x) => x.transactionItemId !== item.transactionItemId));
     }
   }
 
-  function updateReturnQty(itemId: number, qty: number, maxQty: number) {
+  function updateReturnQty(transactionItemId: number, qty: number, maxQty: number) {
     if (qty > maxQty) {
       toast.warning(`Qty retur tidak boleh melebihi qty beli (${maxQty})`);
       qty = maxQty;
     }
-    setRetItems((prev) =>
-      prev.map((x) => (x.itemId === itemId ? { ...x, qty: Math.max(1, qty) } : x))
-    );
+    setRetItems((prev) => prev.map((x) => (x.transactionItemId === transactionItemId ? { ...x, qty: Math.max(1, qty) } : x)));
   }
 
   // Helper to add items to replacement B
@@ -121,9 +164,7 @@ export function ReturClient({ items }: { items: ItemOption[] }) {
   }
 
   function updateRepQty(itemId: number, qty: number) {
-    setRepItems((prev) =>
-      prev.map((x) => (x.itemId === itemId ? { ...x, qty: Math.max(1, qty) } : x))
-    );
+    setRepItems((prev) => prev.map((x) => (x.itemId === itemId ? { ...x, qty: Math.max(1, qty) } : x)));
   }
 
   function removeRepItem(itemId: number) {
@@ -141,19 +182,21 @@ export function ReturClient({ items }: { items: ItemOption[] }) {
     if (retItems.length === 0) return toast.error("Pilih barang yang diretur terlebih dahulu.");
     if (tipe === "TUKAR" && repItems.length === 0) return toast.error("Pilih barang pengganti terlebih dahulu.");
 
-    // The backend `createReturn` Server Action takes a single return item ID and replacement item ID
-    // We will target the first items in lists, or map them as required.
-    // For compatibility with the existing single-item return action in `actions.ts`:
-    const itemRetur = retItems[0];
-    const itemGanti = repItems[0] ?? null;
-
     start(async () => {
       const res = await createReturn({
         tipe,
-        itemReturId: itemRetur.itemId,
-        qtyRetur: itemRetur.qty,
-        itemGantiId: itemGanti ? itemGanti.itemId : null,
-        qtyGanti: itemGanti ? itemGanti.qty : null,
+        transactionId: origTrx!.id,
+        returnItems: retItems.map((ri) => ({
+          transactionItemId: ri.transactionItemId,
+          itemId: ri.itemId,
+          qtyReturned: ri.qty,
+          hargaSnapshot: ri.harga,
+          namaSnapshot: ri.nama,
+        })),
+        replacementItems: repItems.map((ri) => ({
+          itemId: ri.itemId,
+          qtyReplacement: ri.qty,
+        })),
         alasan,
         namaClient: origTrx?.namaClient ?? "",
         alamat: origTrx?.alamat ?? "",
@@ -167,22 +210,25 @@ export function ReturClient({ items }: { items: ItemOption[] }) {
 
       if (res && "ok" in res) {
         toast.success("Transaksi retur/tukar berhasil disimpan!");
-        const lines = [
-          {
-            nama: `[RETUR] ${res.namaRetur}`,
-            harga: res.hargaRetur,
-            qty: res.qtyRetur,
-            subtotal: -(res.hargaRetur * res.qtyRetur),
-          },
-        ];
-        if (res.namaGanti) {
+        const lines: { nama: string; harga: number; qty: number; subtotal: number }[] = [];
+        for (const ri of retItems) {
           lines.push({
-            nama: `[GANTI] ${res.namaGanti}`,
-            harga: res.hargaGanti,
-            qty: res.qtyGanti!,
-            subtotal: res.hargaGanti * res.qtyGanti!,
+            nama: `[RETUR] ${ri.nama}`,
+            harga: ri.harga,
+            qty: ri.qty,
+            subtotal: -(ri.harga * ri.qty),
           });
         }
+        for (const ri of repItems) {
+          lines.push({
+            nama: `[GANTI] ${ri.nama}`,
+            harga: ri.harga,
+            qty: ri.qty,
+            subtotal: ri.harga * ri.qty,
+          });
+        }
+
+        const selisihVal = res.selisih as number;
 
         setNota({
           noReturn: res.noReturn,
@@ -192,17 +238,17 @@ export function ReturClient({ items }: { items: ItemOption[] }) {
           alamat: origTrx?.alamat ?? "",
           namaWs: origTrx?.namaWs ?? "",
           items: lines,
-          total: res.selisih,
+          total: selisihVal,
           judul: tipe === "TUKAR" ? "NOTA TUKAR BARANG" : "NOTA RETUR BARANG",
           catatan:
-            res.selisih > 0
-              ? `Selisih wajib dibayar: ${formatRupiah(res.selisih)}`
-              : res.selisih < 0
-              ? `Refund ke pelanggan: ${formatRupiah(Math.abs(res.selisih))}`
+            selisihVal > 0
+              ? `Selisih wajib dibayar: ${formatRupiah(selisihVal)}`
+              : selisihVal < 0
+              ? `Refund ke pelanggan: ${formatRupiah(Math.abs(selisihVal))}`
               : "Tidak ada selisih.",
         });
 
-        // Reset
+        // Reset state
         setOrigTrx(null);
         setRetItems([]);
         setRepItems([]);
@@ -220,7 +266,7 @@ export function ReturClient({ items }: { items: ItemOption[] }) {
     if (!no) return;
     no = no.replace(/[^0-9]/g, "");
     if (no.startsWith("0")) no = "62" + no.slice(1);
-    
+
     const pesan =
       `Halo,\n` +
       `Berikut rincian nota Retur/Tukar barang Anda.\n\n` +
@@ -230,135 +276,226 @@ export function ReturClient({ items }: { items: ItemOption[] }) {
       `Selisih     : ${formatRupiah(selisih)}\n` +
       `Keterangan  : ${selisih > 0 ? "Pelanggan membayar selisih" : selisih < 0 ? "Refund oleh toko" : "Selesai"}\n\n` +
       `Terima kasih.`;
-      
+
     window.open(`https://wa.me/${no}?text=${encodeURIComponent(pesan)}`, "_blank");
   }
 
+  // ===== Visual stepper definition (RETUR melompati langkah pengganti) =====
+  const stepDefs =
+    tipe === "TUKAR"
+      ? [
+          { n: 1, label: "Cari Transaksi", Icon: ReceiptText },
+          { n: 2, label: "Barang Diretur", Icon: PackageSearch },
+          { n: 3, label: "Barang Pengganti", Icon: Repeat2 },
+          { n: 4, label: "Penyelesaian", Icon: Wallet },
+        ]
+      : [
+          { n: 1, label: "Cari Transaksi", Icon: ReceiptText },
+          { n: 2, label: "Barang Diretur", Icon: PackageSearch },
+          { n: 4, label: "Penyelesaian", Icon: Wallet },
+        ];
+  const currentIdx = Math.max(0, stepDefs.findIndex((s) => s.n === step));
+
   return (
     <div className="space-y-6">
-      {/* Stepper Wizard Indicator */}
-      <div className="flex items-center justify-between bg-card p-4 rounded-xl border border-border">
-        {[
-          { num: 1, label: "Cari Transaksi" },
-          { num: 2, label: "Barang Diretur" },
-          { num: 3, label: "Barang Pengganti" },
-          { num: 4, label: "Penyelesaian" },
-        ].map((s) => (
-          <div key={s.num} className="flex items-center gap-2">
-            <span
-              className={`flex h-8 w-8 items-center justify-center rounded-full text-xs font-bold transition ${
-                step === s.num
-                  ? "bg-primary text-white ring-4 ring-blue-100"
-                  : step > s.num
-                  ? "bg-emerald-600 text-white"
-                  : "bg-slate-100 text-slate-500"
-              }`}
-            >
-              {s.num}
-            </span>
-            <span className={`text-xs font-semibold hidden md:inline ${step === s.num ? "text-slate-800" : "text-muted"}`}>
-              {s.label}
-            </span>
-            {s.num < 4 && <ArrowRight size={14} className="text-muted hidden md:inline" />}
-          </div>
-        ))}
+      {/* ============ PROGRESS STEPPER (redesain) ============ */}
+      <div className="overflow-x-auto rounded-[20px] border border-border bg-gradient-to-br from-white to-slate-50/60 p-4 shadow-[var(--shadow-card)] sm:p-6">
+        <div className="flex min-w-[300px] items-start">
+          {stepDefs.map((s, i) => {
+            const done = i < currentIdx;
+            const active = i === currentIdx;
+            return (
+              <Fragment key={s.n}>
+                <div className="flex w-14 shrink-0 flex-col items-center gap-2 sm:w-28">
+                  <div
+                    className={`flex h-11 w-11 items-center justify-center rounded-2xl transition-all duration-300 ${
+                      active
+                        ? "scale-110 bg-[var(--primary)] text-white shadow-lg shadow-orange-200/70 ring-4 ring-orange-100"
+                        : done
+                        ? "bg-emerald-500 text-white shadow-sm"
+                        : "border-2 border-slate-200 bg-white text-slate-400"
+                    }`}
+                  >
+                    {done ? <Check size={20} /> : <s.Icon size={19} />}
+                  </div>
+                  <span
+                    className={`text-center text-[11px] leading-tight ${
+                      active ? "font-bold text-[var(--primary)]" : done ? "font-semibold text-emerald-600" : "font-semibold text-slate-400"
+                    }`}
+                  >
+                    {s.label}
+                  </span>
+                </div>
+                {i < stepDefs.length - 1 && (
+                  <div
+                    className={`mt-5 h-1 flex-1 rounded-full transition-all duration-500 ${
+                      i < currentIdx ? "bg-[var(--primary)]" : "bg-slate-200"
+                    }`}
+                  />
+                )}
+              </Fragment>
+            );
+          })}
+        </div>
       </div>
 
-      {/* STEP 1: Find original transaction */}
+      {/* ============ STEP 1: Cari transaksi ============ */}
       {step === 1 && (
-        <Card className="max-w-md mx-auto p-6 space-y-4">
-          <div className="text-center">
-            <h2 className="text-sm font-bold text-foreground">Langkah 1: Temukan Transaksi Penjualan Asli</h2>
-            <p className="text-xs text-muted mt-1">Masukkan kode nota penjualan untuk memverifikasi item.</p>
+        <Card className="mx-auto max-w-lg p-0 overflow-visible">
+          <div className="flex items-center gap-3 border-b border-border bg-slate-50/60 px-6 py-5 rounded-t-[17px]">
+            <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-[var(--primary)]/10 text-[var(--primary)]">
+              <ReceiptText size={20} />
+            </div>
+            <div>
+              <h2 className="text-base font-bold text-slate-900">Cari Penjualan Asli</h2>
+              <p className="text-xs text-slate-500">Masukkan kode nota untuk memverifikasi item yang diretur.</p>
+            </div>
           </div>
 
-          <div className="space-y-3 pt-2">
+          <div className="space-y-5 p-6">
             <div>
-              <Label>Jenis Retur</Label>
-              <Select value={tipe} onChange={(e) => setTipe(e.target.value as "RETUR" | "TUKAR")}>
-                <option value="TUKAR">Tukar Barang (Ganti Baru / Bayar Selisih)</option>
-                <option value="RETUR">Retur Biasa (Pengembalian Barang / Refund)</option>
-              </Select>
+              <Label>Jenis Proses</Label>
+              <div className="grid grid-cols-2 gap-2.5">
+                {(["TUKAR", "RETUR"] as const).map((t) => (
+                  <button
+                    key={t}
+                    type="button"
+                    onClick={() => setTipe(t)}
+                    className={`rounded-xl border p-3 text-left transition-all cursor-pointer ${
+                      tipe === t
+                        ? "border-[var(--primary)] bg-[var(--primary)]/5 ring-1 ring-[var(--primary)]"
+                        : "border-border bg-white hover:border-slate-300"
+                    }`}
+                  >
+                    <span className="flex items-center gap-2 text-sm font-bold text-slate-800">
+                      {t === "TUKAR" ? <Repeat2 size={15} /> : <ArrowUpCircle size={15} />}
+                      {t === "TUKAR" ? "Tukar Barang" : "Retur Biasa"}
+                    </span>
+                    <span className="mt-1 block text-[11px] leading-tight text-slate-500">
+                      {t === "TUKAR" ? "Ganti barang baru, bayar selisih" : "Pengembalian / refund tanpa ganti"}
+                    </span>
+                  </button>
+                ))}
+              </div>
             </div>
 
-            <div>
+            <div className="relative" ref={suggestionRef}>
               <Label>Nomor Transaksi Asli (PCxxxxx)</Label>
-              <Input
-                value={searchCode}
-                onChange={(e) => setSearchCode(e.target.value)}
-                placeholder="mis. PC00001"
-                className="h-11"
-              />
+              <div className="relative">
+                <Search size={18} className="absolute left-3.5 top-3 text-slate-400" />
+                <Input
+                  value={searchCode}
+                  onChange={(e) => {
+                    setSearchCode(e.target.value);
+                    setShowSuggestions(true);
+                  }}
+                  onFocus={() => setShowSuggestions(true)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") handleFindTrx();
+                  }}
+                  placeholder="mis. PC00001 atau nama pelanggan"
+                  className="h-11 pl-10"
+                />
+              </div>
+              {showSuggestions && filteredSuggestions.length > 0 && (
+                <div className="absolute left-0 right-0 z-50 mt-1 max-h-60 overflow-y-auto rounded-xl border border-border bg-white p-1.5 shadow-lg">
+                  {filteredSuggestions.map((tx) => (
+                    <button
+                      key={tx.noTransaksi}
+                      type="button"
+                      onClick={() => {
+                        setSearchCode(tx.noTransaksi);
+                        setShowSuggestions(false);
+                      }}
+                      className="flex w-full items-center justify-between rounded-lg px-3 py-2 text-left text-xs font-semibold text-slate-700 transition hover:bg-slate-50 hover:text-slate-900 cursor-pointer select-none"
+                    >
+                      <span className="font-mono text-slate-900">{tx.noTransaksi}</span>
+                      {tx.namaClient && (
+                        <span className="max-w-[150px] truncate text-[10px] text-slate-500">{tx.namaClient}</span>
+                      )}
+                    </button>
+                  ))}
+                </div>
+              )}
             </div>
 
-            <Button onClick={handleFindTrx} disabled={searching} className="w-full h-11">
-              {searching ? "Mencari..." : "Cari Transaksi"}
+            <Button onClick={handleFindTrx} disabled={searching} className="h-11 w-full font-semibold">
+              {searching ? "Mencari Transaksi..." : "Cari Transaksi"}
+              {!searching && <ArrowRight size={16} />}
             </Button>
           </div>
         </Card>
       )}
 
-      {/* STEP 2: Selected return items list */}
+      {/* ============ STEP 2: Barang diretur ============ */}
       {step === 2 && origTrx && (
-        <Card className="space-y-6 p-6">
-          <div className="flex justify-between items-center border-b border-border pb-3">
-            <div>
-              <h2 className="text-sm font-bold text-foreground">Langkah 2: Pilih Barang Yang Dikembalikan</h2>
-              <p className="text-xs text-muted">Beri centang dan input kuantitas barang yang ditukar.</p>
+        <Card className="space-y-5 overflow-hidden p-0">
+          <div className="flex flex-col gap-3 border-b border-border bg-slate-50/60 px-6 py-5 sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex items-center gap-3">
+              <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-[var(--primary)]/10 text-[var(--primary)]">
+                <PackageSearch size={20} />
+              </div>
+              <div>
+                <h2 className="text-base font-bold text-slate-900">Pilih Barang Retur</h2>
+                <p className="text-xs text-slate-500">Centang dan tentukan kuantitas barang yang dikembalikan.</p>
+              </div>
             </div>
-            <div className="text-xs text-slate-500 bg-slate-50 p-2 rounded border border-border">
-              <strong>Nota Asli:</strong> {origTrx.noTransaksi} &middot; {origTrx.namaClient || "Eceran / Pelanggan Umum"}
+            <div className="rounded-xl border border-border bg-white px-3 py-2 text-xs font-bold text-slate-500">
+              Nota: <span className="font-mono text-slate-800">{origTrx.noTransaksi}</span> &middot;{" "}
+              {origTrx.namaClient || "Pelanggan Umum"}
             </div>
           </div>
 
-          {/* Items selection list */}
-          <div className="overflow-x-auto rounded-xl border border-border bg-card shadow-sm">
+          <div className="space-y-5 px-6 pb-6">
             <Table>
               <thead>
                 <tr>
-                  <th className="w-12 text-center py-2.5 bg-slate-50 border-b border-border">Pilih</th>
+                  <Th className="w-12 text-center">Pilih</Th>
                   <Th>Barang</Th>
                   <Th className="text-right">Harga Nota</Th>
-                  <Th className="text-center w-24">Qty Beli</Th>
-                  <Th className="text-center w-36">Qty Diretur</Th>
+                  <Th className="w-28 text-center">Qty Beli</Th>
+                  <Th className="w-36 text-center">Qty Diretur</Th>
                   <Th className="text-right">Total Nilai</Th>
                 </tr>
               </thead>
               <tbody>
                 {origTrx.items.map((it) => {
-                  const isSelected = retItems.some((x) => x.itemId === it.itemId);
-                  const selected = retItems.find((x) => x.itemId === it.itemId);
+                  const isSelected = retItems.some((x) => x.transactionItemId === it.transactionItemId);
+                  const selected = retItems.find((x) => x.transactionItemId === it.transactionItemId);
                   return (
-                    <tr key={it.itemId} className={isSelected ? "bg-blue-50/20" : ""}>
-                      <td className="text-center border-b border-border">
+                    <tr key={it.transactionItemId} className={isSelected ? "bg-[var(--primary)]/5" : ""}>
+                      <Td className="text-center">
                         <input
                           type="checkbox"
                           checked={isSelected}
                           onChange={(e) => toggleReturnItem(it, e.target.checked)}
-                          className="h-4.5 w-4.5 rounded border-slate-300 text-primary"
+                          disabled={it.availableForReturn <= 0}
+                          className="h-4.5 w-4.5 rounded border-slate-300 text-[var(--primary)] focus:ring-transparent cursor-pointer"
                         />
-                      </td>
-                      <Td>
-                        <div className="font-semibold text-slate-800">{it.nama}</div>
-                        <div className="font-mono text-[10px] text-muted">{it.kode}</div>
                       </Td>
-                      <Td className="text-right font-mono">{formatRupiah(it.harga)}</Td>
-                      <Td className="text-center font-mono font-medium">{it.qty} unit</Td>
+                      <Td>
+                        <div className="text-sm font-bold text-slate-800">{it.nama}</div>
+                        <div className="mt-0.5 font-mono text-[10px] text-slate-400">{it.kode}</div>
+                      </Td>
+                      <Td className="text-right font-mono text-xs">{formatRupiah(it.harga)}</Td>
+                      <Td className="text-center font-mono text-xs font-semibold">{it.qty} unit</Td>
                       <Td>
                         {isSelected && selected ? (
                           <Input
                             type="number"
                             min={1}
-                            max={it.qty}
+                            max={it.availableForReturn}
                             value={selected.qty}
-                            onChange={(e) => updateReturnQty(it.itemId, parseInt(e.target.value) || 1, it.qty)}
-                            className="text-center h-8 font-mono font-semibold"
+                            onChange={(e) => updateReturnQty(it.transactionItemId, parseInt(e.target.value) || 1, it.availableForReturn)}
+                            className="h-9 text-center font-mono font-semibold"
                           />
                         ) : (
-                          <span className="text-muted text-xs">—</span>
+                          <span className="text-xs text-slate-400">
+                            {it.availableForReturn <= 0 ? "(habis)" : "—"}
+                          </span>
                         )}
                       </Td>
-                      <Td className="text-right font-bold font-mono">
+                      <Td className="text-right font-mono text-xs font-bold">
                         {isSelected && selected ? formatRupiah(selected.harga * selected.qty) : "—"}
                       </Td>
                     </tr>
@@ -366,252 +503,285 @@ export function ReturClient({ items }: { items: ItemOption[] }) {
                 })}
               </tbody>
             </Table>
-          </div>
 
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 pt-4">
-            <div>
-              <Label>Alasan Pengembalian / Tukar</Label>
-              <Input
-                value={alasan}
-                onChange={(e) => setAlasan(e.target.value)}
-                placeholder="mis. ukuran tidak pas, cacat material"
-              />
-            </div>
-            <div className="bg-emerald-50 border border-emerald-200 rounded-lg p-4 flex items-center justify-between">
-              <div className="flex items-center gap-2 text-emerald-800">
-                <ArrowUpCircle size={22} />
-                <div>
-                  <p className="text-xs font-bold uppercase">Estimasi Stok Masuk (+)</p>
-                  <p className="text-[10px] text-emerald-700">Barang ini akan masuk kembali ke gudang fisik.</p>
-                </div>
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+              <div>
+                <Label>Alasan Pengembalian / Penukaran</Label>
+                <Input
+                  value={alasan}
+                  onChange={(e) => setAlasan(e.target.value)}
+                  placeholder="mis. salah beli ukuran, cacat fisik plywood"
+                />
               </div>
-              <span className="text-lg font-black text-emerald-700 font-mono">{formatRupiah(totalRetur)}</span>
+              <div className="flex items-center justify-between rounded-xl border border-emerald-100 bg-emerald-50 p-4">
+                <div className="flex items-center gap-3 text-emerald-800">
+                  <ArrowUpCircle size={24} className="text-emerald-600" />
+                  <div>
+                    <p className="text-xs font-bold uppercase">Nilai Pengembalian (+)</p>
+                    <p className="mt-0.5 text-[10px] text-emerald-600">Stok barang akan bertambah di kartu gudang.</p>
+                  </div>
+                </div>
+                <span className="font-mono text-lg font-extrabold text-emerald-700">{formatRupiah(totalRetur)}</span>
+              </div>
             </div>
-          </div>
 
-          <div className="flex justify-between pt-4 border-t border-border">
-            <Button variant="outline" onClick={() => setStep(1)}>
-              Kembali
-            </Button>
-            <Button onClick={() => setStep(tipe === "TUKAR" ? 3 : 4)} disabled={retItems.length === 0}>
-              Lanjutkan <ArrowRight size={14} />
-            </Button>
+            <div className="flex flex-col-reverse gap-2.5 border-t border-border pt-4 sm:flex-row sm:items-center sm:justify-between">
+              <Button type="button" variant="outline" onClick={() => setStep(1)}>
+                <ArrowLeft size={14} /> Kembali
+              </Button>
+              <Button type="button" onClick={() => setStep(tipe === "TUKAR" ? 3 : 4)} disabled={retItems.length === 0}>
+                Lanjutkan <ArrowRight size={14} />
+              </Button>
+            </div>
           </div>
         </Card>
       )}
 
-      {/* STEP 3: Replacement items list (only if TUKAR) */}
+      {/* ============ STEP 3: Barang pengganti (TUKAR) ============ */}
       {step === 3 && tipe === "TUKAR" && (
-        <Card className="space-y-6 p-6">
-          <div>
-            <h2 className="text-sm font-bold text-foreground">Langkah 3: Pilih Barang Pengganti (Baru)</h2>
-            <p className="text-xs text-muted mt-1">Cari dan masukkan barang pengganti yang dibawa keluar oleh pelanggan.</p>
-          </div>
-
-          {/* Search bar */}
-          <div className="space-y-2">
-            <Label>Pencarian Barang Pengganti</Label>
-            <div className="relative">
-              <Search size={18} className="absolute left-3 top-3 text-muted" />
-              <Input
-                value={repQuery}
-                onChange={(e) => setRepQuery(e.target.value)}
-                placeholder="Cari berdasarkan kode / nama barang..."
-                className="pl-10 h-11"
-              />
+        <Card className="space-y-5 overflow-hidden p-0">
+          <div className="flex items-center gap-3 border-b border-border bg-slate-50/60 px-6 py-5">
+            <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-[var(--primary)]/10 text-[var(--primary)]">
+              <Repeat2 size={20} />
             </div>
-            {repQuery.trim() && (
-              <div className="max-h-60 divide-y divide-border overflow-y-auto rounded-md border border-border bg-white shadow-md">
-                {repFiltered.map((it) => (
-                  <button
-                    key={it.id}
-                    type="button"
-                    onClick={() => addRepItem(it)}
-                    className="flex w-full items-center justify-between px-4 py-2.5 text-left text-sm hover:bg-slate-50 transition"
-                  >
-                    <span className="flex flex-col">
-                      <span className="font-semibold text-slate-800">{it.nama}</span>
-                      <span className="font-mono text-xs text-muted">{it.kode}</span>
-                    </span>
-                    <span className="font-semibold text-primary">{formatRupiah(it.hargaJual)}</span>
-                  </button>
-                ))}
-              </div>
-            )}
+            <div>
+              <h2 className="text-base font-bold text-slate-900">Pilih Barang Pengganti</h2>
+              <p className="text-xs text-slate-500">Cari barang baru yang keluar dari gudang fisik.</p>
+            </div>
           </div>
 
-          {/* Replacement items cart */}
-          <div className="overflow-x-auto rounded-xl border border-border bg-card shadow-sm">
+          <div className="space-y-5 px-6 pb-6">
+            <div className="space-y-2">
+              <Label>Pencarian Katalog Barang</Label>
+              <div className="relative">
+                <Search size={18} className="absolute left-3.5 top-3 text-slate-400" />
+                <Input
+                  value={repQuery}
+                  onChange={(e) => setRepQuery(e.target.value)}
+                  placeholder="Cari berdasarkan kode / nama barang pengganti..."
+                  className="h-11 pl-10"
+                />
+              </div>
+              {repQuery.trim() && (
+                <div className="max-h-60 divide-y divide-border overflow-y-auto rounded-xl border border-border bg-white shadow-lg">
+                  {repFiltered.map((it) => (
+                    <button
+                      key={it.id}
+                      type="button"
+                      onClick={() => addRepItem(it)}
+                      className="flex w-full items-center justify-between px-4 py-2.5 text-left text-sm transition hover:bg-slate-50 cursor-pointer"
+                    >
+                      <span className="flex flex-col">
+                        <span className="text-xs font-semibold text-slate-800">{it.nama}</span>
+                        <span className="mt-0.5 font-mono text-[9px] text-slate-400">{it.kode}</span>
+                      </span>
+                      <span className="text-xs font-bold text-[var(--primary)]">{formatRupiah(it.hargaJual)}</span>
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+
             <Table>
               <thead>
                 <tr>
                   <Th className="w-12 text-center">#</Th>
                   <Th>Barang Pengganti</Th>
                   <Th className="text-right">Harga Eceran</Th>
-                  <Th className="text-center w-36">Kuantitas</Th>
+                  <Th className="w-36 text-center">Kuantitas</Th>
                   <Th className="text-right">Total Nilai</Th>
                 </tr>
               </thead>
               <tbody>
                 {repItems.map((l) => (
                   <tr key={l.itemId}>
-                    <td className="text-center">
+                    <Td className="text-center">
                       <button
                         type="button"
                         onClick={() => removeRepItem(l.itemId)}
-                        className="text-red-500 hover:text-red-700"
+                        className="mx-auto flex h-8 w-8 items-center justify-center rounded-lg text-slate-400 transition hover:bg-red-50 hover:text-red-500 cursor-pointer"
                       >
                         <Trash2 size={14} />
                       </button>
-                    </td>
-                    <Td>
-                      <div className="font-semibold text-slate-800">{l.nama}</div>
-                      <div className="font-mono text-[10px] text-muted">{l.kode}</div>
                     </Td>
-                    <Td className="text-right font-mono">{formatRupiah(l.harga)}</Td>
                     <Td>
-                      <div className="flex items-center justify-center gap-1">
+                      <div className="text-sm font-bold text-slate-800">{l.nama}</div>
+                      <div className="mt-0.5 font-mono text-[10px] text-slate-400">{l.kode}</div>
+                    </Td>
+                    <Td className="text-right font-mono text-xs">{formatRupiah(l.harga)}</Td>
+                    <Td>
+                      <div className="flex items-center justify-center gap-1.5">
                         <button
                           type="button"
                           onClick={() => updateRepQty(l.itemId, l.qty - 1)}
-                          className="rounded border border-border p-1 bg-white"
+                          className="flex h-8 w-8 items-center justify-center rounded-md border border-border bg-slate-50 text-slate-600 hover:bg-slate-100 cursor-pointer"
                         >
-                          <Minus size={11} />
+                          <Minus size={14} />
                         </button>
                         <input
                           type="number"
                           value={l.qty}
                           onChange={(e) => updateRepQty(l.itemId, parseInt(e.target.value) || 1)}
-                          className="h-8 w-14 rounded border border-border text-center font-mono font-semibold"
+                          className="h-8 w-14 rounded-md border border-border text-center font-mono text-sm font-bold"
                         />
                         <button
                           type="button"
                           onClick={() => updateRepQty(l.itemId, l.qty + 1)}
-                          className="rounded border border-border p-1 bg-white"
+                          className="flex h-8 w-8 items-center justify-center rounded-md border border-border bg-slate-50 text-slate-600 hover:bg-slate-100 cursor-pointer"
                         >
-                          <Plus size={11} />
+                          <Plus size={14} />
                         </button>
                       </div>
                     </Td>
-                    <Td className="text-right font-bold font-mono">{formatRupiah(l.harga * l.qty)}</Td>
+                    <Td className="text-right font-mono text-xs font-bold text-slate-800">{formatRupiah(l.harga * l.qty)}</Td>
                   </tr>
                 ))}
                 {repItems.length === 0 && (
                   <tr>
-                    <Td colSpan={5} className="py-8 text-center text-muted">
-                      Keranjang pengganti kosong. Masukkan barang dari panel pencarian di atas.
+                    <Td colSpan={5} className="py-12 text-center text-slate-400 select-none">
+                      Keranjang barang pengganti kosong. Pilih barang dari hasil pencarian di atas.
                     </Td>
                   </tr>
                 )}
               </tbody>
             </Table>
-          </div>
 
-          <div className="flex justify-between items-center bg-red-50 border border-red-200 rounded-lg p-4">
-            <div className="flex items-center gap-2 text-red-800">
-              <ArrowDownCircle size={22} />
-              <div>
-                <p className="text-xs font-bold uppercase">Estimasi Stok Keluar (-)</p>
-                <p className="text-[10px] text-red-700">Barang ini akan keluar dari stok gudang fisik.</p>
+            <div className="flex items-center justify-between rounded-xl border border-rose-100 bg-rose-50 p-4">
+              <div className="flex items-center gap-3 text-rose-800">
+                <ArrowDownCircle size={24} className="text-rose-500" />
+                <div>
+                  <p className="text-xs font-bold uppercase">Nilai Pengganti (-)</p>
+                  <p className="mt-0.5 text-[10px] text-rose-600">Stok barang pengganti akan berkurang dari gudang.</p>
+                </div>
               </div>
+              <span className="font-mono text-lg font-extrabold text-rose-700">{formatRupiah(totalGanti)}</span>
             </div>
-            <span className="text-lg font-black text-red-700 font-mono">{formatRupiah(totalGanti)}</span>
-          </div>
 
-          <div className="flex justify-between pt-4 border-t border-border">
-            <Button variant="outline" onClick={() => setStep(2)}>
-              Kembali
-            </Button>
-            <Button onClick={() => setStep(4)} disabled={repItems.length === 0}>
-              Lanjutkan <ArrowRight size={14} />
-            </Button>
+            <div className="flex flex-col-reverse gap-2.5 border-t border-border pt-4 sm:flex-row sm:items-center sm:justify-between">
+              <Button type="button" variant="outline" onClick={() => setStep(2)}>
+                <ArrowLeft size={14} /> Kembali
+              </Button>
+              <Button type="button" onClick={() => setStep(4)} disabled={repItems.length === 0}>
+                Lanjutkan <ArrowRight size={14} />
+              </Button>
+            </div>
           </div>
         </Card>
       )}
 
-      {/* STEP 4: Settlement page */}
+      {/* ============ STEP 4: Penyelesaian ============ */}
       {step === 4 && (
-        <Card className="max-w-xl mx-auto p-6 space-y-6">
-          <div className="text-center border-b border-border pb-3">
-            <h2 className="text-sm font-bold text-foreground">Langkah 4: Review Penyelesaian Selisih (Pembayaran/Pengembalian)</h2>
-            <p className="text-xs text-muted mt-1">Verifikasi nominal selisih pengembalian barang.</p>
+        <Card className="mx-auto max-w-xl space-y-6 overflow-hidden p-0">
+          <div className="flex items-center gap-3 border-b border-border bg-slate-50/60 px-6 py-5">
+            <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-[var(--primary)]/10 text-[var(--primary)]">
+              <Wallet size={20} />
+            </div>
+            <div>
+              <h2 className="text-base font-bold text-slate-900">Penyelesaian Selisih</h2>
+              <p className="text-xs text-slate-500">Verifikasi nominal sebelum transaksi disimpan.</p>
+            </div>
           </div>
 
-          <div className="space-y-3 bg-slate-50 p-4 rounded-xl border border-border text-xs">
-            <div className="flex justify-between pb-2 border-b border-dashed border-border">
-              <span className="text-slate-500">Nilai Barang Retur (+)</span>
-              <span className="font-bold text-emerald-600 font-mono">{formatRupiah(totalRetur)}</span>
-            </div>
-            {tipe === "TUKAR" && (
-              <div className="flex justify-between pb-2 border-b border-dashed border-border">
-                <span className="text-slate-500">Nilai Barang Pengganti (-)</span>
-                <span className="font-bold text-red-600 font-mono">{formatRupiah(totalGanti)}</span>
-              </div>
-            )}
-            <div className="flex justify-between items-center pt-2 text-sm">
-              <span className="font-semibold text-slate-800">{selisih >= 0 ? "Selisih Tagihan" : "Sisa Pengembalian (Refund)"}</span>
-              <span className={`text-lg font-black font-mono ${selisih > 0 ? "text-red-600" : selisih < 0 ? "text-emerald-600" : "text-slate-800"}`}>
+          <div className="space-y-6 px-6 pb-6">
+            {/* Big settlement highlight */}
+            <div
+              className={`rounded-2xl border p-5 text-center ${
+                selisih > 0
+                  ? "border-red-100 bg-red-50"
+                  : selisih < 0
+                  ? "border-emerald-100 bg-emerald-50"
+                  : "border-border bg-slate-50"
+              }`}
+            >
+              <p className="text-xs font-bold uppercase tracking-wider text-slate-500">
+                {selisih > 0 ? "Selisih Tagihan Pelanggan" : selisih < 0 ? "Uang Refund Toko" : "Penukaran Seimbang"}
+              </p>
+              <p
+                className={`mt-1 font-mono text-4xl font-extrabold ${
+                  selisih > 0 ? "text-red-600" : selisih < 0 ? "text-emerald-600" : "text-slate-800"
+                }`}
+              >
                 {formatRupiah(Math.abs(selisih))}
-              </span>
+              </p>
             </div>
-          </div>
 
-          <div className="rounded-lg p-3.5 border text-xs">
-            {selisih > 0 ? (
-              <p className="text-red-700 bg-red-50 p-2.5 rounded border border-red-200">
-                <strong>ℹ️ Kewajiban Bayar:</strong> Pelanggan wajib membayar selisih nominal sebesar <strong>{formatRupiah(selisih)}</strong>. Faktur tagihan baru (Invoice) akan diterbitkan otomatis.
-              </p>
-            ) : selisih < 0 ? (
-              <p className="text-emerald-700 bg-emerald-50 p-2.5 rounded border border-emerald-200">
-                <strong>ℹ️ Pengembalian Toko:</strong> Toko berkewajiban mengembalikan uang tunai sebesar <strong>{formatRupiah(Math.abs(selisih))}</strong> kepada pelanggan.
-              </p>
-            ) : (
-              <p className="text-slate-700 bg-slate-100 p-2.5 rounded border border-slate-200">
-                <strong>ℹ️ Selesai:</strong> Tukar barang seimbang. Tidak ada kas keluar/masuk tambahan.
-              </p>
-            )}
-          </div>
+            <div className="space-y-3 rounded-xl border border-border bg-white p-4 text-xs">
+              <div className="flex justify-between border-b border-dashed border-border pb-2">
+                <span className="font-semibold text-slate-500">Total Nilai Barang Retur (+)</span>
+                <span className="font-mono font-bold text-emerald-600">{formatRupiah(totalRetur)}</span>
+              </div>
+              {tipe === "TUKAR" && (
+                <div className="flex justify-between border-b border-dashed border-border pb-2">
+                  <span className="font-semibold text-slate-500">Total Nilai Barang Pengganti (-)</span>
+                  <span className="font-mono font-bold text-red-600">{formatRupiah(totalGanti)}</span>
+                </div>
+              )}
+              <div className="pt-1 leading-relaxed text-slate-600">
+                {selisih > 0 ? (
+                  <span>
+                    <strong className="text-red-700">ℹ️ Tagihan Baru:</strong> Pelanggan membayar selisih{" "}
+                    <strong>{formatRupiah(selisih)}</strong>. Sistem mencatat piutang &amp; membuat invoice otomatis.
+                  </span>
+                ) : selisih < 0 ? (
+                  <span>
+                    <strong className="text-emerald-700">ℹ️ Pengembalian Dana:</strong> Kasir mengembalikan{" "}
+                    <strong>{formatRupiah(Math.abs(selisih))}</strong> tunai kepada pelanggan.
+                  </span>
+                ) : (
+                  <span>
+                    <strong>ℹ️ Seimbang:</strong> Nilai barang yang ditukar pas. Tidak ada tagihan / pengembalian uang.
+                  </span>
+                )}
+              </div>
+            </div>
 
-          {error && <p className="text-xs text-red-700 bg-red-50 p-2.5 rounded">{error}</p>}
+            {error && <p className="rounded-lg bg-red-50 p-2.5 text-xs font-semibold text-red-700">{error}</p>}
 
-          <div className="flex justify-between pt-4 border-t border-border">
-            <Button variant="outline" onClick={() => setStep(tipe === "TUKAR" ? 3 : 2)}>
-              Kembali
-            </Button>
-            <Button onClick={submitReturnExchange} disabled={pending} className="font-bold" variant={selisih > 0 ? "danger" : "success"}>
-              {pending ? "Memproses..." : tipe === "TUKAR" ? "Simpan & Proses Penukaran" : "Simpan & Proses Retur"}
-            </Button>
+            <div className="flex flex-col-reverse gap-2.5 border-t border-border pt-4 sm:flex-row sm:items-center sm:justify-between">
+              <Button type="button" variant="outline" onClick={() => setStep(tipe === "TUKAR" ? 3 : 2)}>
+                <ArrowLeft size={14} /> Kembali
+              </Button>
+              <Button
+                type="button"
+                onClick={submitReturnExchange}
+                disabled={pending}
+                className="font-bold"
+                variant={selisih > 0 ? "danger" : "success"}
+              >
+                {pending ? "Menyimpan Transaksi..." : tipe === "TUKAR" ? "Simpan & Tukar Barang" : "Simpan Retur Barang"}
+              </Button>
+            </div>
           </div>
         </Card>
       )}
 
-      {/* Thermal Receipt dialog */}
+      {/* ============ Thermal Receipt dialog ============ */}
       {nota && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/45 p-4 backdrop-blur-xs">
-          <div className="w-full max-w-md bg-white rounded-2xl overflow-y-auto max-h-[90vh] shadow-2xl border border-border">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 p-4 backdrop-blur-xs">
+          <div className="w-full max-w-md overflow-y-auto rounded-[20px] border border-border bg-white shadow-2xl max-h-[90vh]">
             <div className="print-area">
               <Nota data={nota} />
             </div>
-            <div className="flex flex-wrap gap-1.5 p-4 border-t border-border bg-slate-50 w-full justify-between">
-              <Button onClick={() => {
-                document.body.classList.remove("print-format-a4");
-                setTimeout(() => window.print(), 50);
-              }} variant="outline" size="sm">
-                <Printer size={13} /> Struk (Thermal)
+            <div className="flex flex-wrap sm:flex-nowrap justify-between gap-1.5 rounded-b-[20px] border-t border-border bg-slate-50 p-4">
+              <Button
+                onClick={() => printArea({ thermal: true })}
+                variant="outline"
+                size="sm"
+                className="flex-1 min-w-[75px]"
+              >
+                <Printer size={13} /> Struk
               </Button>
-              <Button onClick={() => {
-                document.body.classList.add("print-format-a4");
-                setTimeout(() => {
-                  window.print();
-                  document.body.classList.remove("print-format-a4");
-                }, 50);
-              }} size="sm">
-                <FileText size={13} /> PDF (A4)
+              <Button
+                onClick={() => printArea({ className: "print-format-a4" })}
+                size="sm"
+                className="flex-1 min-w-[75px]"
+              >
+                <FileText size={13} /> PDF A4
               </Button>
-              <Button onClick={handleSendWA} variant="success" size="sm">
+              <Button onClick={handleSendWA} variant="success" size="sm" className="flex-1 min-w-[75px]">
                 <MessageCircle size={13} /> WhatsApp
               </Button>
-              <Button variant="outline" onClick={() => setNota(null)} size="sm">
+              <Button variant="outline" size="sm" className="flex-1 min-w-[75px]" onClick={() => setNota(null)}>
                 Tutup
               </Button>
             </div>

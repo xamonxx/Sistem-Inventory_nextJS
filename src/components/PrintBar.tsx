@@ -3,22 +3,16 @@
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui";
 import { Printer, ArrowLeft, FileText } from "lucide-react";
+import { printArea } from "@/lib/print";
 
 export function PrintBar({ backHref }: { backHref: string }) {
   const router = useRouter();
 
   function printFormat(format: "thermal" | "a4") {
     if (format === "a4") {
-      document.body.classList.add("print-format-a4");
-      setTimeout(() => {
-        window.print();
-        document.body.classList.remove("print-format-a4");
-      }, 50);
+      printArea({ className: "print-format-a4" });
     } else {
-      document.body.classList.remove("print-format-a4");
-      setTimeout(() => {
-        window.print();
-      }, 50);
+      printArea({ thermal: true });
     }
   }
 

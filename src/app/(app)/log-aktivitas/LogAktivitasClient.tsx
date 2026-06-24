@@ -1,9 +1,14 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useState, useTransition } from "react";
+import { useRouter } from "next/navigation";
 import { Table, Th, Td, Badge, Input, Select, Button, Card, Label } from "@/components/ui";
+import { Pagination, usePagination } from "@/components/Pagination";
 import { formatTanggal } from "@/lib/utils";
-import { Search, Eye, X, HelpCircle, History } from "lucide-react";
+import { Search, Eye, X, HelpCircle, History, Trash2 } from "lucide-react";
+import { ModernDialog } from "@/components/ModernDialog";
+import { toast } from "sonner";
+import { clearActivityLogs } from "./actions";
 
 type LogRow = {
   id: number;
@@ -26,12 +31,32 @@ const AKSI_TONE: Record<string, "slate" | "green" | "red" | "amber" | "blue"> = 
   RETUR_BARANG: "red",
   TUKAR_BARANG: "red",
   STOCK_IN_BATCH: "green",
+  CLEAR_LOGS: "red",
 };
 
 export function LogAktivitasClient({ initialLogs }: { initialLogs: LogRow[] }) {
+  const router = useRouter();
+  const [isPending, startTransition] = useTransition();
+  const [isConfirmOpen, setIsConfirmOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [actionFilter, setActionFilter] = useState("ALL");
   const [selectedLog, setSelectedLog] = useState<LogRow | null>(null);
+
+  const handleClearLogs = () => {
+    startTransition(async () => {
+      try {
+        const res = await clearActivityLogs();
+        if (res.ok) {
+          toast.success("Log aktivitas berhasil dibersihkan.");
+          router.refresh();
+        } else if (res.error) {
+          toast.error(res.error);
+        }
+      } catch (err) {
+        toast.error("Terjadi kesalahan sistem.");
+      }
+    });
+  };
 
   // Filter logs
   const filteredLogs = useMemo(() => {
@@ -46,6 +71,8 @@ export function LogAktivitasClient({ initialLogs }: { initialLogs: LogRow[] }) {
       return matchesSearch && matchesAction;
     });
   }, [initialLogs, searchQuery, actionFilter]);
+
+  const logPg = usePagination(filteredLogs, 10);
 
   // Unique actions for filters
   const uniqueActions = useMemo(() => {
@@ -76,15 +103,26 @@ export function LogAktivitasClient({ initialLogs }: { initialLogs: LogRow[] }) {
             className="pl-9 h-11"
           />
         </div>
-        <div className="w-56">
-          <Select value={actionFilter} onChange={(e) => setActionFilter(e.target.value)}>
-            <option value="ALL">Semua Jenis Aksi</option>
-            {uniqueActions.map((act) => (
-              <option key={act} value={act}>
-                {act}
-              </option>
-            ))}
-          </Select>
+        <div className="flex gap-3 w-full sm:w-auto">
+          <div className="w-56">
+            <Select value={actionFilter} onChange={(e) => setActionFilter(e.target.value)}>
+              <option value="ALL">Semua Jenis Aksi</option>
+              {uniqueActions.map((act) => (
+                <option key={act} value={act}>
+                  {act}
+                </option>
+              ))}
+            </Select>
+          </div>
+          <Button
+            variant="danger"
+            onClick={() => setIsConfirmOpen(true)}
+            disabled={isPending}
+            className="flex items-center gap-2 shrink-0"
+          >
+            <Trash2 size={16} />
+            Bersihkan Log
+          </Button>
         </div>
       </Card>
 
@@ -102,7 +140,7 @@ export function LogAktivitasClient({ initialLogs }: { initialLogs: LogRow[] }) {
             </tr>
           </thead>
           <tbody>
-            {filteredLogs.map((log) => (
+            {logPg.pageData.map((log) => (
               <tr key={log.id} className="hover:bg-slate-50/50">
                 <Td className="text-slate-500 font-medium text-xs">
                   {formatTanggal(log.createdAt)}
@@ -140,6 +178,9 @@ export function LogAktivitasClient({ initialLogs }: { initialLogs: LogRow[] }) {
             )}
           </tbody>
         </Table>
+        <div className="px-4 pb-3">
+          <Pagination page={logPg.page} perPage={logPg.perPage} total={logPg.total} onPage={logPg.setPage} onPerPage={logPg.setPerPage} />
+        </div>
       </div>
 
       {/* JSON Inspector / Diff Dialog */}
@@ -180,6 +221,17 @@ export function LogAktivitasClient({ initialLogs }: { initialLogs: LogRow[] }) {
           </div>
         </div>
       )}
+
+      <ModernDialog
+        isOpen={isConfirmOpen}
+        onClose={() => setIsConfirmOpen(false)}
+        onConfirm={handleClearLogs}
+        title="Bersihkan Log Aktivitas?"
+        description="Tindakan ini akan menghapus seluruh data riwayat audit/log aktivitas secara permanen dan tidak dapat dibatalkan. Apakah Anda yakin?"
+        confirmText="Ya, Bersihkan"
+        cancelText="Batal"
+        variant="danger"
+      />
     </div>
   );
 }

@@ -1,32 +1,30 @@
 @import "tailwindcss";
 
 /* ============================================================
-   PUTRA CORPORATION — Engineering Blueprint design system
-   Warm drafting paper · graphite ink · safety-rust accent
+   PUTRA CORPORATION — Modern Enterprise SaaS Redesign
+   Linear + Stripe + Shopify Admin inspired layout tokens
    ============================================================ */
 
 :root {
-  --paper: #f4f1ea;
-  --paper-2: #efeadf;
-  --background: var(--paper);
-  --foreground: #1b1d1f;
+  --background: #f8f9fb;
+  --foreground: #0f172a;
   --card: #ffffff;
-  --border: #e2dccf;
-  --line-strong: #d3ccbb;
+  --border: #e2e8f0;
+  --line-strong: #cbd5e1;
 
-  --primary: #c2410c;        /* burnt safety rust */
-  --primary-strong: #9a3412;
-  --steel: #2f4a5a;          /* secondary, blueprint steel */
+  --primary: #d35a1f;        /* premium rust orange */
+  --primary-strong: #b94d18;
+  --steel: #64748b;          /* slate gray */
 
-  --success: #15803d;
-  --warning: #b45309;
-  --danger: #b91c1c;
-  --muted: #6c6f76;
+  --success: #10b981;
+  --warning: #f59e0b;
+  --danger: #ef4444;
+  --info: #3b82f6;
+  --muted: #94a3b8;          /* Muted color #94A3B8 */
 
-  --grid: rgba(47, 74, 90, 0.05);   /* blueprint grid lines */
-  --grid-strong: rgba(47, 74, 90, 0.08);
-
-  --shadow-card: 0 1px 0 rgba(27, 29, 31, 0.02), 0 2px 8px -4px rgba(27, 29, 31, 0.12);
+  --shadow-card: 0 4px 20px rgba(0, 0, 0, 0.06);
+  --shadow-drawer: 0 10px 40px rgba(0, 0, 0, 0.12);
+  --shadow-modal: 0 20px 60px rgba(0, 0, 0, 0.18);
 }
 
 @theme inline {
@@ -41,86 +39,100 @@
   --color-warning: var(--warning);
   --color-danger: var(--danger);
   --color-muted: var(--muted);
+  --color-info: var(--info);
 
-  --font-sans: var(--font-plex-sans), ui-sans-serif, system-ui, sans-serif;
-  --font-mono: var(--font-plex-mono), ui-monospace, "SFMono-Regular", monospace;
-  --font-display: var(--font-archivo), var(--font-plex-sans), ui-sans-serif, sans-serif;
+  --font-sans: var(--font-jakarta), "Plus Jakarta Sans", system-ui, sans-serif;
+  --font-mono: var(--font-jakarta), "Plus Jakarta Sans", ui-monospace, "SFMono-Regular", monospace;
+  --font-display: var(--font-jakarta), "Plus Jakarta Sans", system-ui, sans-serif;
+
+  --text-page-title: 36px;
+  --text-section-title: 24px;
+  --text-card-title: 16px;
+  --text-card-label: 12px;
+  --text-kpi-large: 32px;
+  --text-kpi-medium: 24px;
+
+  --leading-page-title: 1.2;
+  --leading-section-title: 1.3;
 }
 
 html,
 body {
-  background-color: var(--paper);
-  /* faint blueprint grid + warm vignette */
-  background-image:
-    linear-gradient(var(--grid) 1px, transparent 1px),
-    linear-gradient(90deg, var(--grid) 1px, transparent 1px),
-    radial-gradient(120% 80% at 100% 0%, rgba(194, 65, 12, 0.04), transparent 60%);
-  background-size: 26px 26px, 26px 26px, 100% 100%;
+  background-color: var(--background);
   color: var(--foreground);
   font-family: var(--font-sans);
   -webkit-font-smoothing: antialiased;
   text-rendering: optimizeLegibility;
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: "tnum" 1;
+  /* Cegah scroll horizontal halaman di mobile (clip = aman utk position:sticky) */
+  overflow-x: clip;
 }
 
-/* Headings use the industrial display face */
-h1,
-h2,
+/* Headings use clean, spacious Geist typography */
+h1 {
+  font-family: var(--font-display);
+  font-size: clamp(1.5rem, 5vw, 36px); /* fluid: ~24px di mobile → 36px di desktop */
+  font-weight: 700;
+  line-height: 1.2;
+  letter-spacing: -0.02em;
+  color: #0f172a;
+}
+
+h2 {
+  font-family: var(--font-display);
+  font-size: clamp(1.25rem, 4vw, 24px);
+  font-weight: 600;
+  line-height: 1.3;
+  letter-spacing: -0.015em;
+  color: #0f172a;
+}
+
 h3,
 .font-display {
   font-family: var(--font-display);
   letter-spacing: -0.01em;
+  font-weight: 700;
+  color: #0f172a;
 }
 
 /* Figures / codes: monospaced, tabular */
 .tnum,
 .font-mono {
-  font-variant-numeric: tabular-nums;
+  font-variant-numeric: tabular-nums !important;
+  font-feature-settings: "tnum" 1 !important;
 }
 
-/* Uppercase micro-label — drafting annotation.
-   In @layer components so text-[...] utilities can override the default color. */
+/* Modern Pill Badge / Micro-label */
 @layer components {
   .u-label {
     font-family: var(--font-display);
     text-transform: uppercase;
-    letter-spacing: 0.14em;
-    font-size: 0.64rem;
+    letter-spacing: 0.1em;
+    font-size: 0.68rem;
     font-weight: 700;
     color: var(--muted);
   }
 }
 
-/* Card with surveyor corner ticks */
+/* Remove retro surveyor tick-card rules. Replace with modern card */
 .tick-card {
-  position: relative;
+  box-shadow: var(--shadow-card);
+  background-color: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 18px;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
 }
-.tick-card::before,
-.tick-card::after {
-  content: "";
-  position: absolute;
-  width: 9px;
-  height: 9px;
-  border-color: var(--line-strong);
-  pointer-events: none;
-}
-.tick-card::before {
-  top: 7px;
-  left: 7px;
-  border-left: 1.5px solid;
-  border-top: 1.5px solid;
-}
-.tick-card::after {
-  bottom: 7px;
-  right: 7px;
-  border-right: 1.5px solid;
-  border-bottom: 1.5px solid;
+.tick-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 24px rgba(0, 0, 0, 0.08);
 }
 
 /* Staggered entrance */
 @keyframes rise {
   from {
     opacity: 0;
-    transform: translateY(10px);
+    transform: translateY(12px);
   }
   to {
     opacity: 1;
@@ -128,7 +140,7 @@ h3,
   }
 }
 .anim-rise {
-  animation: rise 0.5s cubic-bezier(0.22, 1, 0.36, 1) both;
+  animation: rise 0.4s cubic-bezier(0.16, 1, 0.3, 1) both;
 }
 
 @keyframes sheen {
@@ -136,24 +148,42 @@ h3,
   to { background-position: -200% 0; }
 }
 .skel {
-  background: linear-gradient(90deg, var(--paper-2) 25%, #fff 50%, var(--paper-2) 75%);
+  background: linear-gradient(90deg, #f1f5f9 25%, #fff 50%, #f1f5f9 75%);
   background-size: 200% 100%;
   animation: sheen 1.4s ease-in-out infinite;
+  border-radius: 8px;
 }
 
 ::selection {
-  background: rgba(194, 65, 12, 0.18);
+  background: rgba(211, 90, 31, 0.15);
+  color: var(--primary-strong);
 }
 
 /* Thin custom scrollbar */
 * {
   scrollbar-width: thin;
-  scrollbar-color: var(--line-strong) transparent;
+  scrollbar-color: #cbd5e1 transparent;
+}
+
+/* Scrollbar styles for webkit browsers */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
 }
 
 /* Enterprise invoice document uses Inter per brand brief */
 .invoice-doc {
-  font-family: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+  font-family: var(--font-sans), ui-sans-serif, system-ui, sans-serif;
 }
 .invoice-doc * {
   -webkit-print-color-adjust: exact;
@@ -162,66 +192,137 @@ h3,
 
 @page {
   size: A4 portrait;
-  margin: 10mm;
+  margin: 12mm;
 }
 
 @media print {
-  body {
-    background: #fff;
-  }
-  body:has(.print-area) .no-print {
-    display: none !important;
-  }
-  body:has(.print-area) aside,
-  body:has(.print-area) header.no-print,
-  body:has(.print-area) main > div > div:not(:has(.print-area)) {
-    display: none !important;
-  }
-  .print-area {
-    position: fixed;
-    inset: 0;
-    margin: 0 auto;
-    max-width: 380px;
+  html, body {
+    background: white !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+    overflow: visible !important;
+    width: 100% !important;
+    min-height: auto !important;
   }
 
-  /* ===== A4 enterprise invoice: reflow ke lebar halaman, tidak terpotong ===== */
-  body.print-format-a4 .print-area {
-    position: static !important;
-    width: 100% !important;
-    max-width: 100% !important;
-    margin: 0 !important;
-    inset: auto !important;
-    box-shadow: none !important;
-    border: none !important;
-    zoom: 1 !important; /* abaikan zoom auto-fit preview saat cetak */
+  /* A4 format: hide everything except .print-clone (cloned as body direct child) */
+  body.print-format-a4 > :not(.print-clone) {
+    display: none !important;
   }
+
   body.print-format-a4 .invoice-doc {
     width: 100% !important;
-    box-shadow: none !important;
     border: none !important;
+    box-shadow: none !important;
   }
-  /* rapatkan padding agar 8 kolom muat di lebar A4 */
+
   body.print-format-a4 .inv-body {
-    padding-left: 14px !important;
-    padding-right: 14px !important;
-    padding-top: 10px !important;
+    padding: 12mm !important;
   }
-  /* tabel: jangan di-clip, biarkan kolom menyusut mengikuti lebar halaman */
+
   body.print-format-a4 .inv-table-wrap {
     overflow: visible !important;
   }
+
   body.print-format-a4 .inv-table {
-    min-width: 0 !important;
     width: 100% !important;
-    table-layout: fixed;
+    border-collapse: collapse !important;
   }
-  body.print-format-a4 .inv-table th,
-  body.print-format-a4 .inv-table td {
-    padding-left: 5px !important;
-    padding-right: 5px !important;
-    word-break: break-word;
-    overflow-wrap: anywhere;
+
+  body.print-format-a4 .invoice-accent-bar {
+    display: block !important;
+    height: 4px !important;
+    width: 100% !important;
+    background: #EA580C !important;
   }
-  /* hindari satu baris tabel terpotong antar halaman */
-  body.print-format-a4 .inv-table tr { break-inside: avoid; }
+
+  /* Thermal receipt: hide everything except .print-clone */
+  body.print-thermal > :not(.print-clone) {
+    display: none !important;
+  }
+
+  ::-webkit-scrollbar {
+    display: none !important;
+    width: 0 !important;
+    height: 0 !important;
+  }
+  * {
+    scrollbar-width: none !important;
+  }
 }
+
+/* Row hover state — clean SaaS data grid */
+tbody tr {
+  transition: background-color 200ms ease;
+}
+tbody tr:hover {
+  background-color: #f8fafc !important;
+}
+
+/* Hide scrollbars visually while retaining scrolling functionality */
+.scrollbar-none {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+.scrollbar-none::-webkit-scrollbar {
+  display: none;
+}
+
+/* ============================================================
+   Hapus Spinner Arrow Bawaan Browser pada Input Angka
+   ============================================================ */
+input::-webkit-outer-spin-button,
+input::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+input[type="number"] {
+  -moz-appearance: textfield;
+}
+
+/* ============================================================
+   Dual Layout Switching (Thermal vs A4)
+   ============================================================ */
+.thermal-print-layout {
+  display: block !important;
+}
+.a4-print-layout {
+  display: none !important;
+}
+body.print-format-a4 .thermal-print-layout {
+  display: none !important;
+}
+body.print-format-a4 .a4-print-layout {
+  display: block !important;
+}
+
+/* ============================================================
+   Penyesuaian Mobile: rapatkan padding sel tabel & turunkan
+   tinggi baris agar tabel lebih muat di layar kecil.
+   (mengecualikan dokumen invoice .inv-table)
+   ============================================================ */
+@media (max-width: 640px) {
+  table:not(.inv-table) th,
+  table:not(.inv-table) td {
+    padding-left: 0.625rem;
+    padding-right: 0.625rem;
+  }
+  table:not(.inv-table) th {
+    height: 2.5rem;
+  }
+  table:not(.inv-table) td {
+    height: 3rem;
+  }
+
+  /* Cegah auto-zoom iOS saat fokus & jaga keterbacaan input di HP:
+     paksa font kontrol form minimal 16px. */
+  input,
+  select,
+  textarea {
+    font-size: 16px !important;
+  }
+}
+
+

@@ -8,6 +8,7 @@ import { formatRupiah, formatTanggal } from "@/lib/utils";
 import { MessageCircle, Wallet, Printer, X, Download, Mail, Link2 } from "lucide-react";
 import { toast } from "sonner";
 import { InvoiceDocument } from "@/components/InvoiceDocument";
+import { printArea } from "@/lib/print";
 
 export type InvoiceItem = {
   kode: string;
@@ -114,11 +115,7 @@ export function InvoiceActions({ inv, canBayar }: { inv: InvoiceRow; canBayar: b
   }
 
   function cetak() {
-    document.body.classList.add("print-format-a4");
-    setTimeout(() => {
-      window.print();
-      document.body.classList.remove("print-format-a4");
-    }, 50);
+    printArea({ className: "print-format-a4" });
   }
 
   function kirimEmail() {

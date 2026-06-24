@@ -1,4 +1,5 @@
 import { create } from "zustand";
+import type { DiscType } from "@/lib/cart";
 
 export interface CartLine {
   itemId: number;
@@ -7,7 +8,8 @@ export interface CartLine {
   harga: number;
   qty: number;
   stok: number;
-  discount: number; // percentage (0-100) or nominal amount
+  discount: number; // nilai mentah: nominal Rp atau persen (0-100)
+  discountType: DiscType; // "RP" | "PERCENT"
 }
 
 export interface KasirState {
@@ -20,7 +22,9 @@ export interface KasirState {
   projectGroupNama: string;
   paymentMethod: "CASH" | "TRANSFER" | "CREDIT";
   buatInvoice: boolean;
-  
+  globalDiscount: number; // nilai mentah diskon total transaksi
+  globalDiscountType: DiscType;
+
   // Actions
   setTipe: (tipe: "RETAIL" | "PROJECT") => void;
   setNamaClient: (nama: string) => void;
@@ -30,11 +34,14 @@ export interface KasirState {
   setProjectGroupNama: (nama: string) => void;
   setPaymentMethod: (method: "CASH" | "TRANSFER" | "CREDIT") => void;
   setBuatInvoice: (val: boolean) => void;
-  
+  setGlobalDiscount: (val: number) => void;
+  setGlobalDiscountType: (type: DiscType) => void;
+
   addToCart: (item: { id: number; kode: string; nama: string; hargaJual: number; stok: number }) => void;
   removeFromCart: (itemId: number) => void;
   updateQty: (itemId: number, qty: number) => void;
   updateDiscount: (itemId: number, discount: number) => void;
+  updateDiscountType: (itemId: number, discountType: DiscType) => void;
   clearCart: () => void;
 }
 
@@ -47,7 +54,9 @@ export const useKasirStore = create<KasirState>((set) => ({
   projectNama: "",
   projectGroupNama: "",
   paymentMethod: "CASH",
-  buatInvoice: false,
+  buatInvoice: true,
+  globalDiscount: 0,
+  globalDiscountType: "RP",
 
   setTipe: (tipe) => set({ tipe }),
   setNamaClient: (namaClient) => set({ namaClient }),
@@ -57,6 +66,8 @@ export const useKasirStore = create<KasirState>((set) => ({
   setProjectGroupNama: (projectGroupNama) => set({ projectGroupNama }),
   setPaymentMethod: (paymentMethod) => set({ paymentMethod }),
   setBuatInvoice: (buatInvoice) => set({ buatInvoice }),
+  setGlobalDiscount: (globalDiscount) => set({ globalDiscount: Math.max(0, globalDiscount) }),
+  setGlobalDiscountType: (globalDiscountType) => set({ globalDiscountType }),
 
   addToCart: (item) =>
     set((state) => {
@@ -77,6 +88,7 @@ export const useKasirStore = create<KasirState>((set) => ({
             qty: 1,
             stok: item.stok,
             discount: 0,
+            discountType: "RP",
           },
         ],
       };
@@ -97,6 +109,11 @@ export const useKasirStore = create<KasirState>((set) => ({
       cart: state.cart.map((x) => (x.itemId === itemId ? { ...x, discount: Math.max(0, discount) } : x)),
     })),
 
+  updateDiscountType: (itemId, discountType) =>
+    set((state) => ({
+      cart: state.cart.map((x) => (x.itemId === itemId ? { ...x, discountType, discount: 0 } : x)),
+    })),
+
   clearCart: () =>
     set({
       cart: [],
@@ -106,6 +123,8 @@ export const useKasirStore = create<KasirState>((set) => ({
       projectNama: "",
       projectGroupNama: "",
       paymentMethod: "CASH",
-      buatInvoice: false,
+      buatInvoice: true,
+      globalDiscount: 0,
+      globalDiscountType: "RP",
     }),
 }));

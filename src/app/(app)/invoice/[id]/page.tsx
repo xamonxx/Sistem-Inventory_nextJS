@@ -11,7 +11,13 @@ export default async function InvoiceDetailPage({ params }: { params: Promise<{ 
     where: { id: Number(id) },
     include: {
       transaction: { include: { items: true } },
-      return: { include: { itemRetur: true, itemGanti: true } },
+      return: {
+        include: {
+          items: {
+            include: { item: true, itemGanti: true },
+          },
+        },
+      },
     },
   });
   if (!inv) notFound();
@@ -28,9 +34,21 @@ export default async function InvoiceDetailPage({ params }: { params: Promise<{ 
     }));
   } else if (inv.return) {
     const r = inv.return;
-    items = [{ nama: `[RETUR] ${r.itemRetur.nama}`, harga: Number(r.hargaReturSnapshot), qty: r.qtyRetur, subtotal: -(Number(r.hargaReturSnapshot) * r.qtyRetur) }];
-    if (r.itemGanti && r.qtyGanti) {
-      items.push({ nama: `[GANTI] ${r.itemGanti.nama}`, harga: Number(r.hargaGantiSnapshot), qty: r.qtyGanti, subtotal: Number(r.hargaGantiSnapshot) * r.qtyGanti });
+    for (const ri of r.items) {
+      items.push({
+        nama: `[RETUR] ${ri.namaSnapshot}`,
+        harga: Number(ri.hargaSnapshot),
+        qty: ri.qtyReturned,
+        subtotal: -(Number(ri.subtotal)),
+      });
+      if (ri.itemGanti && ri.qtyGanti) {
+        items.push({
+          nama: `[GANTI] ${ri.namaGantiSnapshot ?? ri.itemGanti.nama}`,
+          harga: Number(ri.hargaGantiSnapshot),
+          qty: ri.qtyGanti,
+          subtotal: Number(ri.subtotalGanti),
+        });
+      }
     }
     catatan = "Tagihan dari selisih tukar barang.";
   }

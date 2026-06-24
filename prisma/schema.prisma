@@ -45,10 +45,10 @@ model Item {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  ledgers          StockLedger[]
-  transactionItems TransactionItem[]
-  returnsAsRetur   Return[]          @relation("ItemRetur")
-  returnsAsGanti   Return[]          @relation("ItemGanti")
+  ledgers            StockLedger[]
+  transactionItems   TransactionItem[]
+  returnItemsAsRetur ReturnItem[]      @relation("ReturnItemRetur")
+  returnItemsAsGanti ReturnItem[]      @relation("ReturnItemGanti")
   @@index([nama])
   @@map("items")
 }
@@ -153,6 +153,7 @@ model Transaction {
   items    TransactionItem[]
   returns  Return[]
   invoices Invoice[]
+  payments Payment[]         // Komponen pembayaran split (BUG-002 fix)
   @@index([tanggal])
   @@map("transactions")
 }
@@ -167,8 +168,9 @@ model TransactionItem {
   qty           Int
   subtotal      Decimal @db.Decimal(15, 2)
 
-  transaction Transaction @relation(fields: [transactionId], references: [id], onDelete: Cascade)
-  item        Item        @relation(fields: [itemId], references: [id])
+  transaction Transaction  @relation(fields: [transactionId], references: [id], onDelete: Cascade)
+  item        Item         @relation(fields: [itemId], references: [id])
+  returnItems ReturnItem[] // Track returns linked to this transaction item
   @@index([itemId])
   @@map("transaction_items")
 }
@@ -184,20 +186,10 @@ model Return {
   noReturn      String     @unique // RET-xxxxx
   tanggal       DateTime   @default(now())
   tipe          ReturnType @default(RETUR)
-  transactionId Int?
+  transactionId Int        // WAJIB: harus terikat ke transaksi asli (SEC-007)
   alasan        String?
 
-  // barang yang dikembalikan (A)
-  itemReturId    Int
-  qtyRetur       Int
-  hargaReturSnapshot Decimal @db.Decimal(15, 2)
-
-  // barang pengganti (B) - hanya untuk TUKAR
-  itemGantiId    Int?
-  qtyGanti       Int?
-  hargaGantiSnapshot Decimal? @db.Decimal(15, 2)
-
-  // selisih = (hargaGanti*qtyGanti) - (hargaRetur*qtyRetur)
+  // selisih = sum(totalGanti) - sum(totalRetur) dari ReturnItem
   // > 0 = tagihan ke pelanggan, < 0 = refund
   selisih Decimal @default(0) @db.Decimal(15, 2)
 
@@ -206,13 +198,41 @@ model Return {
   namaWs     String?
   userId     Int?
 
-  transaction Transaction? @relation(fields: [transactionId], references: [id])
-  itemRetur   Item         @relation("ItemRetur", fields: [itemReturId], references: [id])
-  itemGanti   Item?        @relation("ItemGanti", fields: [itemGantiId], references: [id])
+  transaction Transaction  @relation(fields: [transactionId], references: [id])
   user        User?        @relation(fields: [userId], references: [id])
+  items       ReturnItem[] // Detail retur multi-item (BUG-001 fix)
   invoices    Invoice[]
   @@index([tanggal])
+  @@index([transactionId])
   @@map("returns")
+}
+
+// Detail item retur/tukar - mendukung multi-item (BUG-001 & SEC-007)
+model ReturnItem {
+  id                  Int     @id @default(autoincrement())
+  returnId            Int
+  transactionItemId   Int     // Link ke item transaksi asli untuk validasi
+  itemId              Int
+  namaSnapshot        String
+  hargaSnapshot       Decimal @db.Decimal(15, 2) // Harga dari transaksi asli (bukan harga sekarang)
+  qtyReturned         Int
+  subtotal            Decimal @db.Decimal(15, 2) // hargaSnapshot * qtyReturned
+
+  // Untuk TUKAR - barang pengganti
+  itemGantiId         Int?
+  namaGantiSnapshot   String?
+  hargaGantiSnapshot  Decimal? @db.Decimal(15, 2) // Harga saat tukar
+  qtyGanti            Int?
+  subtotalGanti       Decimal? @db.Decimal(15, 2) // hargaGantiSnapshot * qtyGanti
+
+  return              Return          @relation(fields: [returnId], references: [id], onDelete: Cascade)
+  transactionItem     TransactionItem @relation(fields: [transactionItemId], references: [id])
+  item                Item            @relation("ReturnItemRetur", fields: [itemId], references: [id])
+  itemGanti           Item?           @relation("ReturnItemGanti", fields: [itemGantiId], references: [id])
+
+  @@index([returnId])
+  @@index([transactionItemId])
+  @@map("return_items")
 }
 
 // ============ INVOICE / TAGIHAN / PIUTANG ============
@@ -245,9 +265,36 @@ model Invoice {
   project     Project?     @relation(fields: [projectId], references: [id])
   transaction Transaction? @relation(fields: [transactionId], references: [id])
   return      Return?      @relation(fields: [returnId], references: [id])
+  payments    Payment[]    // Pembayaran invoice (BUG-002 fix)
   @@index([status])
   @@index([tanggal])
   @@map("invoices")
+}
+
+// ============ PAYMENT (Split Payment Support - BUG-002) ============
+enum PaymentType {
+  CASH
+  TRANSFER
+  CREDIT
+}
+
+model Payment {
+  id              Int         @id @default(autoincrement())
+  tanggal         DateTime    @default(now())
+  tipe            PaymentType
+  jumlah          Decimal     @db.Decimal(15, 2)
+  keterangan      String?
+
+  transactionId   Int?
+  invoiceId       Int?
+
+  transaction     Transaction? @relation(fields: [transactionId], references: [id])
+  invoice         Invoice?     @relation(fields: [invoiceId], references: [id])
+
+  @@index([transactionId])
+  @@index([invoiceId])
+  @@index([tanggal])
+  @@map("payments")
 }
 
 // ============ AUDIT ============

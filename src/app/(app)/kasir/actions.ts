@@ -10,7 +10,12 @@ import { logActivity } from "@/lib/activity";
 const itemSchema = z.object({
   itemId: z.number().int(),
   qty: z.number().int().positive(),
-  discount: z.number().min(0).default(0), // discount value per line
+  discount: z.number().min(0).default(0),
+});
+
+const paymentComponentSchema = z.object({
+  tipe: z.enum(["CASH", "TRANSFER", "CREDIT"]),
+  jumlah: z.number().positive(),
 });
 
 const schema = z.object({
@@ -21,9 +26,16 @@ const schema = z.object({
   projectNama: z.string().trim().optional().default(""),
   projectGroupNama: z.string().trim().optional().default(""),
   paymentMethod: z.enum(["CASH", "TRANSFER", "CREDIT"]),
-  buatInvoice: z.boolean().optional().default(false),
+  payments: z.array(paymentComponentSchema).optional().default([]),
+  buatInvoice: z.boolean().optional().default(true),
   items: z.array(itemSchema).min(1, "Minimal 1 barang di keranjang."),
-});
+}).refine((d) => {
+  if (d.payments.length > 0) {
+    const totalPayments = d.payments.reduce((sum, p) => sum + p.jumlah, 0);
+    return totalPayments > 0;
+  }
+  return true;
+}, { message: "Total pembayaran harus lebih dari 0." });
 
 export type KasirPayload = z.infer<typeof schema>;
 
@@ -43,6 +55,17 @@ export async function createTransaction(payload: KasirPayload) {
   if (items.length !== ids.length) {
     return { error: "Ada barang yang tidak ditemukan di database." };
   }
+
+  // Determine effective payments: if split payments provided, use them; else single method
+  const effectivePayments = d.payments.length > 0
+    ? d.payments
+    : [{ tipe: d.paymentMethod, jumlah: 0 }]; // jumlah 0 means we don't know the amount yet
+
+  const totalCashTransfer = effectivePayments
+    .filter((p) => p.tipe === "CASH" || p.tipe === "TRANSFER")
+    .reduce((sum, p) => sum + p.jumlah, 0);
+
+  const hasCredit = effectivePayments.some((p) => p.tipe === "CREDIT");
 
   try {
     const result = await prisma.$transaction(async (tx) => {
@@ -131,8 +154,7 @@ export async function createTransaction(payload: KasirPayload) {
       // 5. Save Line items and deduct stock
       for (const line of d.items) {
         const it = itemMap.get(line.itemId)!;
-        
-        // Compute subtotal: (Price * Qty) - Discount
+
         const baseSubtotal = new Prisma.Decimal(it.hargaJual).mul(line.qty);
         const subtotal = baseSubtotal.sub(line.discount);
         grandTotal = grandTotal.add(subtotal);
@@ -149,7 +171,6 @@ export async function createTransaction(payload: KasirPayload) {
           },
         });
 
-        // Register Stock ledger entry
         await tx.stockLedger.create({
           data: {
             itemId: it.id,
@@ -169,14 +190,31 @@ export async function createTransaction(payload: KasirPayload) {
         data: { grandTotal },
       });
 
-      // 6. Conditional Invoice creation
+      // 6. Create Payment records for split payments (BUG-002 fix)
+      if (effectivePayments.length > 0 && effectivePayments[0].jumlah > 0) {
+        for (const payment of effectivePayments) {
+          await tx.payment.create({
+            data: {
+              tipe: payment.tipe as any,
+              jumlah: payment.jumlah,
+              transactionId: trx.id,
+              keterangan: `Pembayaran ${payment.tipe} untuk ${noTransaksi}`,
+            },
+          });
+        }
+      }
+
+      // 7. Conditional Invoice creation
       let invoiceNo: string | null = null;
-      if (d.buatInvoice || d.paymentMethod === "CREDIT") {
+      if (d.buatInvoice || hasCredit) {
         invoiceNo = await nextDocNumber(tx, "invoice");
-        await tx.invoice.create({
+        const totalDibayar = hasCredit ? new Prisma.Decimal(totalCashTransfer) : grandTotal;
+        const invoiceStatus = hasCredit && totalDibayar.lessThan(grandTotal) ? "PENDING" : "LUNAS";
+
+        const invoice = await tx.invoice.create({
           data: {
             noInvoice: invoiceNo,
-            status: d.paymentMethod === "CREDIT" ? "PENDING" : "LUNAS",
+            status: invoiceStatus,
             transactionId: trx.id,
             clientId,
             projectId,
@@ -184,9 +222,17 @@ export async function createTransaction(payload: KasirPayload) {
             alamat: d.alamat || null,
             namaWs: d.namaWs || null,
             total: grandTotal,
-            totalDibayar: d.paymentMethod === "CREDIT" ? new Prisma.Decimal(0) : grandTotal,
+            totalDibayar,
           },
         });
+
+        // Link payments to invoice
+        if (effectivePayments.length > 0 && effectivePayments[0].jumlah > 0) {
+          await tx.payment.updateMany({
+            where: { transactionId: trx.id, invoiceId: null },
+            data: { invoiceId: invoice.id },
+          });
+        }
       }
 
       return { id: trx.id, noTransaksi, invoiceNo, grandTotal: Number(grandTotal) };
@@ -197,7 +243,7 @@ export async function createTransaction(payload: KasirPayload) {
       aksi: "CREATE_TRANSAKSI",
       entitas: "Transaction",
       entitasId: result.id,
-      detail: { noTransaksi: result.noTransaksi, total: result.grandTotal, tipe: d.tipe },
+      detail: { noTransaksi: result.noTransaksi, total: result.grandTotal, tipe: d.tipe, paymentCount: effectivePayments.length },
     });
 
     return { ok: true, ...result };

@@ -7,6 +7,16 @@ export default async function ReturPage() {
   const items = await prisma.item.findMany({ where: { aktif: true }, orderBy: { nama: "asc" } });
   const data = items.map((i) => ({ id: i.id, kode: i.kode, nama: i.nama, hargaJual: Number(i.hargaJual) }));
 
+  const transactions = await prisma.transaction.findMany({
+    select: {
+      noTransaksi: true,
+      namaClient: true,
+    },
+    orderBy: {
+      tanggal: "desc",
+    },
+  });
+
   return (
     <div className="space-y-6">
       <div>
@@ -15,7 +25,7 @@ export default async function ReturPage() {
           Barang A dikembalikan (masuk stok), opsional ditukar Barang B (keluar stok). Selisih jadi tagihan/refund.
         </p>
       </div>
-      <ReturClient items={data} />
+      <ReturClient items={data} transactions={transactions} />
     </div>
   );
 }

@@ -3,7 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { requireUser } from "@/lib/auth";
 import { getStokAkhirMap } from "@/lib/stock";
 import { formatRupiah, formatTanggal } from "@/lib/utils";
-import { Card, Badge, Button } from "@/components/ui";
+import { Card, Badge } from "@/components/ui";
 import { DashboardCharts } from "@/components/DashboardCharts";
 import {
   TrendingUp,
@@ -12,12 +12,14 @@ import {
   Wallet,
   Building2,
   Users,
-  ArrowRight,
   PlusCircle,
   FileText,
   RotateCcw,
   Plus,
   Info,
+  Clock,
+  Layers,
+  CircleAlert,
 } from "lucide-react";
 
 function startOfDay(d: Date) {
@@ -33,7 +35,7 @@ function addDays(d: Date, days: number) {
 export default async function DashboardPage({
   searchParams,
 }: {
-  searchParams: Promise<{ from?: string; to?: string }>;
+  searchParams: Promise<{ from?: string; to?: string; mode?: string }>;
 }) {
   const user = await requireUser();
   const params = await searchParams;
@@ -42,9 +44,10 @@ export default async function DashboardPage({
   const today = startOfDay(now);
   const tomorrow = new Date(today.getTime() + 86400000);
 
-  // Parse filters
+  // Parse filters & mode
   const dateFrom = params.from ? new Date(params.from) : startOfDay(new Date(now.getTime() - 29 * 86400000));
   const dateTo = params.to ? new Date(params.to + "T23:59:59") : new Date();
+  const isOwnerMode = params.mode === "owner";
 
   const isGudang = user.role === "ADMIN_GUDANG";
 
@@ -86,11 +89,11 @@ export default async function DashboardPage({
     0
   );
 
-  // 5. Active Projects & Active Clients Count
+  // 5. Active Projects & Clients
   const activeProjectsCount = await prisma.project.count();
   const activeClientsCount = await prisma.client.count();
 
-  // 6. Revenue & Margin Trend for charts (Grouped by date)
+  // 6. Revenue & Margin Trend
   const chartDays = 30;
   const trendData: { tanggal: string; omset: number; margin: number }[] = [];
   for (let i = chartDays - 1; i >= 0; i--) {
@@ -118,7 +121,7 @@ export default async function DashboardPage({
     });
   }
 
-  // 7. Top Selling Items (by quantity sold in date range)
+  // 7. Top Selling Items
   const topSellingAgg = await prisma.transactionItem.groupBy({
     by: ["itemId", "namaSnapshot"],
     where: { transaction: { tanggal: { gte: dateFrom, lte: dateTo } } },
@@ -153,7 +156,7 @@ export default async function DashboardPage({
     total: Number(x._sum.grandTotal ?? 0),
   }));
 
-  // 9. Inventory Monitoring
+  // 9. Inventory calculations
   const items = await prisma.item.findMany({ where: { aktif: true } });
   const stokMap = await getStokAkhirMap();
   const allStok = items.map((it) => ({
@@ -161,153 +164,154 @@ export default async function DashboardPage({
     stok: stokMap.get(it.id) ?? it.stokAwal,
   }));
 
-  const lowStockItems = allStok.filter((it) => it.stok >= 0 && it.stok < it.minStok).sort((a, b) => a.stok - b.stok).slice(0, 5);
-  const negativeStockItems = allStok.filter((it) => it.stok < 0).sort((a, b) => a.stok - b.stok).slice(0, 5);
+  const lowStockItems = allStok.filter((it) => it.stok >= 0 && it.stok < it.minStok).sort((a, b) => a.stok - b.stok);
+  const negativeStockItems = allStok.filter((it) => it.stok < 0).sort((a, b) => a.stok - b.stok);
 
-  // Fast & Slow moving products (Fast = high quantity sold, Slow = active but zero or low sold quantity)
-  const productMovementMap = new Map<number, number>();
-  const allSalesVolume = await prisma.transactionItem.groupBy({
-    by: ["itemId"],
-    _sum: { qty: true },
+  const totalAssetValue = allStok.reduce((acc, it) => acc + Number(it.hargaBeli) * it.stok, 0);
+
+  // Operational metrics
+  const transactionsTodayCount = await prisma.transaction.count({
+    where: { tanggal: { gte: today, lt: tomorrow } }
   });
-  for (const row of allSalesVolume) {
-    productMovementMap.set(row.itemId, row._sum.qty ?? 0);
-  }
+  const logsTodayCount = await prisma.activityLog.count({
+    where: { createdAt: { gte: today, lt: tomorrow } }
+  });
 
-  const itemsWithSales = allStok.map((it) => ({
-    ...it,
-    volume: productMovementMap.get(it.id) ?? 0,
-  }));
-
-  const fastMoving = [...itemsWithSales].sort((a, b) => b.volume - a.volume).slice(0, 5);
-  const slowMoving = [...itemsWithSales].filter(it => it.volume === 0).slice(0, 5);
-
-  // 10. Recent Activity list (Union actions from ledger and returns)
-  const recentSales = await prisma.transaction.findMany({
-    orderBy: { tanggal: "desc" },
+  // Recent timeline events (Logs)
+  const recentLogs = await prisma.activityLog.findMany({
+    orderBy: { createdAt: "desc" },
     take: 5,
-    include: { user: true },
+    include: { user: true }
   });
-  const recentAdjustments = await prisma.stockLedger.findMany({
-    where: { tipe: "KOREKSI" },
-    orderBy: { tanggal: "desc" },
-    take: 5,
-    include: { item: true, user: true },
-  });
-  const recentReturns = await prisma.return.findMany({
-    orderBy: { tanggal: "desc" },
-    take: 5,
-    include: { user: true },
-  });
+
+  // Build KPIs based on Selected Mode
+  const kpiCards = isOwnerMode
+    ? [
+        { label: "Omset Bulan Ini", value: formatRupiah(omsetMonth), desc: "Penjualan kotor bulan berjalan", icon: TrendingUp, tone: "success" },
+        { label: "Margin Kotor", value: isGudang ? formatRupiah(marginTotal) : "🔒 Terbatas", desc: "Berdasarkan filter tanggal", icon: Layers, tone: "blue" },
+        { label: "Outstanding Piutang", value: formatRupiah(outstandingReceivables), desc: `${unpaidInvoices.length} invoice aktif`, icon: Wallet, tone: "amber" },
+        { label: "Nilai Aset Gudang", value: isGudang ? formatRupiah(totalAssetValue) : "🔒 Terbatas", desc: "Total nilai modal persediaan", icon: Package, tone: "slate" },
+        { label: "Proyek Konstruksi", value: String(activeProjectsCount), desc: "Proyek aktif terdaftar", icon: Building2, tone: "blue" },
+        { label: "Pelanggan Terdaftar", value: String(activeClientsCount), desc: "Customer di dalam CRM", icon: Users, tone: "primary" },
+      ]
+    : [
+        { label: "Omset Hari Ini", value: formatRupiah(omsetToday), desc: "Total penjualan hari ini", icon: TrendingUp, tone: "success" },
+        { label: "Transaksi Hari Ini", value: `${transactionsTodayCount} trx`, desc: "Invoice kasir terbuat", icon: FileText, tone: "blue" },
+        { label: "Stok Kritis (Safety)", value: `${lowStockItems.length} barang`, desc: "Stok di bawah batas minimum", icon: AlertTriangle, tone: "amber" },
+        { label: "Stok Minus Gudang", value: `${negativeStockItems.length} barang`, desc: "Koreksi fisik dibutuhkan", icon: CircleAlert, tone: "red" },
+        { label: "Operator Aktif", value: `${await prisma.user.count({ where: { aktif: true } })} user`, desc: "Total staf terdaftar", icon: Users, tone: "primary" },
+        { label: "Aktivitas Hari Ini", value: `${logsTodayCount} logs`, desc: "Audit trail log operasional", icon: Clock, tone: "slate" },
+      ];
+
+  const toneColors: Record<string, string> = {
+    success: "#10b981",
+    blue: "#3b82f6",
+    amber: "#f59e0b",
+    red: "#ef4444",
+    primary: "#d35a1f",
+    slate: "#64748b",
+  };
 
   return (
-    <div className="space-y-6">
-      {/* Sticky Header */}
-      <header className="anim-rise sticky top-0 z-20 mb-6 flex flex-wrap items-center justify-between gap-4 border-b border-line-strong bg-[var(--paper)]/90 py-4 backdrop-blur-md">
+    <div className="space-y-8">
+      {/* Dashboard Top Header */}
+      <header className="anim-rise flex flex-col gap-5 sm:flex-row sm:items-center sm:justify-between border-b border-border pb-6">
         <div>
-          <p className="u-label flex items-center gap-2 text-[var(--primary)]">
-            <span className="inline-block h-[2px] w-6 bg-[var(--primary)]" /> Ruang Kendali
+          <p className="u-label flex items-center gap-2 text-[var(--primary)] font-bold">
+            <span className="inline-block h-[2px] w-6 bg-[var(--primary)]" />
+            Sistem ERP Putra Corp
           </p>
-          <h1 className="mt-1 text-[1.7rem] font-extrabold leading-none">Executive Dashboard</h1>
-          <p className="mt-1 text-sm text-muted">
-            Selamat datang kembali, <span className="font-semibold text-foreground">{user.nama}</span>.
+          <h1 className="mt-1 text-2xl font-extrabold tracking-tight text-slate-900 md:text-3xl">
+            {isOwnerMode ? "Owner Business Dashboard" : "Operational Workspace"}
+          </h1>
+          <p className="mt-1.5 text-xs font-semibold text-slate-500">
+            Selamat datang kembali, <span className="text-slate-800 font-bold">{user.nama}</span>.
           </p>
         </div>
-        <div className="flex items-center gap-2">
-          <form className="flex items-center gap-2">
+
+        {/* Toggle Mode & Filters */}
+        <div className="flex flex-wrap items-center gap-3 w-full sm:w-auto">
+          {/* Mode Switcher capsule */}
+          <div className="flex rounded-xl bg-slate-100 p-1 border border-border w-full sm:w-auto">
+            <Link
+              href={`/?mode=operational${params.from ? `&from=${params.from}` : ""}${params.to ? `&to=${params.to}` : ""}`}
+              className={`flex-1 sm:flex-none rounded-lg px-4 py-2 text-xs font-bold text-center transition-all duration-150 ${
+                !isOwnerMode
+                  ? "bg-white text-slate-900 shadow-xs"
+                  : "text-slate-500 hover:text-slate-950"
+              }`}
+            >
+              Operasional
+            </Link>
+            <Link
+              href={`/?mode=owner${params.from ? `&from=${params.from}` : ""}${params.to ? `&to=${params.to}` : ""}`}
+              className={`flex-1 sm:flex-none rounded-lg px-4 py-2 text-xs font-bold text-center transition-all duration-150 ${
+                isOwnerMode
+                  ? "bg-white text-slate-900 shadow-xs"
+                  : "text-slate-500 hover:text-slate-950"
+              }`}
+            >
+              Owner
+            </Link>
+          </div>
+
+          <form className="flex flex-wrap items-center gap-2 w-full sm:w-auto">
             <input
               type="date"
               name="from"
               defaultValue={params.from ?? ""}
-              className="h-9 rounded-[4px] border border-line-strong bg-white px-2.5 text-sm tnum"
+              className="flex-1 sm:flex-none h-10 min-w-0 rounded-xl border border-border bg-white px-3 text-xs font-semibold text-slate-700 shadow-xs outline-none focus:border-[var(--primary)]"
             />
-            <span className="text-xs text-muted">s/d</span>
+            <span className="text-xs text-slate-400 font-bold">s/d</span>
             <input
               type="date"
               name="to"
               defaultValue={params.to ?? ""}
-              className="h-9 rounded-[4px] border border-line-strong bg-white px-2.5 text-sm tnum"
+              className="flex-1 sm:flex-none h-10 min-w-0 rounded-xl border border-border bg-white px-3 text-xs font-semibold text-slate-700 shadow-xs outline-none focus:border-[var(--primary)]"
             />
-            <button className="h-9 rounded-[4px] bg-[var(--primary)] px-3.5 text-xs font-bold uppercase tracking-wide text-white hover:bg-[var(--primary-strong)]">
+            {params.mode && <input type="hidden" name="mode" value={params.mode} />}
+            <button className="flex-1 sm:flex-none h-10 rounded-xl bg-[var(--primary)] px-4 text-xs font-bold text-white shadow-md hover:bg-[var(--primary-strong)] cursor-pointer transition">
               Saring
             </button>
             {params.from || params.to ? (
-              <Link href="/" className="flex h-9 items-center justify-center rounded-[4px] border border-line-strong bg-white px-3 text-xs font-medium">
+              <Link href={isOwnerMode ? "/?mode=owner" : "/"} className="flex-1 sm:flex-none flex h-10 items-center justify-center rounded-xl border border-border bg-white px-3 text-xs font-bold text-slate-650 hover:bg-slate-50 shadow-xs">
                 Reset
               </Link>
             ) : null}
           </form>
-          <a
-            href={`/api/export?type=stok`}
-            className="hidden h-9 items-center justify-center gap-1.5 rounded-[4px] border border-line-strong bg-white px-3 text-xs font-semibold text-foreground hover:bg-[var(--paper-2)] sm:inline-flex"
-          >
-            Ekspor Stok
-          </a>
         </div>
       </header>
 
-      {/* KPI Cards */}
-      <section className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-6">
-        {[
-          { label: "Omset Hari Ini", value: formatRupiah(omsetToday), foot: "Harian", icon: TrendingUp, accent: "var(--success)", restricted: false },
-          { label: "Omset Bulan Ini", value: formatRupiah(omsetMonth), foot: "Akumulasi bulanan", icon: Package, accent: "var(--steel)", restricted: false },
-          { label: "Margin Kotor", value: formatRupiah(marginTotal), foot: "Berdasarkan filter", icon: TrendingUp, accent: "var(--success)", restricted: !isGudang },
-          { label: "Piutang Berjalan", value: formatRupiah(outstandingReceivables), foot: `${unpaidInvoices.length} invoice aktif`, icon: Wallet, accent: "var(--warning)", restricted: false },
-          { label: "Total Proyek", value: String(activeProjectsCount), foot: "Proyek konstruksi", icon: Building2, accent: "var(--steel)", restricted: false },
-          { label: "Total Pelanggan", value: String(activeClientsCount), foot: "Client terdaftar", icon: Users, accent: "var(--primary)", restricted: false },
-        ].map((kpi, i) => {
+      {/* KPI Card grid */}
+      <section className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
+        {kpiCards.map((kpi, i) => {
           const Icon = kpi.icon;
           return (
             <div
               key={kpi.label}
-              className="tick-card anim-rise relative flex flex-col justify-between overflow-hidden rounded-[6px] border border-border bg-card p-4 shadow-[var(--shadow-card)]"
-              style={{ animationDelay: `${i * 60}ms` }}
+              className="tick-card anim-rise relative flex flex-col justify-between overflow-hidden rounded-[18px] border border-border bg-white p-4 sm:p-5 shadow-[var(--shadow-card)]"
+              style={{ animationDelay: `${i * 40}ms` }}
             >
-              <span className="absolute inset-x-0 top-0 h-[3px]" style={{ background: kpi.accent }} />
-              <div className="flex items-start justify-between">
-                <p className="u-label pr-2">{kpi.label}</p>
-                <Icon size={15} style={{ color: kpi.accent }} strokeWidth={2.2} />
+              <span className="absolute inset-x-0 top-0 h-[4px]" style={{ background: toneColors[kpi.tone] }} />
+              <div className="flex items-start justify-between gap-3">
+                <p className="text-[9px] sm:text-[10px] font-bold uppercase tracking-wider text-slate-450 leading-tight">{kpi.label}</p>
+                <div className="flex h-7 w-7 sm:h-8 sm:w-8 shrink-0 items-center justify-center rounded-lg border border-slate-100 bg-slate-50/50">
+                  <Icon size={13} style={{ color: toneColors[kpi.tone] }} strokeWidth={2.5} />
+                </div>
               </div>
-              {kpi.restricted ? (
-                <p className="mt-3 flex items-center gap-1 text-xs font-semibold text-muted">
-                  <Info size={13} /> 🔒 Restricted
-                </p>
-              ) : (
-                <p className="mt-3 font-display text-[1.35rem] font-extrabold leading-none tracking-tight tnum">
+              <div className="mt-3 min-w-0">
+                <h3 className="font-display font-extrabold text-slate-900 leading-none tracking-tight tnum text-xs sm:text-sm">
                   {kpi.value}
-                </p>
-              )}
-              <p className="mt-2 text-[0.7rem] text-muted">{kpi.foot}</p>
+                </h3>
+                <p className="mt-1 text-[9px] sm:text-[10px] font-semibold text-slate-450 leading-tight">{kpi.desc}</p>
+              </div>
             </div>
           );
         })}
       </section>
 
-      {/* Quick Actions Panel */}
-      <section className="rounded-xl border border-border bg-card p-5">
-        <h2 className="mb-3 text-sm font-semibold text-foreground">Aksi Cepat Operational</h2>
-        <div className="flex flex-wrap gap-3">
-          {user.role === "ADMIN_KASIR" && (
-            <Link href="/kasir" className="inline-flex h-10 items-center justify-center gap-1.5 rounded-lg bg-primary px-4 text-xs font-medium text-white hover:opacity-90">
-              <PlusCircle size={15} /> Transaksi POS Baru
-            </Link>
-          )}
-          {user.role === "ADMIN_GUDANG" && (
-            <Link href="/stok" className="inline-flex h-10 items-center justify-center gap-1.5 rounded-lg bg-emerald-600 px-4 text-xs font-medium text-white hover:bg-emerald-700">
-              <Plus size={15} /> Input Barang Masuk
-            </Link>
-          )}
-          <Link href="/retur" className="inline-flex h-10 items-center justify-center gap-1.5 rounded-lg border border-border bg-white px-4 text-xs font-medium text-foreground hover:bg-slate-50">
-            <RotateCcw size={15} /> Retur / Tukar Barang
-          </Link>
-          <Link href="/invoice" className="inline-flex h-10 items-center justify-center gap-1.5 rounded-lg border border-border bg-white px-4 text-xs font-medium text-foreground hover:bg-slate-50">
-            <FileText size={15} /> Tagihan & Receivables
-          </Link>
-        </div>
-      </section>
-
-      {/* Graphical Charts */}
-      <section>
+      {/* Charts Section */}
+      <section className="anim-rise">
         <DashboardCharts
           revenueTrend={trendData}
           topItems={topItems}
@@ -315,162 +319,112 @@ export default async function DashboardPage({
         />
       </section>
 
-      {/* Grid of Monitors */}
-      <section className="grid grid-cols-1 gap-6 lg:grid-cols-3">
-        {/* Inventory Monitor */}
+      {/* Spacious Double Column Layout: Activity & Alerts */}
+      <section className="grid grid-cols-1 gap-6 lg:grid-cols-3 anim-rise">
+        {/* Activity Timeline (Linear-style list) */}
+        <Card className="lg:col-span-2 space-y-5">
+          <div>
+            <h3 className="font-display text-sm font-bold text-slate-900 flex items-center gap-2">
+              <Clock size={16} className="text-[var(--primary)]" /> Riwayat Audit Operasional
+            </h3>
+            <p className="text-xs text-slate-400 mt-1">Log audit aktivitas staf kasir dan gudang terbaru.</p>
+          </div>
+
+          <div className="relative border-l border-slate-100 pl-4 ml-2 space-y-5">
+            {recentLogs.map((log) => (
+              <div key={log.id} className="relative text-xs">
+                {/* Bullet point indicator */}
+                <span className="absolute -left-[21px] top-1 flex h-2 w-2 rounded-full bg-slate-350 ring-4 ring-white" />
+                <div className="flex items-start justify-between gap-4">
+                  <div>
+                    <p className="font-semibold text-slate-800">
+                      {log.user?.nama ?? "System"} melakukan <span className="font-bold text-slate-950">{log.aksi}</span>
+                    </p>
+                    <p className="text-[10px] text-slate-450 mt-0.5">Target: {log.entitas} (ID: {log.entitasId ?? "—"})</p>
+                  </div>
+                  <span className="text-[10px] font-bold text-slate-400 font-mono">
+                    {new Date(log.createdAt).toLocaleTimeString("id-ID", { hour: "2-digit", minute: "2-digit" })}
+                  </span>
+                </div>
+              </div>
+            ))}
+
+            {recentLogs.length === 0 && (
+              <p className="text-xs text-slate-450 text-center py-4">Belum ada catatan aktivitas.</p>
+            )}
+          </div>
+        </Card>
+
+        {/* Alert Center Dashboard */}
         <Card className="space-y-4">
           <div>
-            <h2 className="font-semibold text-foreground flex items-center gap-1.5">
-              <Package size={18} className="text-primary" /> Pengawasan Stok Gudang
-            </h2>
-            <p className="text-xs text-muted">Deteksi kritis ketersediaan material plywood.</p>
+            <h3 className="font-display text-sm font-bold text-slate-900 flex items-center gap-2">
+              <AlertTriangle size={16} className="text-amber-500" /> Alert Center
+            </h3>
+            <p className="text-xs text-slate-400 mt-1">Peringatan stok gudang & piutang tempo kritis.</p>
           </div>
 
           <div className="space-y-3">
+            {/* Stok Minus alert card */}
             {negativeStockItems.length > 0 && (
-              <div>
-                <p className="text-xs font-bold text-red-600 mb-1">⚠️ Stok Minus</p>
+              <div className="rounded-xl border border-red-100 bg-red-50/50 p-3.5 text-xs text-red-800">
+                <p className="font-bold flex items-center gap-1.5 mb-1.5">
+                  <CircleAlert size={14} className="text-red-500" /> Stok Minus Gudang ({negativeStockItems.length})
+                </p>
                 <ul className="space-y-1">
-                  {negativeStockItems.map((it) => (
-                    <li key={it.id} className="flex justify-between items-center text-xs">
+                  {negativeStockItems.slice(0, 3).map((it) => (
+                    <li key={it.id} className="flex justify-between items-center text-[10px] font-semibold text-red-750">
                       <span className="truncate pr-2">{it.nama}</span>
-                      <Badge tone="red">{it.stok} unit</Badge>
+                      <span className="font-mono bg-red-100 px-1.5 py-0.5 rounded text-red-700">{it.stok} unit</span>
                     </li>
                   ))}
                 </ul>
               </div>
             )}
 
-            <div>
-              <p className="text-xs font-bold text-amber-600 mb-1">⚠️ Stok Menipis</p>
-              {lowStockItems.length === 0 ? (
-                <p className="text-xs text-muted">Semua stok di atas minimum aman.</p>
-              ) : (
+            {/* Stok Menipis alert card */}
+            {lowStockItems.length > 0 && (
+              <div className="rounded-xl border border-amber-100 bg-amber-50/50 p-3.5 text-xs text-amber-800">
+                <p className="font-bold flex items-center gap-1.5 mb-1.5">
+                  <AlertTriangle size={14} className="text-amber-500" /> Stok Kritis ({lowStockItems.length})
+                </p>
                 <ul className="space-y-1">
-                  {lowStockItems.map((it) => (
-                    <li key={it.id} className="flex justify-between items-center text-xs">
+                  {lowStockItems.slice(0, 3).map((it) => (
+                    <li key={it.id} className="flex justify-between items-center text-[10px] font-semibold text-amber-755">
                       <span className="truncate pr-2">{it.nama}</span>
-                      <Badge tone="amber">tersisa {it.stok} (min {it.minStok})</Badge>
+                      <span>tersisa {it.stok} (min {it.minStok})</span>
                     </li>
                   ))}
                 </ul>
-              )}
-            </div>
+              </div>
+            )}
 
-            <div className="pt-2 border-t border-border">
-              <p className="text-xs font-bold text-slate-700 mb-1">🔥 Fast Moving Products</p>
-              <ul className="space-y-1">
-                {fastMoving.map((it) => (
-                  <li key={it.id} className="flex justify-between items-center text-xs">
-                    <span className="truncate pr-2">{it.nama}</span>
-                    <span className="text-muted font-medium">{it.volume} terjual</span>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          </div>
-        </Card>
-
-        {/* Receivables Monitor */}
-        <Card className="space-y-4">
-          <div>
-            <h2 className="font-semibold text-foreground flex items-center gap-1.5">
-              <Wallet size={18} className="text-amber-600" /> Pengawasan Piutang
-            </h2>
-            <p className="text-xs text-muted">Invoice jatuh tempo & outstanding balance.</p>
-          </div>
-
-          {unpaidInvoices.length === 0 ? (
-            <p className="text-xs text-muted py-4 text-center">Seluruh invoice telah lunas dibayar. 👍</p>
-          ) : (
-            <div className="space-y-3">
-              <ul className="divide-y divide-border">
-                {unpaidInvoices.slice(0, 5).map((inv) => {
-                  const sisa = Number(inv.total) - Number(inv.totalDibayar);
-                  // Virtual due date: invoice date + 30 days
-                  const dueDate = addDays(inv.tanggal, 30);
-                  const isOverdue = dueDate.getTime() < now.getTime();
-
-                  return (
-                    <li key={inv.noInvoice} className="py-2 flex justify-between items-start text-xs">
-                      <div>
-                        <Link href={`/invoice`} className="font-mono text-primary font-medium hover:underline">
-                          {inv.noInvoice}
-                        </Link>
-                        <p className="text-slate-500 font-medium text-[10px]">{inv.namaClient ?? "Retail"}</p>
-                      </div>
-                      <div className="text-right">
-                        <p className="font-semibold">{formatRupiah(sisa)}</p>
-                        <p className={`text-[10px] ${isOverdue ? "text-red-500 font-bold" : "text-muted"}`}>
-                          Tempo: {formatTanggal(dueDate.toISOString())}
+            {/* Overdue receivables warning card */}
+            {unpaidInvoices.length > 0 && (
+              <div className="rounded-xl border border-slate-100 bg-slate-50/55 p-3.5 text-xs text-slate-700">
+                <p className="font-bold text-slate-900 flex items-center gap-1.5 mb-1.5">
+                  <FileText size={14} className="text-slate-500" /> Piutang Jatuh Tempo
+                </p>
+                <ul className="divide-y divide-slate-100">
+                  {unpaidInvoices.slice(0, 2).map((inv) => {
+                    const sisa = Number(inv.total) - Number(inv.totalDibayar);
+                    const dueDate = addDays(inv.tanggal, 30);
+                    const isOverdue = dueDate.getTime() < now.getTime();
+                    if (!isOverdue) return null;
+                    return (
+                      <li key={inv.noInvoice} className="py-2 flex justify-between items-start text-[10px]">
+                        <div>
+                          <p className="font-bold text-slate-800">{inv.noInvoice}</p>
+                          <p className="text-slate-400 font-semibold">{inv.namaClient ?? "Pelanggan"}</p>
+                        </div>
+                        <p className="font-bold font-mono text-red-500 text-right">
+                          {formatRupiah(sisa)}
                         </p>
-                      </div>
-                    </li>
-                  );
-                })}
-              </ul>
-              <Link href="/invoice" className="flex items-center justify-center gap-1 text-xs text-primary hover:underline pt-2">
-                Lihat Semua Tagihan <ArrowRight size={13} />
-              </Link>
-            </div>
-          )}
-        </Card>
-
-        {/* Recent Activity Log */}
-        <Card className="space-y-4">
-          <div>
-            <h2 className="font-semibold text-foreground flex items-center gap-1.5">
-              <Info size={18} className="text-indigo-600" /> Log Aktivitas Terkini
-            </h2>
-            <p className="text-xs text-muted">Riwayat transaksi operasional terbaru.</p>
-          </div>
-
-          <div className="space-y-3 max-h-72 overflow-y-auto">
-            {recentSales.map((sale) => (
-              <div key={sale.id} className="text-xs flex flex-col border-b border-dashed border-border pb-2 last:border-0 last:pb-0">
-                <div className="flex justify-between font-medium">
-                  <span className="text-slate-800">Sales POS {sale.noTransaksi}</span>
-                  <span className="text-indigo-600">{formatRupiah(sale.grandTotal)}</span>
-                </div>
-                <div className="flex justify-between text-[10px] text-muted mt-0.5">
-                  <span>Oleh: {sale.user?.nama ?? "-"}</span>
-                  <span>{formatTanggal(sale.tanggal)}</span>
-                </div>
+                      </li>
+                    );
+                  })}
+                </ul>
               </div>
-            ))}
-
-            {recentReturns.map((ret) => (
-              <div key={ret.id} className="text-xs flex flex-col border-b border-dashed border-border pb-2 last:border-0 last:pb-0">
-                <div className="flex justify-between font-medium">
-                  <span className="text-amber-700">Retur {ret.noReturn}</span>
-                  <span className={Number(ret.selisih) > 0 ? "text-red-600" : "text-emerald-600"}>
-                    {formatRupiah(Number(ret.selisih))}
-                  </span>
-                </div>
-                <div className="flex justify-between text-[10px] text-muted mt-0.5">
-                  <span>Alasan: {ret.alasan ?? "-"}</span>
-                  <span>{formatTanggal(ret.tanggal)}</span>
-                </div>
-              </div>
-            ))}
-
-            {recentAdjustments.map((adj) => (
-              <div key={adj.id} className="text-xs flex flex-col border-b border-dashed border-border pb-2 last:border-0 last:pb-0">
-                <div className="flex justify-between font-medium">
-                  <span className="text-slate-700">Koreksi: {adj.item.nama}</span>
-                  <span className={adj.qty > 0 ? "text-emerald-600" : "text-red-600"}>
-                    {adj.qty > 0 ? `+${adj.qty}` : adj.qty}
-                  </span>
-                </div>
-                <div className="flex justify-between text-[10px] text-muted mt-0.5">
-                  <span>Oleh: {adj.user?.nama ?? "-"}</span>
-                  <span>{formatTanggal(adj.tanggal)}</span>
-                </div>
-              </div>
-            ))}
-
-            {recentSales.length === 0 && recentAdjustments.length === 0 && recentReturns.length === 0 && (
-              <p className="text-xs text-muted text-center py-4">Belum ada aktivitas tercatat.</p>
             )}
           </div>
         </Card>
