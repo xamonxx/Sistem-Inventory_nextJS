@@ -21,70 +21,53 @@ export async function fetchSystemNotifications(): Promise<SystemNotification[]> 
     // 1. Get stock alerts
     const items = await prisma.item.findMany({ where: { aktif: true } });
     const stokMap = await getStokAkhirMap(items.map(i => i.id));
-    
     let lowStockCount = 0;
     let negativeStockCount = 0;
+    const lowStockItemsList: string[] = [];
+    const negativeStockItemsList: string[] = [];
 
     items.forEach(it => {
       const stok = stokMap.get(it.id) ?? it.stokAwal;
       if (stok < 0) {
         negativeStockCount++;
+        negativeStockItemsList.push(`${it.nama} (stok: ${stok} unit)`);
       } else if (stok < it.minStok) {
         lowStockCount++;
+        lowStockItemsList.push(`${it.nama} (sisa: ${stok} unit, min: ${it.minStok})`);
       }
     });
 
     if (negativeStockCount > 0) {
+      const itemsText = negativeStockItemsList.slice(0, 3).join(", ");
+      const moreText = negativeStockCount > 3 ? ` dan ${negativeStockCount - 3} barang lainnya` : "";
+      const textHash = (itemsText + moreText).length;
       notifications.push({
-        id: "neg-stock",
+        id: `neg-stock-${textHash}-${negativeStockCount}`,
         type: "negative_stock",
         title: "Kritis: Stok Material Minus",
-        description: `Ada ${negativeStockCount} barang dengan stok fisik di bawah 0 unit. Segera periksa mutasi keluar gudang.`,
+        description: `Stok minus terdeteksi pada barang: ${itemsText}${moreText}. Harap segera periksa mutasi keluar gudang dan lakukan koreksi fisik penyesuaian stok.`,
         time: "Real-time",
         severity: "danger",
-        link: "/barang",
+        link: "/stok",
       });
     }
 
     if (lowStockCount > 0) {
+      const itemsText = lowStockItemsList.slice(0, 3).join(", ");
+      const moreText = lowStockCount > 3 ? ` dan ${lowStockCount - 3} barang lainnya` : "";
+      const textHash = (itemsText + moreText).length;
       notifications.push({
-        id: "low-stock",
+        id: `low-stock-${textHash}-${lowStockCount}`,
         type: "low_stock",
         title: "Perhatian: Stok Menipis",
-        description: `Ada ${lowStockCount} barang yang menyentuh batas minimum keamanan stok. Direkomendasikan melakukan pemesanan ulang.`,
+        description: `Stok di bawah batas aman pada barang: ${itemsText}${moreText}. Harap segera lakukan pemesanan ulang (restock) ke supplier atau lakukan penyesuaian stok.`,
         time: "Real-time",
         severity: "warning",
-        link: "/barang",
+        link: "/stok",
       });
     }
 
-    // 2. Get overdue invoices
-    const unpaidInvoices = await prisma.invoice.findMany({
-      where: { status: { not: "LUNAS" } },
-      select: { tanggal: true, noInvoice: true }
-    });
 
-    let overdueCount = 0;
-    unpaidInvoices.forEach(inv => {
-      // due date is 30 days from date
-      const dueDate = new Date(inv.tanggal);
-      dueDate.setDate(dueDate.getDate() + 30);
-      if (dueDate.getTime() < now.getTime()) {
-        overdueCount++;
-      }
-    });
-
-    if (overdueCount > 0) {
-      notifications.push({
-        id: "overdue-inv",
-        type: "overdue_invoice",
-        title: "Piutang Jatuh Tempo (Overdue)",
-        description: `Terdapat ${overdueCount} tagihan invoice yang telah melewati batas tempo pembayaran 30 hari.`,
-        time: "Harian",
-        severity: "danger",
-        link: "/invoice",
-      });
-    }
 
     // 3. Get recent user activities
     const logs = await prisma.activityLog.findMany({

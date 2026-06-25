@@ -47,7 +47,7 @@ export default async function DashboardPage({
   // Parse filters & mode
   const dateFrom = params.from ? new Date(params.from) : startOfDay(new Date(now.getTime() - 29 * 86400000));
   const dateTo = params.to ? new Date(params.to + "T23:59:59") : new Date();
-  const isOwnerMode = params.mode === "owner";
+  const isOwnerMode = user.role !== "ADMIN_KASIR" && params.mode === "owner";
 
   const isGudang = user.role === "ADMIN_GUDANG";
 
@@ -199,8 +199,12 @@ export default async function DashboardPage({
         { label: "Transaksi Hari Ini", value: `${transactionsTodayCount} trx`, desc: "Invoice kasir terbuat", icon: FileText, tone: "blue" },
         { label: "Stok Kritis (Safety)", value: `${lowStockItems.length} barang`, desc: "Stok di bawah batas minimum", icon: AlertTriangle, tone: "amber" },
         { label: "Stok Minus Gudang", value: `${negativeStockItems.length} barang`, desc: "Koreksi fisik dibutuhkan", icon: CircleAlert, tone: "red" },
-        { label: "Operator Aktif", value: `${await prisma.user.count({ where: { aktif: true } })} user`, desc: "Total staf terdaftar", icon: Users, tone: "primary" },
-        { label: "Aktivitas Hari Ini", value: `${logsTodayCount} logs`, desc: "Audit trail log operasional", icon: Clock, tone: "slate" },
+        ...(user.role !== "ADMIN_KASIR"
+          ? [
+              { label: "Operator Aktif", value: `${await prisma.user.count({ where: { aktif: true } })} user`, desc: "Total staf terdaftar", icon: Users, tone: "primary" },
+              { label: "Aktivitas Hari Ini", value: `${logsTodayCount} logs`, desc: "Audit trail log operasional", icon: Clock, tone: "slate" },
+            ]
+          : []),
       ];
 
   const toneColors: Record<string, string> = {
@@ -232,28 +236,30 @@ export default async function DashboardPage({
         {/* Toggle Mode & Filters */}
         <div className="flex flex-wrap items-center gap-3 w-full sm:w-auto">
           {/* Mode Switcher capsule */}
-          <div className="flex rounded-xl bg-slate-100 p-1 border border-border w-full sm:w-auto">
-            <Link
-              href={`/?mode=operational${params.from ? `&from=${params.from}` : ""}${params.to ? `&to=${params.to}` : ""}`}
-              className={`flex-1 sm:flex-none rounded-lg px-4 py-2 text-xs font-bold text-center transition-all duration-150 ${
-                !isOwnerMode
-                  ? "bg-white text-slate-900 shadow-xs"
-                  : "text-slate-500 hover:text-slate-950"
-              }`}
-            >
-              Operasional
-            </Link>
-            <Link
-              href={`/?mode=owner${params.from ? `&from=${params.from}` : ""}${params.to ? `&to=${params.to}` : ""}`}
-              className={`flex-1 sm:flex-none rounded-lg px-4 py-2 text-xs font-bold text-center transition-all duration-150 ${
-                isOwnerMode
-                  ? "bg-white text-slate-900 shadow-xs"
-                  : "text-slate-500 hover:text-slate-950"
-              }`}
-            >
-              Owner
-            </Link>
-          </div>
+          {user.role !== "ADMIN_KASIR" && (
+            <div className="flex rounded-xl bg-slate-100 p-1 border border-border w-full sm:w-auto">
+              <Link
+                href={`/?mode=operational${params.from ? `&from=${params.from}` : ""}${params.to ? `&to=${params.to}` : ""}`}
+                className={`flex-1 sm:flex-none rounded-lg px-4 py-2 text-xs font-bold text-center transition-all duration-150 ${
+                  !isOwnerMode
+                    ? "bg-white text-slate-900 shadow-xs"
+                    : "text-slate-500 hover:text-slate-950"
+                }`}
+              >
+                Operasional
+              </Link>
+              <Link
+                href={`/?mode=owner${params.from ? `&from=${params.from}` : ""}${params.to ? `&to=${params.to}` : ""}`}
+                className={`flex-1 sm:flex-none rounded-lg px-4 py-2 text-xs font-bold text-center transition-all duration-150 ${
+                  isOwnerMode
+                    ? "bg-white text-slate-900 shadow-xs"
+                    : "text-slate-500 hover:text-slate-950"
+                }`}
+              >
+                Owner
+              </Link>
+            </div>
+          )}
 
           <form className="flex flex-wrap items-center gap-2 w-full sm:w-auto">
             <input
@@ -282,89 +288,17 @@ export default async function DashboardPage({
         </div>
       </header>
 
-      {/* KPI Card grid */}
-      <section className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
-        {kpiCards.map((kpi, i) => {
-          const Icon = kpi.icon;
-          return (
-            <div
-              key={kpi.label}
-              className="tick-card anim-rise relative flex flex-col justify-between overflow-hidden rounded-[18px] border border-border bg-white p-4 sm:p-5 shadow-[var(--shadow-card)]"
-              style={{ animationDelay: `${i * 40}ms` }}
-            >
-              <span className="absolute inset-x-0 top-0 h-[4px]" style={{ background: toneColors[kpi.tone] }} />
-              <div className="flex items-start justify-between gap-3">
-                <p className="text-[9px] sm:text-[10px] font-bold uppercase tracking-wider text-slate-450 leading-tight">{kpi.label}</p>
-                <div className="flex h-7 w-7 sm:h-8 sm:w-8 shrink-0 items-center justify-center rounded-lg border border-slate-100 bg-slate-50/50">
-                  <Icon size={13} style={{ color: toneColors[kpi.tone] }} strokeWidth={2.5} />
-                </div>
-              </div>
-              <div className="mt-3 min-w-0">
-                <h3 className="font-display font-extrabold text-slate-900 leading-none tracking-tight tnum text-xs sm:text-sm">
-                  {kpi.value}
-                </h3>
-                <p className="mt-1 text-[9px] sm:text-[10px] font-semibold text-slate-450 leading-tight">{kpi.desc}</p>
-              </div>
-            </div>
-          );
-        })}
-      </section>
-
-      {/* Charts Section */}
-      <section className="anim-rise">
-        <DashboardCharts
-          revenueTrend={trendData}
-          topItems={topItems}
-          projectSales={projectSales}
-        />
-      </section>
-
-      {/* Spacious Double Column Layout: Activity & Alerts */}
-      <section className="grid grid-cols-1 gap-6 lg:grid-cols-3 anim-rise">
-        {/* Activity Timeline (Linear-style list) */}
-        <Card className="lg:col-span-2 space-y-5">
-          <div>
-            <h3 className="font-display text-sm font-bold text-slate-900 flex items-center gap-2">
-              <Clock size={16} className="text-[var(--primary)]" /> Riwayat Audit Operasional
-            </h3>
-            <p className="text-xs text-slate-400 mt-1">Log audit aktivitas staf kasir dan gudang terbaru.</p>
-          </div>
-
-          <div className="relative border-l border-slate-100 pl-4 ml-2 space-y-5">
-            {recentLogs.map((log) => (
-              <div key={log.id} className="relative text-xs">
-                {/* Bullet point indicator */}
-                <span className="absolute -left-[21px] top-1 flex h-2 w-2 rounded-full bg-slate-350 ring-4 ring-white" />
-                <div className="flex items-start justify-between gap-4">
-                  <div>
-                    <p className="font-semibold text-slate-800">
-                      {log.user?.nama ?? "System"} melakukan <span className="font-bold text-slate-950">{log.aksi}</span>
-                    </p>
-                    <p className="text-[10px] text-slate-450 mt-0.5">Target: {log.entitas} (ID: {log.entitasId ?? "—"})</p>
-                  </div>
-                  <span className="text-[10px] font-bold text-slate-400 font-mono">
-                    {new Date(log.createdAt).toLocaleTimeString("id-ID", { hour: "2-digit", minute: "2-digit" })}
-                  </span>
-                </div>
-              </div>
-            ))}
-
-            {recentLogs.length === 0 && (
-              <p className="text-xs text-slate-450 text-center py-4">Belum ada catatan aktivitas.</p>
-            )}
-          </div>
-        </Card>
-
-        {/* Alert Center Dashboard */}
-        <Card className="space-y-4">
+      {/* Alert Center (Moved to the top) */}
+      {(negativeStockItems.length > 0 || lowStockItems.length > 0) && (
+        <Card className="anim-rise space-y-4 border-amber-100 bg-amber-50/10">
           <div>
             <h3 className="font-display text-sm font-bold text-slate-900 flex items-center gap-2">
               <AlertTriangle size={16} className="text-amber-500" /> Alert Center
             </h3>
-            <p className="text-xs text-slate-400 mt-1">Peringatan stok gudang & piutang tempo kritis.</p>
+            <p className="text-xs text-slate-400 mt-1">Peringatan stok gudang kritis.</p>
           </div>
 
-          <div className="space-y-3">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {/* Stok Minus alert card */}
             {negativeStockItems.length > 0 && (
               <div className="rounded-xl border border-red-100 bg-red-50/50 p-3.5 text-xs text-red-800">
@@ -398,37 +332,88 @@ export default async function DashboardPage({
                 </ul>
               </div>
             )}
-
-            {/* Overdue receivables warning card */}
-            {unpaidInvoices.length > 0 && (
-              <div className="rounded-xl border border-slate-100 bg-slate-50/55 p-3.5 text-xs text-slate-700">
-                <p className="font-bold text-slate-900 flex items-center gap-1.5 mb-1.5">
-                  <FileText size={14} className="text-slate-500" /> Piutang Jatuh Tempo
-                </p>
-                <ul className="divide-y divide-slate-100">
-                  {unpaidInvoices.slice(0, 2).map((inv) => {
-                    const sisa = Number(inv.total) - Number(inv.totalDibayar);
-                    const dueDate = addDays(inv.tanggal, 30);
-                    const isOverdue = dueDate.getTime() < now.getTime();
-                    if (!isOverdue) return null;
-                    return (
-                      <li key={inv.noInvoice} className="py-2 flex justify-between items-start text-[10px]">
-                        <div>
-                          <p className="font-bold text-slate-800">{inv.noInvoice}</p>
-                          <p className="text-slate-400 font-semibold">{inv.namaClient ?? "Pelanggan"}</p>
-                        </div>
-                        <p className="font-bold font-mono text-red-500 text-right">
-                          {formatRupiah(sisa)}
-                        </p>
-                      </li>
-                    );
-                  })}
-                </ul>
-              </div>
-            )}
           </div>
         </Card>
+      )}
+
+      {/* KPI Card grid */}
+      <section className={`grid grid-cols-2 gap-3 sm:grid-cols-3 ${kpiCards.length === 4 ? "lg:grid-cols-4" : "lg:grid-cols-6"}`}>
+        {kpiCards.map((kpi, i) => {
+          const Icon = kpi.icon;
+          return (
+            <div
+              key={kpi.label}
+              className="tick-card anim-rise relative flex flex-col justify-between overflow-hidden rounded-[18px] border border-border bg-white p-4 sm:p-5 shadow-[var(--shadow-card)]"
+              style={{ animationDelay: `${i * 40}ms` }}
+            >
+              <span className="absolute inset-x-0 top-0 h-[4px]" style={{ background: toneColors[kpi.tone] }} />
+              <div className="flex items-start justify-between gap-3">
+                <p className="text-[9px] sm:text-[10px] font-bold uppercase tracking-wider text-slate-450 leading-tight">{kpi.label}</p>
+                <div className="flex h-7 w-7 sm:h-8 sm:w-8 shrink-0 items-center justify-center rounded-lg border border-slate-100 bg-slate-50/50">
+                  <Icon size={13} style={{ color: toneColors[kpi.tone] }} strokeWidth={2.5} />
+                </div>
+              </div>
+              <div className="mt-3 min-w-0">
+                <div data-tooltip={kpi.value}>
+                  <h3 className="font-display font-extrabold text-slate-900 leading-none tracking-tight tnum text-xs sm:text-sm lg:text-[11px] xl:text-xs 2xl:text-sm whitespace-nowrap overflow-hidden text-ellipsis">
+                    {kpi.value}
+                  </h3>
+                </div>
+                <p className="mt-1 text-[9px] sm:text-[10px] font-semibold text-slate-450 leading-tight truncate" title={kpi.desc}>{kpi.desc}</p>
+              </div>
+            </div>
+          );
+        })}
       </section>
+
+      {/* Charts Section */}
+      <section className="anim-rise">
+        <DashboardCharts
+          revenueTrend={trendData}
+          topItems={topItems}
+          projectSales={projectSales}
+          showMargin={user.role !== "ADMIN_KASIR"}
+        />
+      </section>
+
+      {/* Spacious Double Column Layout: Activity */}
+      {user.role !== "ADMIN_KASIR" && (
+        <section className="anim-rise">
+          {/* Activity Timeline (Linear-style list) */}
+          <Card className="space-y-5">
+            <div>
+              <h3 className="font-display text-sm font-bold text-slate-900 flex items-center gap-2">
+                <Clock size={16} className="text-[var(--primary)]" /> Riwayat Audit Operasional
+              </h3>
+              <p className="text-xs text-slate-400 mt-1">Log audit aktivitas staf kasir dan gudang terbaru.</p>
+            </div>
+
+            <div className="relative border-l border-slate-100 pl-4 ml-2 space-y-5">
+              {recentLogs.map((log) => (
+                <div key={log.id} className="relative text-xs">
+                  {/* Bullet point indicator */}
+                  <span className="absolute -left-[21px] top-1 flex h-2 w-2 rounded-full bg-slate-350 ring-4 ring-white" />
+                  <div className="flex items-start justify-between gap-4">
+                    <div>
+                      <p className="font-semibold text-slate-800">
+                        {log.user?.nama ?? "System"} melakukan <span className="font-bold text-slate-950">{log.aksi}</span>
+                      </p>
+                      <p className="text-[10px] text-slate-450 mt-0.5">Target: {log.entitas} (ID: {log.entitasId ?? "—"})</p>
+                    </div>
+                    <span className="text-[10px] font-bold text-slate-400 font-mono">
+                      {new Date(log.createdAt).toLocaleTimeString("id-ID", { hour: "2-digit", minute: "2-digit" })}
+                    </span>
+                  </div>
+                </div>
+              ))}
+
+              {recentLogs.length === 0 && (
+                <p className="text-xs text-slate-450 text-center py-4">Belum ada catatan aktivitas.</p>
+              )}
+            </div>
+          </Card>
+        </section>
+      )}
     </div>
   );
 }

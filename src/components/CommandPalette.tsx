@@ -3,10 +3,11 @@
 import { useEffect, useState, useRef, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { Search, ShoppingCart, Boxes, RotateCcw, FileText, BarChart3, PackagePlus, ArrowRight, CornerDownLeft } from "lucide-react";
+import type { Role } from "@prisma/client";
 import { universalSearch, type SearchResult } from "./CommandPaletteActions";
 import { cn } from "@/lib/utils";
 
-export function CommandPalette() {
+export function CommandPalette({ role }: { role: Role }) {
   const router = useRouter();
   const [isOpen, setIsOpen] = useState(false);
   const [query, setQuery] = useState("");
@@ -94,14 +95,16 @@ export function CommandPalette() {
     router.push(action.link);
   }
 
-  const quickActions = [
-    { title: "Transaksi POS Baru (Kasir)", subtitle: "Mulai transaksi eceran atau proyek", icon: ShoppingCart, link: "/kasir" },
-    { title: "Master Barang & Plywood", subtitle: "Lihat katalog barang dan harga jual", icon: Boxes, link: "/barang" },
-    { title: "Input Stok / Restok Barang", subtitle: "Tambah mutasi masuk material baru", icon: PackagePlus, link: "/stok" },
-    { title: "Retur / Tukar Barang", subtitle: "Proses pengembalian atau penggantian barang", icon: RotateCcw, link: "/retur" },
+  const allQuickActions = [
+    { title: "Transaksi POS Baru (Kasir)", subtitle: "Mulai transaksi eceran atau proyek", icon: ShoppingCart, link: "/kasir", roles: ["ADMIN_KASIR"] },
+    { title: "Master Barang & Plywood", subtitle: "Lihat katalog barang dan harga jual", icon: Boxes, link: "/barang", roles: ["ADMIN_GUDANG"] },
+    { title: "Input Stok / Restok Barang", subtitle: "Tambah mutasi masuk material baru", icon: PackagePlus, link: "/stok", roles: ["ADMIN_GUDANG"] },
+    { title: "Retur / Tukar Barang", subtitle: "Proses pengembalian atau penggantian barang", icon: RotateCcw, link: "/retur", roles: ["ADMIN_KASIR", "ADMIN_GUDANG"] },
     { title: "Invoice & Piutang Berjalan", subtitle: "Pantau cicilan invoice dan jatuh tempo", icon: FileText, link: "/invoice" },
-    { title: "Laporan Pendapatan & Omset", subtitle: "Buka analisis data penjualan bulanan", icon: BarChart3, link: "/laporan" },
+    { title: "Laporan Pendapatan & Omset", subtitle: "Buka analisis data penjualan bulanan", icon: BarChart3, link: "/laporan", roles: ["ADMIN_GUDANG"] },
   ];
+
+  const quickActions = allQuickActions.filter(act => !act.roles || act.roles.includes(role));
 
   if (!isOpen) return null;
 

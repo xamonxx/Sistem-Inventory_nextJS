@@ -192,7 +192,10 @@ h3,
 
 @page {
   size: A4 portrait;
-  margin: 12mm;
+  /* margin: 0 -> hilangkan area tempat browser mencetak header/footer otomatis
+     (tanggal, judul tab, URL, nomor halaman). Jarak tepi kertas dikompensasi
+     oleh padding di dalam dokumen (lihat .inv-body & .so-sheet di bawah). */
+  margin: 0;
 }
 
 @media print {
@@ -238,9 +241,57 @@ h3,
     background: #EA580C !important;
   }
 
+  /* Bersihkan chrome layar (border/shadow/sudut membulat) dari area cetak —
+     ini hanya afordansi tampilan, tidak boleh ikut tercetak di PDF. */
+  body.print-format-a4 .print-clone {
+    border: none !important;
+    box-shadow: none !important;
+    border-radius: 0 !important;
+    padding: 0 !important;
+  }
+
+  /* Lembar Stock Opname: padding tepi kertas 12mm (samakan dengan invoice
+     yang sudah diatur lewat .inv-body) karena @page margin kini 0. */
+  body.print-format-a4 .so-sheet {
+    padding: 12mm !important;
+  }
+
+  /* Pagination aman untuk tabel panjang (mis. Stock Opname multi-halaman):
+     ulang header di tiap halaman & jangan potong baris di tengah. */
+  body.print-format-a4 thead {
+    display: table-header-group;
+  }
+  body.print-format-a4 tr {
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+
   /* Thermal receipt: hide everything except .print-clone */
   body.print-thermal > :not(.print-clone) {
     display: none !important;
+  }
+
+  /* === Struk thermal 80mm — rapikan font & padding agar muat pas di kertas
+     (tampilan modal pratinjau & PNG yang lebih lebar tetap tidak terpengaruh,
+     karena aturan ini hanya berlaku saat mencetak). === */
+  body.print-thermal .print-clone {
+    border: none !important;
+    box-shadow: none !important;
+    border-radius: 0 !important;
+  }
+  body.print-thermal .thermal-print-layout {
+    padding: 3mm 3mm 4mm !important;
+    line-height: 1.3 !important;
+  }
+  /* Nama perusahaan: kecilkan supaya rapi (maks 2 baris) di lebar 80mm */
+  body.print-thermal .thermal-print-layout h2 {
+    font-size: 13px !important;
+    line-height: 1.12 !important;
+    letter-spacing: -0.2px !important;
+  }
+  /* Alamat & judul nota sedikit dikecilkan agar proporsional */
+  body.print-thermal .thermal-print-layout .text-\[10px\] {
+    font-size: 9px !important;
   }
 
   ::-webkit-scrollbar {
@@ -325,4 +376,77 @@ body.print-format-a4 .a4-print-layout {
   }
 }
 
+/* ============================================================
+   Hide Floating Action Button (FAB) on Kasir Page
+   ============================================================ */
+body:has(#search-item) .no-print.fixed.bottom-6.right-6 {
+  display: none !important;
+}
 
+/* ============================================================
+   Desktop Fixed Sidebar Offset for Main Viewport
+   ============================================================ */
+@media (min-width: 1024px) {
+  .flex.flex-1.flex-col {
+    transition: padding-left 0.2s ease-in-out;
+  }
+  aside.lg\:w-\[280px\] ~ .flex.flex-1.flex-col {
+    padding-left: 280px;
+  }
+  aside.lg\:w-\[80px\] ~ .flex.flex-1.flex-col {
+    padding-left: 80px;
+  }
+}
+
+/* ============================================================
+   Premium CSS Tooltip Utility
+   ============================================================ */
+[data-tooltip] {
+  position: relative;
+}
+
+[data-tooltip]::before {
+  content: attr(data-tooltip);
+  position: absolute;
+  bottom: 100%;
+  left: 50%;
+  transform: translate(-50%, -8px) scale(0.95);
+  padding: 6px 10px;
+  background-color: #0f172a; /* Slate 900 */
+  color: #ffffff;
+  font-size: 11px;
+  font-weight: 600;
+  font-family: var(--font-display), sans-serif;
+  letter-spacing: 0.02em;
+  border-radius: 8px;
+  white-space: nowrap;
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -4px rgba(0, 0, 0, 0.1);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.15s ease, transform 0.15s ease;
+  z-index: 9999;
+}
+
+[data-tooltip]:hover::before {
+  opacity: 1;
+  transform: translate(-50%, -8px) scale(1);
+}
+
+[data-tooltip]::after {
+  content: '';
+  position: absolute;
+  bottom: 100%;
+  left: 50%;
+  transform: translate(-50%, -3px);
+  border-width: 5px;
+  border-style: solid;
+  border-color: #0f172a transparent transparent transparent;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.15s ease, transform 0.15s ease;
+  z-index: 9999;
+}
+
+[data-tooltip]:hover::after {
+  opacity: 1;
+}

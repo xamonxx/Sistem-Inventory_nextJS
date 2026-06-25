@@ -42,9 +42,11 @@ const TIPE_LABEL = {
 export function StokClient({
   initialLedgers,
   items,
+  canEdit = false,
 }: {
   initialLedgers: LedgerRow[];
   items: ItemOption[];
+  canEdit?: boolean;
 }) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
@@ -256,7 +258,7 @@ export function StokClient({
                 </Th>
                 <Th>Keterangan / Ref</Th>
                 <Th className="w-36">Operator</Th>
-                <Th className="text-center w-36">Aksi</Th>
+                {canEdit && <Th className="text-center w-36">Aksi</Th>}
               </tr>
             </thead>
             <tbody>
@@ -305,22 +307,24 @@ export function StokClient({
                     <Td className="text-slate-600 text-xs font-medium">
                       {l.userName}
                     </Td>
-                    <Td className="text-center">
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={() => handleOpenQuickUpdate(l.itemId, l.itemName)}
-                        className="h-8 px-2.5 rounded-[10px] text-xs font-semibold hover:border-[var(--primary)] hover:text-[var(--primary)] transition duration-150 inline-flex items-center gap-1.5 cursor-pointer mx-auto"
-                      >
-                        <RefreshCcw size={11} /> Update Stok
-                      </Button>
-                    </Td>
+                    {canEdit && (
+                      <Td className="text-center">
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => handleOpenQuickUpdate(l.itemId, l.itemName)}
+                          className="h-8 px-2.5 rounded-[10px] text-xs font-semibold hover:border-[var(--primary)] hover:text-[var(--primary)] transition duration-150 inline-flex items-center gap-1.5 cursor-pointer mx-auto"
+                        >
+                          <RefreshCcw size={11} /> Update Stok
+                        </Button>
+                      </Td>
+                    )}
                   </tr>
                 );
               })}
               {processedRows.length === 0 && (
                 <tr>
-                  <Td colSpan={9} className="py-12 text-center text-slate-400 text-sm">
+                  <Td colSpan={canEdit ? 9 : 8} className="py-12 text-center text-slate-400 text-sm">
                     Belum ada pergerakan stok untuk saringan ini.
                   </Td>
                 </tr>
@@ -423,7 +427,7 @@ export function StokClient({
       )}
 
       {/* Modal Quick Update Stok */}
-      {isUpdateOpen && (
+      {canEdit && isUpdateOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 p-4 backdrop-blur-xs animate-fade-in" onClick={() => setIsUpdateOpen(false)}>
           <div onClick={(e) => e.stopPropagation()} className="w-full max-w-md bg-white rounded-2xl overflow-y-auto max-h-[90vh] p-6 shadow-2xl border border-border anim-rise">
             <div className="flex items-center justify-between border-b border-border pb-3 mb-4">

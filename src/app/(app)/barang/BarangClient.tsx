@@ -1,10 +1,11 @@
 "use client";
 
-import { useState, useTransition, useMemo, useEffect } from "react";
+import { useState, useTransition, useMemo, useEffect, useRef } from "react";
 import { getItemHistory, toggleAktif } from "./actions";
 import { Button, Card, Input, Label, Select, Table, Th, Td, Badge } from "@/components/ui";
 import { Drawer } from "@/components/Drawer";
 import { formatRupiah, formatTanggal, cn } from "@/lib/utils";
+import { printArea } from "@/lib/print";
 import {
   Search,
   Eye,
@@ -20,6 +21,7 @@ import {
   SlidersHorizontal,
   Pencil,
   Coins,
+  X,
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -58,7 +60,22 @@ export function BarangClient({
   const [selectedItem, setSelectedItem] = useState<ItemData | null>(null);
   const [itemHistory, setItemHistory] = useState<HistoryEntry[]>([]);
   const [loadingHistory, setLoadingHistory] = useState(false);
+  const [openSOPreview, setOpenSOPreview] = useState(false);
+  const [showSystemStock, setShowSystemStock] = useState(true);
+  const [showSOOptions, setShowSOOptions] = useState(false);
   const [pending, startTransition] = useTransition();
+
+  const soOptionsRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (soOptionsRef.current && !soOptionsRef.current.contains(event.target as Node)) {
+        setShowSOOptions(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
 
   // Statistics calculation
   const stats = useMemo(() => {
@@ -169,13 +186,13 @@ export function BarangClient({
   return (
     <div className="space-y-8">
       {/* 1. Statistics Cards Row */}
-      <section className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-5">
+      <section className={cn("grid grid-cols-1 gap-4 sm:grid-cols-2", canEdit ? "lg:grid-cols-3 xl:grid-cols-5" : "lg:grid-cols-4")}>
         {[
           { label: "Total Katalog Barang", value: `${stats.total} item`, desc: "Semua material terdaftar", icon: Boxes, tone: "blue" },
-          { label: "Total Nilai Aset", value: formatRupiah(stats.asset), desc: "Total modal persediaan", icon: Coins, tone: "indigo" },
+          ...(canEdit ? [{ label: "Total Nilai Aset", value: formatRupiah(stats.asset), desc: "Total modal persediaan", icon: Coins, tone: "indigo" }] : []),
           { label: "Produk Aktif POS", value: `${stats.active} item`, desc: "Dapat dijual oleh Kasir", icon: ArrowUpRight, tone: "green" },
           { label: "Stok Menipis (Kritis)", value: `${stats.low} item`, desc: "Di bawah batas safety", icon: ArrowDownRight, tone: "amber" },
-          { label: "Stok Minus Fisik", value: `${stats.negative} item`, desc: "Perlu rekonsiliasi stok", icon: ShieldAlert, tone: "red" },
+          { label: "Stok Minus", value: `${stats.negative} item`, desc: "Perlu rekonsiliasi stok", icon: ShieldAlert, tone: "red" },
         ].map((card) => {
           const Icon = card.icon;
           const toneColors: Record<string, string> = {
@@ -186,14 +203,20 @@ export function BarangClient({
             red: "bg-rose-50 text-rose-700 border-rose-100",
           };
           return (
-            <Card key={card.label} className="flex items-center gap-4.5">
-              <div className={cn("flex h-12 w-12 shrink-0 items-center justify-center rounded-xl border", toneColors[card.tone])}>
-                <Icon size={20} strokeWidth={2.3} />
+            <Card key={card.label} className="flex items-center gap-3 p-4 sm:gap-4 sm:p-5 lg:gap-3 lg:p-3.5 xl:gap-4 xl:p-5">
+              <div className={cn("flex h-10 w-10 sm:h-12 sm:w-12 shrink-0 items-center justify-center rounded-xl border", toneColors[card.tone])}>
+                <Icon className="h-5 w-5 sm:h-6 sm:w-6" strokeWidth={2.3} />
               </div>
               <div className="leading-tight select-none min-w-0 flex-1">
-                <p className="text-[10px] font-bold uppercase tracking-wider text-slate-450">{card.label}</p>
-                <p className="mt-1 font-extrabold text-slate-800 font-display text-xs sm:text-sm">{card.value}</p>
-                <p className="text-[10px] text-slate-450 mt-0.5">{card.desc}</p>
+                <p className="text-[10px] lg:text-[9px] xl:text-[10px] font-bold uppercase tracking-wider text-slate-450">{card.label}</p>
+                <div data-tooltip={card.value} className="mt-1">
+                  <p className="font-extrabold text-slate-800 font-display text-xs sm:text-sm lg:text-[11px] xl:text-xs 2xl:text-sm whitespace-nowrap overflow-hidden text-ellipsis">
+                    {card.value}
+                  </p>
+                </div>
+                <p className="text-[10px] lg:text-[9px] xl:text-[10px] text-slate-450 mt-0.5 truncate" title={card.desc}>
+                  {card.desc}
+                </p>
               </div>
             </Card>
           );
@@ -231,6 +254,43 @@ export function BarangClient({
             <option value="LOW">Stok Menipis</option>
             <option value="NEGATIVE">Stok Minus</option>
           </Select>
+
+          {canEdit && (
+            <>
+              <Button
+                onClick={() => setOpenSOPreview(true)}
+                variant="outline"
+                className="h-10 rounded-xl px-4 text-xs font-bold gap-2"
+              >
+                <Printer size={14} /> Lembar SO (PDF)
+              </Button>
+
+              <div ref={soOptionsRef} className="relative">
+                <Button
+                  onClick={() => setShowSOOptions(!showSOOptions)}
+                  variant="outline"
+                  className="h-10 rounded-xl px-3 text-xs font-bold gap-1.5"
+                  title="Opsi Cetak Lembar SO"
+                >
+                  <SlidersHorizontal size={14} />
+                </Button>
+                {showSOOptions && (
+                  <div className="absolute right-0 z-30 mt-2 w-56 rounded-xl border border-border bg-white p-3.5 shadow-lg animate-in fade-in slide-in-from-top-1 duration-150">
+                    <p className="text-[10px] font-bold uppercase tracking-wider text-slate-450 mb-2">Opsi Lembar SO</p>
+                    <label className="flex items-center gap-2 text-xs font-semibold text-slate-700 cursor-pointer select-none">
+                      <input
+                        type="checkbox"
+                        checked={showSystemStock}
+                        onChange={(e) => setShowSystemStock(e.target.checked)}
+                        className="h-4 w-4 rounded border-slate-300 text-[var(--primary)] focus:ring-transparent cursor-pointer"
+                      />
+                      Tampilkan Stok Sistem
+                    </label>
+                  </div>
+                )}
+              </div>
+            </>
+          )}
         </div>
       </Card>
 
@@ -243,7 +303,7 @@ export function BarangClient({
               <Th>Nama Barang</Th>
               <Th className="text-right">Harga Beli</Th>
               <Th className="text-right">Harga Jual</Th>
-              <Th className="text-right w-32">Stok Fisik</Th>
+              <Th className="text-right w-32">Stok</Th>
               <Th className="text-right w-40">Total Aset</Th>
               <Th className="text-center w-28">Status</Th>
               <Th className="text-center w-28">Aksi</Th>
@@ -314,7 +374,7 @@ export function BarangClient({
               </tr>
             )}
           </tbody>
-          {filteredItems.length > 0 && (
+          {filteredItems.length > 0 && canEdit && (
             <tfoot>
               <tr className="bg-slate-50/80 font-bold">
                 <Td colSpan={5} className="text-right text-xs uppercase tracking-wider text-slate-500">
@@ -324,7 +384,7 @@ export function BarangClient({
                   "text-right font-mono text-sm font-extrabold",
                   totalAset < 0 ? "text-rose-600" : "text-slate-900"
                 )}>
-                  {canEdit ? formatRupiah(totalAset) : "🔒 Dibatasi"}
+                  {formatRupiah(totalAset)}
                 </Td>
                 <Td colSpan={2} />
               </tr>
@@ -440,7 +500,7 @@ export function BarangClient({
                   <span className="text-slate-800 text-sm font-bold font-mono">{selectedItem.stokAwal} unit</span>
                 </div>
                 <div>
-                  <span className="text-slate-450 block mb-1">Stok Fisik Saat Ini</span>
+                  <span className="text-slate-450 block mb-1">Stok Saat Ini</span>
                   <span className={cn(
                     "text-sm font-bold font-mono",
                     selectedItem.stok < 0 ? "text-red-650" : selectedItem.stok < selectedItem.minStok ? "text-amber-600" : "text-slate-800"
@@ -512,6 +572,99 @@ export function BarangClient({
           </div>
         )}
       </Drawer>
+
+      {/* 5. Stock Opname (SO) Print Preview Modal */}
+      {canEdit && openSOPreview && (
+        <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto overscroll-contain bg-black/55 p-4 backdrop-blur-xs no-print" onClick={() => setOpenSOPreview(false)}>
+          <div onClick={(e) => e.stopPropagation()} className="my-4 w-full overflow-hidden rounded-2xl bg-white shadow-2xl border border-border max-w-4xl">
+            <div className="flex items-center justify-between gap-2 border-b border-border px-4 py-3">
+              <p className="text-sm font-semibold text-slate-800">
+                Pratinjau Lembar Stock Opname (SO)
+              </p>
+              <div className="flex items-center gap-2">
+                <Button size="sm" onClick={() => printArea({ className: "print-format-a4" })}>
+                  <Printer size={13} /> Cetak Sekarang (PDF)
+                </Button>
+                <button onClick={() => setOpenSOPreview(false)} className="flex h-8 w-8 items-center justify-center rounded-lg text-slate-450 hover:bg-slate-100 hover:text-slate-700 transition cursor-pointer">
+                  <X size={16} />
+                </button>
+              </div>
+            </div>
+            <div className="overflow-auto bg-[var(--paper-2)] p-6" style={{ maxHeight: "calc(100vh - 120px)" }}>
+              {/* Document print area */}
+              <div className="so-sheet print-area mx-auto w-[800px] max-w-full origin-top overflow-hidden rounded-xl border border-border bg-white p-8 shadow-[0_4px_24px_-8px_rgba(15,23,42,0.18)]">
+                <div className="space-y-6 text-slate-900 font-sans">
+                  {/* Header */}
+                  <div className="border-b-2 border-slate-900 pb-4">
+                    <h1 className="text-center text-xl font-bold uppercase tracking-wide">Lembar Stock Opname Gudang</h1>
+                    <p className="text-center text-xs text-slate-500 mt-1">PUTRA CORPORATION HARDWARE</p>
+                    <div className="mt-4 grid grid-cols-2 text-xs text-slate-600">
+                      <div>
+                        <p>Tanggal Cetak: <span className="font-semibold text-slate-800">{formatTanggal(new Date().toISOString())}</span></p>
+                        <p>Total Item: <span className="font-semibold text-slate-800">{filteredItems.length} barang</span></p>
+                      </div>
+                      <div className="text-right">
+                        <p>Kondisi Stok: <span className="font-semibold text-slate-800">{stockCondition === "LOW" ? "Stok Kritis" : stockCondition === "NEGATIVE" ? "Stok Minus" : "Semua"}</span></p>
+                        <p>Status Barang: <span className="font-semibold text-slate-800">{statusFilter === "ACTIVE" ? "Aktif" : statusFilter === "INACTIVE" ? "Diarsipkan" : "Semua"}</span></p>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Table */}
+                  <table className="w-full text-[11px] border-collapse border border-slate-400">
+                    <thead>
+                      <tr className="bg-slate-100">
+                        <th className="border border-slate-400 p-1.5 text-center w-8">No</th>
+                        <th className="border border-slate-400 p-1.5 text-left w-24">Kode SKU</th>
+                        <th className="border border-slate-400 p-1.5 text-left">Nama Barang</th>
+                        {showSystemStock && <th className="border border-slate-400 p-1.5 text-right w-20">Stok Sistem</th>}
+                        <th className="border border-slate-400 p-1.5 text-center w-24">Stok Fisik</th>
+                        <th className="border border-slate-400 p-1.5 text-center w-12">Sesuai</th>
+                        <th className="border border-slate-400 p-1.5 text-center w-12">Selisih</th>
+                        <th className="border border-slate-400 p-1.5 text-left w-32">Catatan</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {filteredItems.map((it, idx) => (
+                        <tr key={it.id} className="hover:bg-slate-50">
+                          <td className="border border-slate-400 p-1.5 text-center font-mono">{idx + 1}</td>
+                          <td className="border border-slate-400 p-1.5 font-mono font-semibold">{it.kode}</td>
+                          <td className="border border-slate-400 p-1.5 font-medium">{it.nama}</td>
+                          {showSystemStock && <td className="border border-slate-400 p-1.5 text-right font-mono font-bold text-slate-700">{it.stok} unit</td>}
+                          <td className="border border-slate-400 p-1.5 text-center">
+                            <span className="inline-block w-16 border-b border-dashed border-slate-500 h-4">&nbsp;</span>
+                          </td>
+                          <td className="border border-slate-400 p-1.5 text-center">
+                            <span className="inline-flex h-3.5 w-3.5 items-center justify-center rounded border border-slate-400 bg-white"></span>
+                          </td>
+                          <td className="border border-slate-400 p-1.5 text-center">
+                            <span className="inline-flex h-3.5 w-3.5 items-center justify-center rounded border border-slate-400 bg-white"></span>
+                          </td>
+                          <td className="border border-slate-400 p-1.5">
+                            <span className="inline-block w-full border-b border-dotted border-slate-300 h-4">&nbsp;</span>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+
+                  {/* Signatures */}
+                  <div className="pt-8 grid grid-cols-2 text-center text-xs">
+                    <div>
+                      <p className="text-slate-500 mb-14">Petugas Gudang (Checker)</p>
+                      <div className="w-36 mx-auto border-b border-slate-400"></div>
+                    </div>
+                    <div>
+                      <p className="text-slate-500 mb-14">Supervisor / Owner</p>
+                      <div className="w-36 mx-auto border-b border-slate-400"></div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

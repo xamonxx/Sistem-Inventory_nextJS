@@ -22,11 +22,13 @@ import {
   X,
   CreditCard,
   Percent,
+  Camera,
 } from "lucide-react";
 import { Nota, type NotaData } from "@/components/Nota";
 import { ModernDialog } from "@/components/ModernDialog";
 import { printArea } from "@/lib/print";
 import { toast } from "sonner";
+import { toPng } from "html-to-image";
 
 type Item = { id: number; kode: string; nama: string; hargaJual: number; stok: number };
 
@@ -263,6 +265,36 @@ export function KasirClient({ items }: { items: Item[] }) {
     toast.info("Penangguhan transaksi dihapus");
   }
 
+  async function handleSaveToImage() {
+    const element = document.querySelector<HTMLElement>(".print-area");
+    if (!element) {
+      toast.error("Elemen cetak tidak ditemukan.");
+      return;
+    }
+    try {
+      toast.info("Sedang mengambil gambar...");
+      // Ukur tinggi penuh isi (scrollHeight) supaya struk panjang tidak
+      // terpotong — wrapper memakai overflow-hidden.
+      const imgDataUrl = await toPng(element, {
+        quality: 1.0,
+        pixelRatio: 2,
+        backgroundColor: "#ffffff",
+        width: element.scrollWidth,
+        height: element.scrollHeight,
+        cacheBust: true,
+        style: { margin: "0", borderRadius: "0" },
+      });
+      const link = document.createElement("a");
+      link.download = `Nota-${nota?.noInvoice ?? nota?.noTransaksi ?? "Transaksi"}.png`;
+      link.href = imgDataUrl;
+      link.click();
+      toast.success("Gambar berhasil disimpan!");
+    } catch (err) {
+      console.error(err);
+      toast.error("Gagal menyimpan gambar.");
+    }
+  }
+
   // Submit checkout transaction
   function submitCheckout() {
     setError("");
@@ -332,6 +364,7 @@ export function KasirClient({ items }: { items: Item[] }) {
           alamat,
           namaWs,
           items: cart.map((l, i) => ({
+            kode: l.kode,
             nama: l.nama,
             harga: l.harga,
             qty: l.qty,
@@ -534,14 +567,26 @@ export function KasirClient({ items }: { items: Item[] }) {
                     value={q}
                     onChange={handleSearchChange}
                     onKeyDown={handleSearchKeyDown}
-                    placeholder="Scan barcode atau ketik nama material... (Klik item di grid untuk memasukkan langsung)"
-                    className="h-11 w-full rounded-xl border border-border bg-slate-50/50 pl-10 pr-4 text-sm outline-none transition-all focus:border-[var(--primary)] focus:bg-white focus:ring-4 focus:ring-[var(--primary)]/10"
+                    placeholder="Scan barcode atau ketik nama material... (Klik item di grid)"
+                    className="h-11 w-full rounded-xl border border-border bg-slate-50/50 pl-10 pr-10 text-sm outline-none transition-all focus:border-[var(--primary)] focus:bg-white focus:ring-4 focus:ring-[var(--primary)]/10"
                   />
+                  {q && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setQ("");
+                        searchInputRef.current?.focus();
+                      }}
+                      className="absolute right-3.5 top-3 text-slate-400 hover:text-slate-655 cursor-pointer flex h-5 w-5 items-center justify-center rounded-full hover:bg-slate-100 transition-all duration-150"
+                    >
+                      <X size={14} />
+                    </button>
+                  )}
                 </div>
 
                 {/* Dynamic Grid of Items */}
-                <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 max-h-[220px] overflow-y-auto pr-1 scrollbar-thin">
-                  {filtered.slice(0, 8).map((it) => (
+                <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 max-h-[320px] md:max-h-[460px] overflow-y-auto p-2.5 pr-2 scrollbar-thin">
+                  {filtered.slice(0, 16).map((it) => (
                     <button
                       key={it.id}
                       type="button"
@@ -549,16 +594,16 @@ export function KasirClient({ items }: { items: Item[] }) {
                         addToCart(it);
                         toast.success(`${it.nama} masuk keranjang`);
                       }}
-                      className="flex flex-col justify-between rounded-xl border border-border bg-white p-3 text-left transition hover:border-[var(--primary)] hover:shadow-xs active:scale-[0.98] cursor-pointer"
+                      className="group relative flex flex-col justify-between rounded-2xl border border-slate-200/80 bg-white p-3.5 text-left transition-all duration-200 hover:border-orange-300 hover:shadow-[0_8px_30px_rgb(0,0,0,0.04)] hover:-translate-y-0.5 active:scale-[0.98] cursor-pointer"
                     >
-                      <div>
-                        <p className="line-clamp-2 text-xs font-bold text-slate-800 leading-snug">{it.nama}</p>
-                        <p className="font-mono text-[9px] text-slate-400 mt-1">{it.kode}</p>
+                      <div className="space-y-1">
+                        <p className="line-clamp-2 text-xs font-bold text-slate-800 leading-snug group-hover:text-slate-900 transition-colors">{it.nama}</p>
+                        <p className="font-mono text-[9px] text-slate-400">{it.kode}</p>
                       </div>
-                      <div className="mt-3 flex items-center justify-between border-t border-slate-50 pt-2 w-full">
-                        <span className="font-mono text-xs font-bold text-[var(--primary)]">{formatRupiah(it.hargaJual)}</span>
-                        <Badge tone={it.stok < 10 ? "red" : "slate"} className="text-[8px] px-1 py-0 select-none">
-                          stok {it.stok}
+                      <div className="mt-4 flex items-center justify-between border-t border-slate-100 pt-2.5 w-full">
+                        <span className="font-mono text-xs font-extrabold text-[var(--primary)] group-hover:text-[var(--primary-strong)] transition-colors">{formatRupiah(it.hargaJual)}</span>
+                        <Badge tone={it.stok <= 0 ? "red" : it.stok < 10 ? "amber" : "green"} className="text-[8px] px-1.5 py-0.5 select-none font-bold">
+                          {it.stok <= 0 ? "habis" : `stok ${it.stok}`}
                         </Badge>
                       </div>
                     </button>
@@ -568,14 +613,15 @@ export function KasirClient({ items }: { items: Item[] }) {
 
               {/* Modern Cart List */}
               <div className="overflow-hidden rounded-[18px] border border-border bg-white shadow-[var(--shadow-card)]">
-                <div className="flex items-center justify-between border-b border-border px-6 py-4.5 bg-slate-50/50">
+                <div className="flex items-center justify-between border-b border-border px-6 py-4 bg-slate-50/50">
                   <h3 className="text-sm font-bold text-slate-900 leading-none">Keranjang Belanja</h3>
                   <Badge tone="blue" className="text-xs select-none">
                     {totalQtyCount} item
                   </Badge>
                 </div>
 
-                <div className="overflow-x-auto">
+                {/* Desktop/Tablet Table Layout */}
+                <div className="hidden sm:block overflow-x-auto">
                   <Table>
                     <thead>
                       <tr>
@@ -596,14 +642,14 @@ export function KasirClient({ items }: { items: Item[] }) {
                               <button
                                 type="button"
                                 onClick={() => removeFromCart(l.itemId)}
-                                className="flex h-8 w-8 items-center justify-center rounded-lg text-slate-400 hover:bg-red-50 hover:text-red-650 transition cursor-pointer"
+                                className="flex h-8 w-8 items-center justify-center rounded-lg text-slate-400 hover:bg-red-50 hover:text-red-655 transition cursor-pointer"
                               >
                                 <Trash2 size={15} />
                               </button>
                             </Td>
                             <Td>
                               <div className="font-bold text-slate-800 text-xs sm:text-sm">{l.nama}</div>
-                              <div className="font-mono text-[9px] text-slate-400 flex items-center gap-1.5 mt-1 select-none">
+                              <div className="font-mono text-[9px] text-slate-450 flex items-center gap-1.5 mt-1 select-none">
                                 <span>{l.kode}</span>
                                 {isOverStock && (
                                   <Badge tone="red" className="text-[7px] px-1 py-0">
@@ -653,6 +699,79 @@ export function KasirClient({ items }: { items: Item[] }) {
                       )}
                     </tbody>
                   </Table>
+                </div>
+
+                {/* Mobile Card-Based List Layout */}
+                <div className="block sm:hidden divide-y divide-slate-100">
+                  {cart.map((l, i) => {
+                    const isOverStock = l.qty > l.stok;
+                    const lineSubtotal = computed.lines[i].base;
+                    return (
+                      <div key={l.itemId} className="p-4 space-y-3 bg-white">
+                        <div className="flex justify-between items-start">
+                          <div className="space-y-1 pr-2">
+                            <div className="font-bold text-slate-800 text-xs leading-snug">{l.nama}</div>
+                            <div className="font-mono text-[9px] text-slate-400 flex flex-wrap items-center gap-1.5 mt-1 select-none">
+                              <span>{l.kode}</span>
+                              {isOverStock && (
+                                <Badge tone="red" className="text-[7px] px-1 py-0">
+                                  ⚠️ Stok Minus (Tersedia: {l.stok})
+                                </Badge>
+                              )}
+                            </div>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => removeFromCart(l.itemId)}
+                            className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-slate-400 hover:bg-red-50 hover:text-red-655 transition cursor-pointer"
+                          >
+                            <Trash2 size={15} />
+                          </button>
+                        </div>
+
+                        <div className="flex justify-between items-center pt-1">
+                          <div className="font-mono text-xs text-slate-500 font-medium">
+                            {formatRupiah(l.harga)}
+                          </div>
+                          
+                          <div className="flex items-center gap-1 bg-slate-50 p-0.5 rounded-xl border border-slate-150">
+                            <button
+                              type="button"
+                              onClick={() => updateQty(l.itemId, l.qty - 1)}
+                              className="flex h-7 w-7 items-center justify-center rounded-lg bg-white text-slate-650 hover:bg-slate-100 active:scale-95 transition cursor-pointer border border-border/80 shadow-xs"
+                            >
+                              <Minus size={11} />
+                            </button>
+                            <input
+                              type="number"
+                              value={l.qty}
+                              min={1}
+                              onChange={(e) => updateQty(l.itemId, parseInt(e.target.value) || 1)}
+                              className="w-9 text-center text-xs font-semibold font-mono outline-none bg-transparent"
+                            />
+                            <button
+                              type="button"
+                              onClick={() => addToCart({ id: l.itemId, kode: l.kode, nama: l.nama, hargaJual: l.harga, stok: l.stok })}
+                              className="flex h-7 w-7 items-center justify-center rounded-lg bg-white text-slate-650 hover:bg-slate-100 active:scale-95 transition cursor-pointer border border-border/80 shadow-xs"
+                            >
+                              <Plus size={11} />
+                            </button>
+                          </div>
+                          
+                          <div className="text-right font-extrabold font-mono text-slate-800 text-xs sm:text-sm">
+                            {formatRupiah(lineSubtotal)}
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                  {cart.length === 0 && (
+                    <div className="py-12 text-center text-slate-455 select-none">
+                      <ShoppingBag className="mx-auto text-slate-200 mb-2.5" size={32} />
+                      <p className="font-bold text-sm text-slate-700">Keranjang Belanja Kosong</p>
+                      <p className="text-xs text-slate-400 mt-1">Browse atau cari barang di katalog atas untuk transaksi.</p>
+                    </div>
+                  )}
                 </div>
               </div>
             </div>
@@ -1094,18 +1213,86 @@ export function KasirClient({ items }: { items: Item[] }) {
             <div className="print-area">
               <Nota data={nota} />
             </div>
-            <div className="no-print flex flex-wrap sm:flex-nowrap justify-between gap-1.5 border-t border-border p-4 bg-slate-50 rounded-b-[20px]">
-              <Button onClick={() => printArea({ thermal: true })} variant="outline" size="sm" className="flex-1 min-w-[75px]">
-                <Printer size={14} /> Thermal (80mm)
-              </Button>
-              <Button onClick={() => printArea({ className: "print-format-a4" })} size="sm" className="flex-1 min-w-[75px]">
-                <FileText size={14} /> Cetak A4 PDF
-              </Button>
-              <Button variant="outline" size="sm" className="flex-1 min-w-[75px]" onClick={() => setNota(null)}>
-                Tutup
+            <div className="no-print flex flex-col gap-2 border-t border-border p-4 bg-slate-50 rounded-b-[20px]">
+              <div className="flex flex-wrap sm:flex-nowrap justify-between gap-1.5 w-full">
+                <Button onClick={() => printArea({ thermal: true })} variant="outline" size="sm" className="flex-1 min-w-[75px] h-9">
+                  <Printer size={14} /> Thermal (80mm)
+                </Button>
+                <Button onClick={() => printArea({ className: "print-format-a4" })} size="sm" className="flex-1 min-w-[75px] h-9">
+                  <FileText size={14} /> Cetak A4 PDF
+                </Button>
+                <Button variant="outline" size="sm" className="flex-1 min-w-[75px] h-9" onClick={() => setNota(null)}>
+                  Tutup
+                </Button>
+              </div>
+              <Button
+                onClick={handleSaveToImage}
+                variant="outline"
+                size="sm"
+                className="w-full h-9 bg-orange-50 hover:bg-orange-100 border-orange-200 text-[var(--primary)] font-bold gap-1.5 rounded-xl cursor-pointer"
+              >
+                <Camera size={14} /> Save to Image (PNG)
               </Button>
             </div>
           </div>
+        </div>
+      )}
+
+      {/* Floating Bottom Dock for Mobile & Tablet (hidden on XL) */}
+      {cart.length > 0 && (
+        <div className="xl:hidden fixed bottom-4 left-4 right-4 z-40 bg-white/90 backdrop-blur-md border border-slate-200/80 p-4 rounded-2xl shadow-[0_12px_40px_rgba(0,0,0,0.12)] flex items-center justify-between gap-4 select-none anim-rise no-print">
+          <div className="flex flex-col">
+            <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wider">Total Belanja</span>
+            <span className="text-base font-extrabold font-mono text-[var(--primary)]">{formatRupiah(grandTotalCost)}</span>
+          </div>
+          
+          {step === 1 && (
+            <Button
+              onClick={() => setStep(2)}
+              disabled={cart.length === 0}
+              className="h-10 text-xs font-bold px-4 rounded-xl"
+            >
+              Lanjut &rarr;
+            </Button>
+          )}
+          
+          {step === 2 && (
+            <div className="flex gap-2">
+              <Button
+                variant="outline"
+                onClick={() => setStep(1)}
+                className="h-10 text-xs px-3 rounded-xl"
+              >
+                &larr;
+              </Button>
+              <Button
+                onClick={() => setStep(3)}
+                disabled={tipe === "PROJECT" && !namaClient.trim()}
+                className="h-10 text-xs font-bold px-4 rounded-xl"
+              >
+                Bayar &rarr;
+              </Button>
+            </div>
+          )}
+          
+          {step === 3 && (
+            <div className="flex gap-2">
+              <Button
+                variant="outline"
+                onClick={() => setStep(2)}
+                className="h-10 text-xs px-3 rounded-xl"
+              >
+                &larr;
+              </Button>
+              <Button
+                onClick={submitCheckout}
+                disabled={pending || cart.length === 0 || cashShort || (isSplitActive && !isSplitValid)}
+                className="h-10 text-xs font-bold bg-emerald-600 hover:bg-emerald-700 text-white px-4 rounded-xl shadow-sm"
+              >
+                {pending ? "..." : "Selesai (F4)"}
+              </Button>
+            </div>
+          )}
         </div>
       )}
     </div>

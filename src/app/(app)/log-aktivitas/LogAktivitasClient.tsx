@@ -28,6 +28,7 @@ const AKSI_TONE: Record<string, "slate" | "green" | "red" | "amber" | "blue"> = 
   TOGGLE_BARANG: "amber",
   CREATE_TRANSAKSI: "green",
   BAYAR_INVOICE: "green",
+  VERIFIKASI_INVOICE: "green",
   RETUR_BARANG: "red",
   TUKAR_BARANG: "red",
   STOCK_IN_BATCH: "green",

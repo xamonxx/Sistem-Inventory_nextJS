@@ -16,7 +16,6 @@ const STATUS: Record<string, { label: string; fg: string; bg: string }> = {
   PAID: { label: "LUNAS", fg: "#166534", bg: "#DCFCE7" },
   PARTIAL: { label: "DIBAYAR SEBAGIAN", fg: "#92400E", bg: "#FEF3C7" },
   PENDING: { label: "BELUM LUNAS", fg: "#991B1B", bg: "#FEE2E2" },
-  OVERDUE: { label: "JATUH TEMPO", fg: "#991B1B", bg: "#FEE2E2" },
   DRAFT: { label: "DRAFT", fg: "#475569", bg: "#F1F5F9" },
 };
 
@@ -31,10 +30,17 @@ export function InvoiceDocument({
 }) {
   const sisa = inv.total - inv.totalDibayar;
   const lunas = sisa <= 0;
-  const dueDate = new Date(inv.tanggal);
-  dueDate.setDate(dueDate.getDate() + 30);
   const totalQty = inv.items.reduce((a, it) => a + it.qty, 0);
   const stat = STATUS[inv.status] ?? STATUS.PENDING;
+
+  // QR digenerate lazy: pakai qrDataUrl bila tersedia, jika tidak fallback ke
+  // QR image online dari verifyUrl. <img> hanya di-fetch saat dokumen dirender
+  // (pratinjau cetak dibuka), jadi tidak membebani load daftar invoice.
+  const qrSrc =
+    qrDataUrl ??
+    (verifyUrl
+      ? `https://api.qrserver.com/v1/create-qr-code/?size=160x160&margin=2&data=${encodeURIComponent(verifyUrl)}`
+      : undefined);
 
   const Label = ({ children }: { children: React.ReactNode }) => (
     <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-[#94A3B8]">{children}</p>
@@ -75,10 +81,6 @@ export function InvoiceDocument({
                 <dt className="text-[#94A3B8]">Tanggal</dt>
                 <dd className="w-[78px] font-semibold tabular-nums text-[#111827]">{formatTanggal(inv.tanggal)}</dd>
               </div>
-              <div className="flex justify-end gap-2">
-                <dt className="text-[#94A3B8]">Jatuh Tempo</dt>
-                <dd className="w-[78px] font-semibold tabular-nums text-[#111827]">{formatTanggal(dueDate.toISOString())}</dd>
-              </div>
             </dl>
             <span
               className="mt-2.5 inline-flex items-center rounded-full px-3 py-1 text-[10px] font-bold uppercase tracking-wide"
@@ -105,7 +107,6 @@ export function InvoiceDocument({
             <dl className="mt-1.5 space-y-1 text-[10px]">
               {[
                 ["Tanggal Invoice", formatTanggal(inv.tanggal)],
-                ["Jatuh Tempo", formatTanggal(dueDate.toISOString())],
                 ["Metode Pembayaran", "Tunai / Transfer"],
                 ["Status", stat.label],
               ].map(([k, v]) => (
@@ -117,14 +118,10 @@ export function InvoiceDocument({
             </dl>
           </div>
 
-          {(qrDataUrl || verifyUrl) && (
+          {qrSrc && (
             <div className="text-center">
-              {qrDataUrl ? (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img src={qrDataUrl} alt="QR Verifikasi" className="h-[68px] w-[68px]" />
-              ) : (
-                <div className="flex h-[68px] w-[68px] items-center justify-center border border-dashed border-[#CBD5E1] text-[8px] text-[#94A3B8]">QR</div>
-              )}
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src={qrSrc} alt="QR Verifikasi" className="h-[68px] w-[68px]" />
               <p className="mt-1 text-[7.5px] uppercase tracking-wide text-[#94A3B8]">Scan untuk verifikasi</p>
             </div>
           )}

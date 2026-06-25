@@ -22,10 +22,12 @@ import {
   PackageSearch,
   Repeat2,
   Wallet,
+  Camera,
 } from "lucide-react";
 import { Nota, type NotaData } from "@/components/Nota";
 import { printArea } from "@/lib/print";
 import { toast } from "sonner";
+import { toPng } from "html-to-image";
 
 type ItemOption = { id: number; kode: string; nama: string; hargaJual: number };
 type OriginalItem = { transactionItemId: number; itemId: number; nama: string; kode: string; qty: number; alreadyReturned: number; availableForReturn: number; harga: number };
@@ -171,9 +173,39 @@ export function ReturClient({
     setRepItems((prev) => prev.filter((x) => x.itemId !== itemId));
   }
 
+  async function handleSaveToImage() {
+    const element = document.querySelector<HTMLElement>(".print-area");
+    if (!element) {
+      toast.error("Elemen cetak tidak ditemukan.");
+      return;
+    }
+    try {
+      toast.info("Sedang mengambil gambar...");
+      // Ukur tinggi penuh isi (scrollHeight) supaya struk panjang tidak
+      // terpotong — wrapper memakai overflow-hidden.
+      const imgDataUrl = await toPng(element, {
+        quality: 1.0,
+        pixelRatio: 2,
+        backgroundColor: "#ffffff",
+        width: element.scrollWidth,
+        height: element.scrollHeight,
+        cacheBust: true,
+        style: { margin: "0", borderRadius: "0" },
+      });
+      const link = document.createElement("a");
+      link.download = `Nota-Retur-${nota?.noReturn ?? "Transaksi"}.png`;
+      link.href = imgDataUrl;
+      link.click();
+      toast.success("Gambar berhasil disimpan!");
+    } catch (err) {
+      console.error(err);
+      toast.error("Gagal menyimpan gambar.");
+    }
+  }
+
   // Calculations
   const totalRetur = retItems.reduce((acc, x) => acc + x.harga * x.qty, 0);
-  const totalGanti = tipe === "TUKAR" ? repItems.reduce((acc, x) => acc + x.harga * x.qty, 0) : 0;
+  const totalGanti = repItems.reduce((acc, x) => acc + x.harga * x.qty, 0);
   const selisih = totalGanti - totalRetur; // positive: customer pays; negative: refund customer
 
   // Submit action
@@ -210,9 +242,10 @@ export function ReturClient({
 
       if (res && "ok" in res) {
         toast.success("Transaksi retur/tukar berhasil disimpan!");
-        const lines: { nama: string; harga: number; qty: number; subtotal: number }[] = [];
+        const lines: { kode?: string; nama: string; harga: number; qty: number; subtotal: number }[] = [];
         for (const ri of retItems) {
           lines.push({
+            kode: ri.kode,
             nama: `[RETUR] ${ri.nama}`,
             harga: ri.harga,
             qty: ri.qty,
@@ -221,6 +254,7 @@ export function ReturClient({
         }
         for (const ri of repItems) {
           lines.push({
+            kode: ri.kode,
             nama: `[GANTI] ${ri.nama}`,
             harga: ri.harga,
             qty: ri.qty,
@@ -353,31 +387,6 @@ export function ReturClient({
           </div>
 
           <div className="space-y-5 p-6">
-            <div>
-              <Label>Jenis Proses</Label>
-              <div className="grid grid-cols-2 gap-2.5">
-                {(["TUKAR", "RETUR"] as const).map((t) => (
-                  <button
-                    key={t}
-                    type="button"
-                    onClick={() => setTipe(t)}
-                    className={`rounded-xl border p-3 text-left transition-all cursor-pointer ${
-                      tipe === t
-                        ? "border-[var(--primary)] bg-[var(--primary)]/5 ring-1 ring-[var(--primary)]"
-                        : "border-border bg-white hover:border-slate-300"
-                    }`}
-                  >
-                    <span className="flex items-center gap-2 text-sm font-bold text-slate-800">
-                      {t === "TUKAR" ? <Repeat2 size={15} /> : <ArrowUpCircle size={15} />}
-                      {t === "TUKAR" ? "Tukar Barang" : "Retur Biasa"}
-                    </span>
-                    <span className="mt-1 block text-[11px] leading-tight text-slate-500">
-                      {t === "TUKAR" ? "Ganti barang baru, bayar selisih" : "Pengembalian / refund tanpa ganti"}
-                    </span>
-                  </button>
-                ))}
-              </div>
-            </div>
 
             <div className="relative" ref={suggestionRef}>
               <Label>Nomor Transaksi Asli (PCxxxxx)</Label>
@@ -529,7 +538,7 @@ export function ReturClient({
               <Button type="button" variant="outline" onClick={() => setStep(1)}>
                 <ArrowLeft size={14} /> Kembali
               </Button>
-              <Button type="button" onClick={() => setStep(tipe === "TUKAR" ? 3 : 4)} disabled={retItems.length === 0}>
+              <Button type="button" onClick={() => setStep(3)} disabled={retItems.length === 0}>
                 Lanjutkan <ArrowRight size={14} />
               </Button>
             </div>
@@ -538,15 +547,15 @@ export function ReturClient({
       )}
 
       {/* ============ STEP 3: Barang pengganti (TUKAR) ============ */}
-      {step === 3 && tipe === "TUKAR" && (
+      {step === 3 && (
         <Card className="space-y-5 overflow-hidden p-0">
           <div className="flex items-center gap-3 border-b border-border bg-slate-50/60 px-6 py-5">
             <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-[var(--primary)]/10 text-[var(--primary)]">
               <Repeat2 size={20} />
             </div>
             <div>
-              <h2 className="text-base font-bold text-slate-900">Pilih Barang Pengganti</h2>
-              <p className="text-xs text-slate-500">Cari barang baru yang keluar dari gudang fisik.</p>
+              <h2 className="text-base font-bold text-slate-900">Pilih Barang Pengganti (Opsional)</h2>
+              <p className="text-xs text-slate-500">Cari barang baru yang keluar dari gudang fisik (kosongkan jika hanya retur biasa).</p>
             </div>
           </div>
 
@@ -661,7 +670,13 @@ export function ReturClient({
               <Button type="button" variant="outline" onClick={() => setStep(2)}>
                 <ArrowLeft size={14} /> Kembali
               </Button>
-              <Button type="button" onClick={() => setStep(4)} disabled={repItems.length === 0}>
+              <Button
+                type="button"
+                onClick={() => {
+                  setTipe(repItems.length > 0 ? "TUKAR" : "RETUR");
+                  setStep(4);
+                }}
+              >
                 Lanjutkan <ArrowRight size={14} />
               </Button>
             </div>
@@ -738,7 +753,7 @@ export function ReturClient({
             {error && <p className="rounded-lg bg-red-50 p-2.5 text-xs font-semibold text-red-700">{error}</p>}
 
             <div className="flex flex-col-reverse gap-2.5 border-t border-border pt-4 sm:flex-row sm:items-center sm:justify-between">
-              <Button type="button" variant="outline" onClick={() => setStep(tipe === "TUKAR" ? 3 : 2)}>
+              <Button type="button" variant="outline" onClick={() => setStep(3)}>
                 <ArrowLeft size={14} /> Kembali
               </Button>
               <Button
@@ -762,27 +777,37 @@ export function ReturClient({
             <div className="print-area">
               <Nota data={nota} />
             </div>
-            <div className="flex flex-wrap sm:flex-nowrap justify-between gap-1.5 rounded-b-[20px] border-t border-border bg-slate-50 p-4">
+            <div className="flex flex-col gap-2 rounded-b-[20px] border-t border-border bg-slate-50 p-4">
+              <div className="flex flex-wrap sm:flex-nowrap justify-between gap-1.5 w-full">
+                <Button
+                  onClick={() => printArea({ thermal: true })}
+                  variant="outline"
+                  size="sm"
+                  className="flex-1 min-w-[75px] h-9"
+                >
+                  <Printer size={13} /> Struk
+                </Button>
+                <Button
+                  onClick={() => printArea({ className: "print-format-a4" })}
+                  size="sm"
+                  className="flex-1 min-w-[75px] h-9"
+                >
+                  <FileText size={13} /> PDF A4
+                </Button>
+                <Button onClick={handleSendWA} variant="success" size="sm" className="flex-1 min-w-[75px] h-9">
+                  <MessageCircle size={13} /> WhatsApp
+                </Button>
+                <Button variant="outline" size="sm" className="flex-1 min-w-[75px] h-9" onClick={() => setNota(null)}>
+                  Tutup
+                </Button>
+              </div>
               <Button
-                onClick={() => printArea({ thermal: true })}
+                onClick={handleSaveToImage}
                 variant="outline"
                 size="sm"
-                className="flex-1 min-w-[75px]"
+                className="w-full h-9 bg-orange-50 hover:bg-orange-100 border-orange-200 text-[var(--primary)] font-bold gap-1.5 rounded-xl cursor-pointer"
               >
-                <Printer size={13} /> Struk
-              </Button>
-              <Button
-                onClick={() => printArea({ className: "print-format-a4" })}
-                size="sm"
-                className="flex-1 min-w-[75px]"
-              >
-                <FileText size={13} /> PDF A4
-              </Button>
-              <Button onClick={handleSendWA} variant="success" size="sm" className="flex-1 min-w-[75px]">
-                <MessageCircle size={13} /> WhatsApp
-              </Button>
-              <Button variant="outline" size="sm" className="flex-1 min-w-[75px]" onClick={() => setNota(null)}>
-                Tutup
+                <Camera size={13} /> Save to Image (PNG)
               </Button>
             </div>
           </div>

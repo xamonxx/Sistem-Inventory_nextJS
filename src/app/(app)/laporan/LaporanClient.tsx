@@ -140,8 +140,10 @@ function StatCard({
           <Icon size={17} />
         </div>
       </div>
-      <p className="mt-3 font-display font-extrabold tracking-tight text-slate-900 text-sm sm:text-lg">{value}</p>
-      <p className="mt-1 text-[11px] text-muted">{hint}</p>
+      <div data-tooltip={value} className="mt-3">
+        <p className="font-display font-extrabold tracking-tight text-slate-900 text-sm sm:text-lg whitespace-nowrap overflow-hidden text-ellipsis">{value}</p>
+      </div>
+      <p className="mt-1 text-[11px] text-muted truncate" title={hint}>{hint}</p>
     </div>
   );
 }

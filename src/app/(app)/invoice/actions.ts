@@ -1,12 +1,12 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { Prisma } from "@prisma/client";
+import { Prisma, PaymentType } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { requireRole } from "@/lib/auth";
 import { logActivity } from "@/lib/activity";
 
-export async function bayarInvoice(invoiceId: number, jumlah: number) {
+export async function bayarInvoice(invoiceId: number, jumlah: number, tipe: PaymentType = "CASH") {
   // Pembayaran/penagihan = domain kasir
   const user = await requireRole("ADMIN_KASIR");
 
@@ -19,9 +19,20 @@ export async function bayarInvoice(invoiceId: number, jumlah: number) {
   const totalDibayar = new Prisma.Decimal(inv.totalDibayar).add(bayar);
   const lunas = totalDibayar.gte(inv.total);
 
-  await prisma.invoice.update({
-    where: { id: invoiceId },
-    data: { totalDibayar, status: lunas ? "LUNAS" : "PENDING" },
+  const newPayment = await prisma.$transaction(async (tx) => {
+    await tx.invoice.update({
+      where: { id: invoiceId },
+      data: { totalDibayar, status: lunas ? "LUNAS" : "PENDING" },
+    });
+
+    return await tx.payment.create({
+      data: {
+        tipe,
+        jumlah: bayar,
+        invoiceId,
+        keterangan: `Pembayaran cicilan untuk ${inv.noInvoice}`,
+      },
+    });
   });
 
   await logActivity({
@@ -29,9 +40,18 @@ export async function bayarInvoice(invoiceId: number, jumlah: number) {
     aksi: "BAYAR_INVOICE",
     entitas: "Invoice",
     entitasId: invoiceId,
-    detail: { bayar, lunas },
+    detail: { bayar, lunas, tipe },
   });
 
   revalidatePath("/invoice");
-  return { ok: true };
+  return {
+    ok: true,
+    payment: {
+      id: newPayment.id,
+      tanggal: newPayment.tanggal.toISOString(),
+      tipe: newPayment.tipe,
+      jumlah: Number(newPayment.jumlah),
+      keterangan: newPayment.keterangan,
+    },
+  };
 }

@@ -36,17 +36,17 @@ const KEUANGAN: Item[] = [
 ];
 
 const PERSEDIAAN: Item[] = [
-  { href: "/barang", label: "Master Barang", icon: Boxes },
-  { href: "/stok", label: "Stok", icon: PackagePlus },
+  { href: "/barang", label: "Master Barang", icon: Boxes, roles: ["ADMIN_GUDANG"] },
+  { href: "/stok", label: "Stok", icon: PackagePlus, roles: ["ADMIN_GUDANG"] },
 ];
 
 const ANALITIK: Item[] = [
-  { href: "/laporan", label: "Laporan", icon: BarChart3 },
+  { href: "/laporan", label: "Laporan", icon: BarChart3, roles: ["ADMIN_GUDANG"] },
 ];
 
 const ADMINISTRASI: Item[] = [
   { href: "/log-aktivitas", label: "Log Aktivitas", icon: History, roles: ["ADMIN_GUDANG"] },
-  { href: "/pengguna", label: "Pengguna", icon: Users },
+  { href: "/pengguna", label: "Pengguna", icon: Users, roles: ["ADMIN_GUDANG"] },
 ];
 
 type SidebarProps = {
@@ -181,7 +181,7 @@ function SidebarContent({
       <aside
         className={cn(
           "no-print bg-[#0a0e17] text-slate-300",
-          "lg:sticky lg:top-0 lg:flex lg:h-screen lg:shrink-0 lg:flex-col lg:border-r lg:border-slate-800/60 lg:transition-[width] lg:duration-200 lg:ease-in-out lg:z-30",
+          "lg:fixed lg:left-0 lg:top-0 lg:bottom-0 lg:flex lg:h-screen lg:shrink-0 lg:flex-col lg:border-r lg:border-slate-800/60 lg:transition-[width] lg:duration-200 lg:ease-in-out lg:z-10",
           isCollapsed ? "lg:w-[80px]" : "lg:w-[280px]",
           "max-lg:fixed max-lg:inset-y-0 max-lg:left-0 max-lg:z-50 max-lg:w-[280px] flex flex-col max-lg:transition-transform max-lg:duration-200 max-lg:ease-in-out",
           isOpen ? "max-lg:translate-x-0" : "max-lg:-translate-x-full"

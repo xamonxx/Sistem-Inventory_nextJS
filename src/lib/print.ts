@@ -13,14 +13,22 @@ export function printArea(options: PrintOptions = {}) {
 
   const bodyClass = options.className || (options.thermal ? "print-thermal" : "");
 
+  // Ukuran kertas: struk thermal pakai roll 80mm dengan tinggi mengikuti isi
+  // (auto) sehingga tidak tercetak kecil di tengah kertas A4. Untuk A4 dipakai
+  // @page global. Style ini di-inject sementara lalu dihapus setelah cetak.
+  let pageStyle: HTMLStyleElement | null = null;
   if (options.thermal) {
+    pageStyle = document.createElement("style");
+    pageStyle.textContent = "@page { size: 80mm auto; margin: 0 !important; }";
+    document.head.appendChild(pageStyle);
+
     Object.assign(clone.style, {
       display: "block",
       position: "fixed",
-      inset: "0",
-      margin: "0 auto",
-      maxWidth: "380px",
-      width: "auto",
+      inset: "0 auto auto 0",
+      margin: "0",
+      width: "80mm",
+      maxWidth: "80mm",
       background: "white",
       zIndex: "9999",
     });
@@ -43,5 +51,6 @@ export function printArea(options: PrintOptions = {}) {
     window.print();
     if (bodyClass) document.body.classList.remove(bodyClass);
     clone.remove();
+    pageStyle?.remove();
   }, 50);
 }

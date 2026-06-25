@@ -1,4 +1,3 @@
-import QRCode from "qrcode";
 import { requireUser } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { InvoiceClient, type InvoiceRow, type InvoiceItem } from "./InvoiceClient";
@@ -9,12 +8,15 @@ export default async function InvoicePage() {
   const user = await requireUser();
   const canBayar = user.role === "ADMIN_KASIR";
 
-  // Query invoices including projects and clients
+  // Query invoices including projects, clients, and payments
   const invoices = await prisma.invoice.findMany({
     orderBy: { id: "desc" }, // terbaru ditambahkan tampil paling atas
     include: {
       project: true,
       client: true,
+      payments: {
+        orderBy: { id: "desc" },
+      },
       transaction: {
         include: {
           items: { include: { item: true } },
@@ -31,17 +33,20 @@ export default async function InvoicePage() {
     },
   });
 
-  // Pre-render QR verification tiap invoice (server-side, offline-safe)
-  const qrMap = new Map<number, { qr: string; verifyUrl: string }>();
-  await Promise.all(
-    invoices.map(async (inv) => {
-      const verifyUrl = `${VERIFY_BASE}/verify/${inv.noInvoice}`;
-      const qr = await QRCode.toDataURL(verifyUrl, { margin: 1, width: 160 });
-      qrMap.set(inv.id, { qr, verifyUrl });
-    })
+  // Hitung jumlah verifikasi semua invoice dalam SATU query (hindari N+1).
+  // QR code tidak lagi digenerate di server — dibuat lazy di klien saat
+  // pratinjau cetak dibuka (lihat InvoiceDocument), jadi load halaman ringan.
+  const verifAgg = await prisma.activityLog.groupBy({
+    by: ["entitasId"],
+    where: {
+      aksi: "VERIFIKASI_INVOICE",
+      entitasId: { in: invoices.map((inv) => String(inv.id)) },
+    },
+    _count: { _all: true },
+  });
+  const verifCountMap = new Map(
+    verifAgg.map((v) => [v.entitasId, v._count._all])
   );
-
-  const now = new Date();
 
   // Format dataset for Client Component
   const formattedInvoices: InvoiceRow[] = invoices.map((inv) => {
@@ -49,19 +54,12 @@ export default async function InvoicePage() {
     const paidVal = Number(inv.totalDibayar);
     const sisa = totalVal - paidVal;
     
-    // Virtual due date: tanggal + 30 days
-    const dueDate = new Date(inv.tanggal);
-    dueDate.setDate(dueDate.getDate() + 30);
-    const isOverdue = sisa > 0 && dueDate.getTime() < now.getTime();
-
-    // Resolve dynamic status: Draft, Pending, Partial, Paid, Overdue
+    // Resolve dynamic status: Draft, Pending, Partial, Paid
     let computedStatus: "DRAFT" | "PENDING" | "PARTIAL" | "PAID" | "OVERDUE" = "PENDING";
     if (inv.status === "DRAFT") {
       computedStatus = "DRAFT";
     } else if (paidVal >= totalVal) {
       computedStatus = "PAID";
-    } else if (isOverdue) {
-      computedStatus = "OVERDUE";
     } else if (paidVal > 0 && paidVal < totalVal) {
       computedStatus = "PARTIAL";
     }
@@ -109,10 +107,17 @@ export default async function InvoicePage() {
       status: computedStatus,
       tanggal: inv.tanggal.toISOString(),
       items,
-      qrDataUrl: qrMap.get(inv.id)?.qr,
-      verifyUrl: qrMap.get(inv.id)?.verifyUrl,
+      verifyUrl: `${VERIFY_BASE}/verify/${inv.noInvoice}`,
+      verifCount: verifCountMap.get(String(inv.id)) ?? 0,
       projectName: inv.project?.nama ?? undefined,
       noTransaksi: inv.transaction?.noTransaksi ?? inv.return?.transaction?.noTransaksi ?? undefined,
+      payments: inv.payments.map((p) => ({
+        id: p.id,
+        tanggal: p.tanggal.toISOString(),
+        tipe: p.tipe,
+        jumlah: Number(p.jumlah),
+        keterangan: p.keterangan,
+      })),
     };
   });
 

@@ -21,9 +21,10 @@ type ChartProps = {
   revenueTrend: { tanggal: string; omset: number; margin: number }[];
   topItems: { nama: string; qty: number }[];
   projectSales: { nama: string; total: number }[];
+  showMargin?: boolean;
 };
 
-export function DashboardCharts({ revenueTrend, topItems, projectSales }: ChartProps) {
+export function DashboardCharts({ revenueTrend, topItems, projectSales, showMargin = true }: ChartProps) {
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
@@ -37,8 +38,10 @@ export function DashboardCharts({ revenueTrend, topItems, projectSales }: ChartP
   return (
     <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
       {/* Revenue & Margin Trend */}
-      <div className="rounded-[18px] border border-border bg-white p-6 shadow-[var(--shadow-card)]">
-        <h3 className="mb-4 text-xs font-bold text-slate-800 uppercase tracking-wider">Tren Omset & Margin Kotor</h3>
+      <div className={`rounded-[18px] border border-border bg-white p-6 shadow-[var(--shadow-card)] ${!showMargin ? "lg:col-span-2" : ""}`}>
+        <h3 className="mb-4 text-xs font-bold text-slate-800 uppercase tracking-wider">
+          {showMargin ? "Tren Omset & Margin Kotor" : "Tren Omset"}
+        </h3>
         <div className="h-72">
           <ResponsiveContainer width="100%" height="100%">
             <AreaChart data={revenueTrend} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
@@ -47,10 +50,12 @@ export function DashboardCharts({ revenueTrend, topItems, projectSales }: ChartP
                   <stop offset="5%" stopColor="#d35a1f" stopOpacity={0.2} />
                   <stop offset="95%" stopColor="#d35a1f" stopOpacity={0} />
                 </linearGradient>
-                <linearGradient id="colorMargin" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor="#10b981" stopOpacity={0.2} />
-                  <stop offset="95%" stopColor="#10b981" stopOpacity={0} />
-                </linearGradient>
+                {showMargin && (
+                  <linearGradient id="colorMargin" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor="#10b981" stopOpacity={0.2} />
+                    <stop offset="95%" stopColor="#10b981" stopOpacity={0} />
+                  </linearGradient>
+                )}
               </defs>
               <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
               <XAxis dataKey="tanggal" tick={{ fontSize: 10, fill: "#94a3b8" }} />
@@ -65,7 +70,9 @@ export function DashboardCharts({ revenueTrend, topItems, projectSales }: ChartP
               />
               <Legend verticalAlign="top" height={36} iconType="circle" />
               <Area name="Omset" type="monotone" dataKey="omset" stroke="#d35a1f" strokeWidth={2} fillOpacity={1} fill="url(#colorOmset)" />
-              <Area name="Margin" type="monotone" dataKey="margin" stroke="#10b981" strokeWidth={2} fillOpacity={1} fill="url(#colorMargin)" />
+              {showMargin && (
+                <Area name="Margin" type="monotone" dataKey="margin" stroke="#10b981" strokeWidth={2} fillOpacity={1} fill="url(#colorMargin)" />
+              )}
             </AreaChart>
           </ResponsiveContainer>
         </div>
@@ -115,23 +122,25 @@ export function DashboardCharts({ revenueTrend, topItems, projectSales }: ChartP
       </div>
 
       {/* Margin Trend (%) */}
-      <div className="rounded-[18px] border border-border bg-white p-6 shadow-[var(--shadow-card)]">
-        <h3 className="mb-4 text-xs font-bold text-slate-800 uppercase tracking-wider">Tren Persentase Margin Kotor (%)</h3>
-        <div className="h-72">
-          <ResponsiveContainer width="100%" height="100%">
-            <LineChart data={revenueTrend.map(d => ({ ...d, marginPct: d.omset > 0 ? Math.round((d.margin / d.omset) * 100) : 0 }))} margin={{ top: 10, right: 10, left: 0, bottom: 5 }}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
-              <XAxis dataKey="tanggal" tick={{ fontSize: 10, fill: "#94a3b8" }} />
-              <YAxis tick={{ fontSize: 10, fill: "#94a3b8" }} tickFormatter={(v) => `${v}%`} />
-              <Tooltip 
-                contentStyle={{ backgroundColor: "#fff", border: "1px solid #e2e8f0", borderRadius: "12px" }}
-                formatter={(v: number) => [`${v}%`, "Margin (%)"]} 
-              />
-              <Line name="Margin %" type="monotone" dataKey="marginPct" stroke="#ef4444" strokeWidth={2.5} activeDot={{ r: 6 }} />
-            </LineChart>
-          </ResponsiveContainer>
+      {showMargin && (
+        <div className="rounded-[18px] border border-border bg-white p-6 shadow-[var(--shadow-card)]">
+          <h3 className="mb-4 text-xs font-bold text-slate-800 uppercase tracking-wider">Tren Persentase Margin Kotor (%)</h3>
+          <div className="h-72">
+            <ResponsiveContainer width="100%" height="100%">
+              <LineChart data={revenueTrend.map(d => ({ ...d, marginPct: d.omset > 0 ? Math.round((d.margin / d.omset) * 100) : 0 }))} margin={{ top: 10, right: 10, left: 0, bottom: 5 }}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
+                <XAxis dataKey="tanggal" tick={{ fontSize: 10, fill: "#94a3b8" }} />
+                <YAxis tick={{ fontSize: 10, fill: "#94a3b8" }} tickFormatter={(v) => `${v}%`} />
+                <Tooltip 
+                  contentStyle={{ backgroundColor: "#fff", border: "1px solid #e2e8f0", borderRadius: "12px" }}
+                  formatter={(v: number) => [`${v}%`, "Margin (%)"]} 
+                />
+                <Line name="Margin %" type="monotone" dataKey="marginPct" stroke="#ef4444" strokeWidth={2.5} activeDot={{ r: 6 }} />
+              </LineChart>
+            </ResponsiveContainer>
+          </div>
         </div>
-      </div>
+      )}
     </div>
   );
 }

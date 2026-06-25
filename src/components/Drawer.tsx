@@ -36,11 +36,14 @@ export function Drawer({
   useEffect(() => {
     if (isOpen) {
       document.body.style.overflow = "hidden";
+      document.documentElement.style.overflow = "hidden";
     } else {
       document.body.style.overflow = "";
+      document.documentElement.style.overflow = "";
     }
     return () => {
       document.body.style.overflow = "";
+      document.documentElement.style.overflow = "";
     };
   }, [isOpen]);
 
@@ -70,7 +73,7 @@ export function Drawer({
       <div
         ref={panelRef}
         className={cn(
-          "relative flex h-full w-full flex-col bg-white shadow-[var(--shadow-drawer)] transition-transform duration-300 ease-out border-l border-border rounded-l-[24px]",
+          "relative flex h-full w-full flex-col bg-white shadow-[var(--shadow-drawer)] transition-transform duration-300 ease-out border-l border-border",
           widths[size],
           isOpen ? "translate-x-0" : "translate-x-full"
         )}

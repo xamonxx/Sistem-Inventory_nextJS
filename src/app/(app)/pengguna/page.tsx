@@ -5,6 +5,18 @@ import { PenggunaClient } from "./PenggunaClient";
 
 export default async function PenggunaPage() {
   const currentUser = await requireUser();
+
+  if (currentUser.role !== "ADMIN_GUDANG") {
+    return (
+      <div className="rounded-xl border border-red-200 bg-red-50 p-6">
+        <h1 className="text-xl font-bold text-red-800">Akses Ditolak</h1>
+        <p className="mt-2 text-sm text-red-700">
+          Menu Manajemen Pengguna hanya diizinkan untuk <strong>Admin Gudang</strong>.
+        </p>
+      </div>
+    );
+  }
+
   const canEdit = currentUser.role === "ADMIN_GUDANG";
 
   // Fetch all accounts from database

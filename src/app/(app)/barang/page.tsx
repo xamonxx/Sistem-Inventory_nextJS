@@ -6,6 +6,18 @@ import { BarangClient } from "./BarangClient";
 
 export default async function BarangPage() {
   const user = await requireUser();
+
+  if (user.role !== "ADMIN_GUDANG") {
+    return (
+      <div className="rounded-xl border border-red-200 bg-red-50 p-6">
+        <h1 className="text-xl font-bold text-red-800">Akses Ditolak</h1>
+        <p className="mt-2 text-sm text-red-700">
+          Menu Master Barang hanya diizinkan untuk <strong>Admin Gudang / Owner</strong>.
+        </p>
+      </div>
+    );
+  }
+
   const canEdit = user.role === "ADMIN_GUDANG";
 
   // Fetch all items from database

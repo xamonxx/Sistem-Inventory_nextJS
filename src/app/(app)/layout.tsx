@@ -13,7 +13,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   return (
     <div className="flex min-h-screen flex-col lg:flex-row bg-[#f8f9fb]">
       {/* Universal Command Palette */}
-      <CommandPalette />
+      <CommandPalette role={user.role} />
 
       {/* Floating Action Button */}
       <FloatingActionButton role={user.role} />

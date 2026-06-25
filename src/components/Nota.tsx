@@ -1,6 +1,6 @@
 import { formatRupiah, formatTanggal } from "@/lib/utils";
 
-export type NotaItem = { nama: string; harga: number; qty: number; subtotal: number };
+export type NotaItem = { kode?: string; nama: string; harga: number; qty: number; subtotal: number };
 export type NotaData = {
   noTransaksi?: string | null;
   noReturn?: string | null;
@@ -19,11 +19,35 @@ export type NotaData = {
 };
 
 const COMPANY = process.env.NEXT_PUBLIC_COMPANY_NAME ?? "PUTRA CORPORATION HARDWARE";
-const ADDRESS = process.env.NEXT_PUBLIC_COMPANY_ADDRESS ?? "Jl. Raya Industri No. 12, Cikarang, Bekasi";
-const PHONE = "021-8901234";
-const EMAIL = "info@putracorporation.com";
+const ADDRESS = process.env.NEXT_PUBLIC_COMPANY_ADDRESS ?? "Jl. Nasional III, Cipatat, Bandung Barat, Jawa Barat (40554)";
+const PHONE = "0822-1234-5678";
+const EMAIL = "info@putracorp.co.id";
 
 export function Nota({ data }: { data: NotaData }) {
+  // Calculate due date (30 days from transaction date)
+  const dueDate = new Date(data.tanggal);
+  dueDate.setDate(dueDate.getDate() + 30);
+
+  // Status mapping
+  const isCredit = data.catatan?.toLowerCase().includes("credit") || data.catatan?.toLowerCase().includes("tempo");
+  const isReturn = data.total < 0;
+  const stat = isReturn 
+    ? { label: "RETUR", fg: "#3730A3", bg: "#E0E7FF" }
+    : isCredit 
+    ? { label: "TEMPO", fg: "#991B1B", bg: "#FEE2E2" } 
+    : { label: "LUNAS", fg: "#166534", bg: "#DCFCE7" };
+
+  const lunas = stat.label === "LUNAS";
+  const totalQty = data.items.reduce((a, it) => a + it.qty, 0);
+
+  // Verification URL & QR code
+  const verifyUrl = typeof window !== "undefined"
+    ? `${window.location.origin}/verify?code=${data.noInvoice ?? data.noTransaksi ?? ""}`
+    : "";
+  const qrDataUrl = verifyUrl
+    ? `https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(verifyUrl)}`
+    : "";
+
   return (
     <>
       {/* 1. THERMAL PRINT LAYOUT (Compact, default for POS receipt) */}
@@ -34,7 +58,7 @@ export function Nota({ data }: { data: NotaData }) {
           <p className="mt-2 font-bold font-sans text-xs tracking-wider">{data.judul ?? "NOTA TRANSAKSI"}</p>
         </div>
 
-        <div className="space-y-0.5 border-b border-dashed border-slate-400 py-2.5 text-[11px]">
+        <div className="space-y-1.5 border-b border-dashed border-slate-400 py-3 text-[11px]">
           {data.noTransaksi && <Row k="No. Transaksi" v={data.noTransaksi} />}
           {data.noReturn && <Row k="No. Retur" v={data.noReturn} />}
           {data.noInvoice && <Row k="No. Invoice" v={data.noInvoice} />}
@@ -91,156 +115,193 @@ export function Nota({ data }: { data: NotaData }) {
           {data.catatan && <p className="mt-2.5 italic text-[10px] leading-normal">{data.catatan}</p>}
         </div>
 
-        <p className="mt-5 text-center text-[10px] text-slate-500 font-sans">Terima kasih atas kepercayaan Anda 🙏</p>
+        <p className="mt-5 text-center text-[9px] text-[#64748B] font-sans leading-relaxed">Nota ini dibuat otomatis oleh sistem.</p>
       </div>
 
       {/* 2. PREMIUM A4 ENTERPRISE INVOICE LAYOUT (Elegant, spaced, professional corporate invoice) */}
-      <div className="a4-print-layout bg-white p-10 text-slate-800 invoice-doc text-xs leading-relaxed hidden">
-        {/* Header Grid */}
-        <div className="flex justify-between items-start border-b-2 border-[var(--primary)] pb-6 mb-6">
-          <div>
-            <h1 className="text-xl font-black text-slate-900 leading-none tracking-tight">{COMPANY}</h1>
-            <p className="text-[10px] text-slate-500 mt-2 max-w-xs">{ADDRESS}</p>
-            <p className="text-[10px] text-slate-500 mt-1">Telp: {PHONE} | Email: {EMAIL}</p>
-          </div>
-          <div className="text-right">
-            <h2 className="text-xl font-bold text-[var(--primary)] tracking-wide">{data.total < 0 ? "NOTA KREDIT (RETUR)" : "FAKTUR PENJUALAN"}</h2>
-            <p className="text-[10px] text-slate-450 mt-1">INVOICE DOCUMENT</p>
-            
-            <div className="mt-4 grid grid-cols-2 gap-x-2 gap-y-0.5 text-left text-[10px] font-medium text-slate-600 bg-slate-50 p-3 rounded-lg border border-slate-200">
-              <span className="text-slate-400">No. Transaksi</span>
-              <span className="font-bold text-slate-800 text-right">{data.noTransaksi || "-"}</span>
-              
-              {data.noInvoice && (
-                <>
-                  <span className="text-slate-400">No. Invoice</span>
-                  <span className="font-bold text-slate-800 text-right">{data.noInvoice}</span>
-                </>
-              )}
-              
-              {data.noReturn && (
-                <>
-                  <span className="text-slate-400">No. Retur</span>
-                  <span className="font-bold text-slate-800 text-right">{data.noReturn}</span>
-                </>
-              )}
-              
-              <span className="text-slate-400">Tanggal</span>
-              <span className="font-mono text-slate-800 text-right">{formatTanggal(data.tanggal)}</span>
+      <div className="a4-print-layout bg-white text-[#111827] invoice-doc hidden">
+        {/* Thin accent bar */}
+        <div className="invoice-accent-bar h-1.5 w-full bg-[#EA580C]" />
+
+        <div className="inv-body px-9 py-7">
+          {/* ============ HEADER ============ */}
+          <div className="flex items-start justify-between gap-6">
+            <div className="flex items-start gap-3.5">
+              <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-md bg-[#1E293B] text-base font-extrabold text-white">
+                PC
+              </div>
+              <div className="leading-tight">
+                <h1 className="max-w-[280px] text-[22px] font-bold leading-[1.1] tracking-tight text-[#111827]">
+                  {COMPANY}
+                </h1>
+                <p className="mt-0.5 text-[9px] font-bold uppercase tracking-[0.08em] text-[#EA580C]">
+                  HARDWARE &amp; BUILDING MATERIALS SUPPLIER
+                </p>
+                <div className="mt-1.5 space-y-px text-[10px] leading-snug text-[#64748B]">
+                  <p>{ADDRESS}</p>
+                  <p>Telp: {PHONE}</p>
+                  <p>{EMAIL} · www.putracorp.co.id</p>
+                </div>
+              </div>
+            </div>
+
+            <div className="text-right">
+              <h2 className="text-[18px] font-bold leading-none tracking-tight text-[#1E293B]">INVOICE</h2>
+              <p className="mt-1 font-mono text-[16px] font-semibold text-[#EA580C]">{data.noInvoice ?? data.noTransaksi ?? "-"}</p>
+              <dl className="mt-2.5 space-y-0.5 text-[10px]">
+                <div className="flex justify-end gap-2">
+                  <dt className="text-[#94A3B8]">Tanggal</dt>
+                  <dd className="w-[78px] font-semibold tabular-nums text-[#111827] text-right">{formatTanggal(data.tanggal)}</dd>
+                </div>
+              </dl>
+              <span
+                className="mt-2.5 inline-flex items-center rounded-full px-3 py-1 text-[10px] font-bold uppercase tracking-wide"
+                style={{ color: stat.fg, background: stat.bg }}
+              >
+                {stat.label}
+              </span>
             </div>
           </div>
-        </div>
 
-        {/* Client & Project Details */}
-        <div className="grid grid-cols-2 gap-8 mb-8">
-          <div className="p-4 rounded-xl border border-slate-200 bg-slate-50/50">
-            <h3 className="text-[10px] font-bold uppercase tracking-wider text-slate-450 mb-2 border-b border-slate-200 pb-1">Diterbitkan Kepada</h3>
-            <p className="text-sm font-extrabold text-slate-900">{data.namaClient || "Umum / Eceran"}</p>
-            {data.alamat && (
-              <div className="mt-2 text-[10px] text-slate-500 leading-normal">
-                <span className="font-bold text-slate-600">Alamat Pengiriman:</span>
-                <p className="mt-0.5">{data.alamat}</p>
-              </div>
-            )}
-          </div>
-          
-          <div className="p-4 rounded-xl border border-slate-200 bg-slate-50/50">
-            <h3 className="text-[10px] font-bold uppercase tracking-wider text-slate-450 mb-2 border-b border-slate-200 pb-1">Referensi Tambahan</h3>
-            <div className="space-y-1 text-[10px] text-slate-600">
+          {/* ============ INFO BLOCKS ============ */}
+          <div className="mt-5 grid grid-cols-[1fr_1fr_auto] gap-8 border-t border-[#E5E7EB] pt-4">
+            <div>
+              <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-[#94A3B8]">Ditagihkan Kepada</p>
+              <p className="mt-1.5 text-[13px] font-bold text-[#111827]">{data.namaClient || "Umum / Eceran"}</p>
               {data.namaWs && (
-                <div className="flex justify-between">
-                  <span>Bengkel / Workshop:</span>
-                  <span className="font-bold text-slate-800">{data.namaWs}</span>
-                </div>
+                <p className="mt-0.5 text-[10px] text-[#475569]">Bengkel / WS: <span className="font-semibold">{data.namaWs}</span></p>
               )}
-              <div className="flex justify-between">
-                <span>Tipe Transaksi:</span>
-                <span className="font-bold text-slate-800">{data.noInvoice || data.noReturn ? "PROYEK" : "RETAIL"}</span>
+              {data.alamat && <p className="mt-0.5 text-[10px] leading-snug text-[#64748B]">{data.alamat}</p>}
+            </div>
+
+            <div>
+              <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-[#94A3B8]">Informasi Invoice</p>
+              <dl className="mt-1.5 space-y-1 text-[10px]">
+                {[
+                  ["Tanggal Invoice", formatTanggal(data.tanggal)],
+                  ["Metode Pembayaran", data.catatan?.includes("Split") ? "Split Payment" : data.catatan?.includes("Kredit") ? "Kredit / Tempo" : "Tunai / Transfer"],
+                  ["Status", stat.label],
+                ].map(([k, v]) => (
+                  <div key={k} className="flex justify-between gap-3">
+                    <dt className="text-[#94A3B8]">{k}</dt>
+                    <dd className="font-semibold text-[#111827]">{v}</dd>
+                  </div>
+                ))}
+              </dl>
+            </div>
+
+            {qrDataUrl && (
+              <div className="text-center">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={qrDataUrl} alt="QR Verifikasi" className="h-[68px] w-[68px]" />
+                <p className="mt-1 text-[7.5px] uppercase tracking-wide text-[#94A3B8]">Scan untuk verifikasi</p>
               </div>
-              {data.catatan && (
-                <div className="mt-2 pt-2 border-t border-slate-200/60 text-slate-500 italic leading-snug">
-                  <span className="font-bold text-slate-600 not-italic block">Catatan Pembayaran:</span>
-                  {data.catatan}
+            )}
+          </div>
+
+          {/* ============ ITEM TABLE ============ */}
+          <div className="inv-table-wrap mt-6">
+            <table className="inv-table w-full border-collapse text-[10px]">
+              <colgroup>
+                <col style={{ width: "12%" }} />
+                <col style={{ width: "37%" }} />
+                <col style={{ width: "8%" }} />
+                <col style={{ width: "10%" }} />
+                <col style={{ width: "16.5%" }} />
+                <col style={{ width: "16.5%" }} />
+              </colgroup>
+              <thead>
+                <tr className="bg-[#1E293B] text-white">
+                  <th className="h-[34px] px-3 text-left text-[10px] font-semibold uppercase tracking-wide">Kode</th>
+                  <th className="px-3 text-left text-[10px] font-semibold uppercase tracking-wide">Nama Barang</th>
+                  <th className="px-3 text-center text-[10px] font-semibold uppercase tracking-wide">Qty</th>
+                  <th className="px-3 text-center text-[10px] font-semibold uppercase tracking-wide">Satuan</th>
+                  <th className="px-3 text-right text-[10px] font-semibold uppercase tracking-wide">Harga</th>
+                  <th className="px-3 text-right text-[10px] font-semibold uppercase tracking-wide">Subtotal</th>
+                </tr>
+              </thead>
+              <tbody>
+                {data.items.map((it, i) => (
+                  <tr key={i} className="border-b border-[#E5E7EB]">
+                    <td className="h-[28px] px-3 font-mono font-semibold text-[#EA580C]">{it.kode ?? "-"}</td>
+                    <td className="h-[28px] px-3 font-medium text-[#111827]">{it.nama}</td>
+                    <td className="h-[28px] px-3 text-center font-semibold tabular-nums">{it.qty}</td>
+                    <td className="h-[28px] px-3 text-center text-[#64748B]">Unit</td>
+                    <td className="h-[28px] px-3 text-right tabular-nums text-[#334155]">{formatRupiah(it.harga)}</td>
+                    <td className="h-[28px] px-3 text-right font-semibold tabular-nums text-[#111827]">{formatRupiah(it.subtotal)}</td>
+                  </tr>
+                ))}
+                {data.items.length === 0 && (
+                  <tr><td colSpan={6} className="px-3 py-6 text-center text-[#94A3B8]">Tidak ada rincian item.</td></tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+
+          {/* ============ NOTES + SUMMARY ============ */}
+          <div className="mt-5 grid grid-cols-[1fr_minmax(220px,260px)] gap-8">
+            {/* Left: notes + bank */}
+            <div className="space-y-4">
+              <div>
+                <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-[#94A3B8]">Catatan</p>
+                <p className="mt-1.5 text-[10px] leading-relaxed text-[#64748B]">
+                  Terima kasih atas kepercayaan Anda. Penukaran barang maksimal 3 hari dengan nota asli.
+                  Mohon konfirmasi setelah melakukan pembayaran/transfer.
+                </p>
+              </div>
+              <div>
+                <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-[#94A3B8]">Pembayaran</p>
+                <div className="mt-1.5 space-y-0.5 text-[10px]">
+                  <div className="flex justify-between gap-6"><span className="text-[#94A3B8]">Bank BCA</span><span className="font-mono font-semibold tabular-nums text-[#111827]">7720 118 234</span></div>
+                  <div className="flex justify-between gap-6"><span className="text-[#94A3B8]">Bank Mandiri</span><span className="font-mono font-semibold tabular-nums text-[#111827]">130 0098 7654</span></div>
+                  <div className="flex justify-between gap-6"><span className="text-[#94A3B8]">Atas Nama</span><span className="font-semibold text-[#111827]">PT Putra Corporation</span></div>
                 </div>
-              )}
+              </div>
+            </div>
+
+            {/* Right: totals */}
+            <div className="self-start">
+              <div className="space-y-1.5 text-[11px]">
+                <div className="flex justify-between text-[#475569]">
+                  <span>Subtotal</span>
+                  <span className="tabular-nums">{formatRupiah(Math.abs(data.total))}</span>
+                </div>
+                {lunas && (
+                  <div className="flex justify-between text-[#475569]">
+                    <span>Pembayaran Masuk</span>
+                    <span className="tabular-nums">− {formatRupiah(Math.abs(data.total))}</span>
+                  </div>
+                )}
+              </div>
+              <div className="mt-2.5 flex items-end justify-between border-t-2 border-[#111827] pt-2.5">
+                <span className="text-[10px] font-bold uppercase tracking-wide text-[#64748B]">
+                  {lunas ? "Total Lunas" : "Sisa Tagihan"}
+                </span>
+                <span className="text-[20px] font-bold leading-none tabular-nums text-[#111827]">
+                  {formatRupiah(Math.abs(data.total))}
+                </span>
+              </div>
+              <p className="mt-1 text-right text-[9px] text-[#94A3B8]">
+                {data.items.length} jenis barang · {totalQty} total unit
+              </p>
             </div>
           </div>
-        </div>
 
-        {/* Items Table */}
-        <table className="w-full border-collapse mb-8">
-          <thead>
-            <tr className="border-b-2 border-slate-300 bg-slate-100 text-[10px] font-bold text-slate-600 uppercase tracking-wider">
-              <th className="py-2.5 px-3 text-left w-8">#</th>
-              <th className="py-2.5 px-3 text-left">Deskripsi Barang / Material</th>
-              <th className="py-2.5 px-3 text-center w-20">Kuantitas</th>
-              <th className="py-2.5 px-3 text-right w-32">Harga Satuan</th>
-              <th className="py-2.5 px-3 text-right w-36">Total Harga</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-slate-200">
-            {data.items.map((it, i) => (
-              <tr key={i} className="hover:bg-slate-50/50">
-                <td className="py-3 px-3 text-slate-400 font-mono">{i + 1}</td>
-                <td className="py-3 px-3 font-bold text-slate-800">{it.nama}</td>
-                <td className="py-3 px-3 text-center font-semibold font-mono">{it.qty}</td>
-                <td className="py-3 px-3 text-right font-mono">{formatRupiah(it.harga)}</td>
-                <td className="py-3 px-3 text-right font-bold font-mono text-slate-900">{formatRupiah(it.subtotal)}</td>
-              </tr>
+          {/* ============ SIGNATURES ============ */}
+          <div className="mt-7 grid grid-cols-3 gap-8 text-center text-[10px]">
+            {["Dibuat Oleh", "Disetujui", "Penerima"].map((role) => (
+              <div key={role}>
+                <p className="font-semibold text-[#475569]">{role}</p>
+                <div className="mt-10 border-t border-[#94A3B8]" />
+                <p className="mt-1 text-[8.5px] text-[#94A3B8]">( ........................... )</p>
+              </div>
             ))}
-          </tbody>
-        </table>
-
-        {/* Calculations & Total Summary */}
-        <div className="flex justify-between items-start gap-8">
-          <div className="text-[10px] text-slate-450 max-w-xs">
-            <h4 className="font-bold uppercase tracking-wider mb-1 text-slate-600">Pemberitahuan Penting:</h4>
-            <p className="leading-relaxed">
-              * Barang yang sudah dibeli tidak dapat ditukar atau dikembalikan kecuali ada perjanjian tertulis sebelumnya.<br/>
-              * Faktur ini merupakan bukti pembayaran sah untuk transaksi yang tercantum di atas.
-            </p>
           </div>
 
-          <div className="w-80 space-y-2 rounded-xl bg-slate-50 border border-slate-200 p-4">
-            {data.diskon != null && data.diskon > 0 && (
-              <div className="flex justify-between text-[11px] text-slate-600 select-none">
-                <span>Total Potongan Diskon</span>
-                <span className="font-bold font-mono text-rose-600">-{formatRupiah(data.diskon)}</span>
-              </div>
-            )}
-            
-            <div className="flex justify-between items-center text-xs font-black text-slate-900 border-t border-slate-200 pt-2 select-none">
-              <span>{data.total < 0 ? "JUMLAH REFUND" : "TOTAL PEMBAYARAN"}</span>
-              <span className="text-base font-extrabold font-mono text-[var(--primary)]">{formatRupiah(Math.abs(data.total))}</span>
-            </div>
-
-            {data.bayar != null && (
-              <div className="flex justify-between text-[10px] text-slate-500 border-t border-dashed border-slate-200 pt-2">
-                <span>Pembayaran Tunai</span>
-                <span className="font-mono">{formatRupiah(data.bayar)}</span>
-              </div>
-            )}
-            
-            {data.kembali != null && (
-              <div className="flex justify-between text-[10px] text-slate-500 font-bold">
-                <span>Kembalian Tunai</span>
-                <span className="font-mono text-emerald-600">{formatRupiah(data.kembali)}</span>
-              </div>
-            )}
-          </div>
-        </div>
-
-        {/* Signature Area */}
-        <div className="mt-16 grid grid-cols-2 gap-8 text-center text-[10px] font-bold text-slate-600">
-          <div>
-            <p className="mb-14">Hormat Kami,</p>
-            <div className="w-40 mx-auto border-b border-slate-400" />
-            <p className="mt-1.5 text-slate-400">Kasir / Administrasi</p>
-          </div>
-          <div>
-            <p className="mb-14">Penerima / Pelanggan,</p>
-            <div className="w-40 mx-auto border-b border-slate-400" />
-            <p className="mt-1.5 text-slate-400">Tanda Tangan &amp; Nama Terang</p>
+          {/* ============ FOOTER ============ */}
+          <div className="mt-6 flex items-center justify-between border-t border-[#E5E7EB] pt-3 text-[9px] text-[#94A3B8]">
+            <span>Invoice dibuat otomatis oleh sistem.</span>
+            <span className="font-semibold text-[#EA580C]">www.putracorp.co.id</span>
           </div>
         </div>
       </div>
@@ -250,10 +311,9 @@ export function Nota({ data }: { data: NotaData }) {
 
 function Row({ k, v }: { k: string; v: string }) {
   return (
-    <div className="flex justify-between">
-      <span className="text-slate-400">{k}</span>
-      <span className="font-bold">{v}</span>
+    <div className="flex justify-between gap-4 items-start">
+      <span className="text-slate-500 shrink-0">{k}</span>
+      <span className="font-semibold text-right break-words max-w-[70%]">{v}</span>
     </div>
   );
 }
-

@@ -5,6 +5,17 @@ import { LaporanClient } from "./LaporanClient";
 export default async function LaporanPage() {
   const user = await requireUser();
 
+  if (user.role !== "ADMIN_GUDANG") {
+    return (
+      <div className="rounded-xl border border-red-200 bg-red-50 p-6">
+        <h1 className="text-xl font-bold text-red-800">Akses Ditolak</h1>
+        <p className="mt-2 text-sm text-red-700">
+          Menu Analitik &amp; Laporan hanya diizinkan untuk <strong>Admin Gudang / Owner</strong>.
+        </p>
+      </div>
+    );
+  }
+
   // Fetch reports on server-side
   const margin = await laporanMargin();
   const terlaris = await barangTerlaris(10);
