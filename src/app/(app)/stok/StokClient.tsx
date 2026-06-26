@@ -45,10 +45,12 @@ export function StokClient({
   initialLedgers,
   items,
   canEdit = false,
+  totalCount: _totalCount,
 }: {
   initialLedgers: LedgerRow[];
   items: ItemOption[];
   canEdit?: boolean;
+  totalCount?: number;
 }) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
