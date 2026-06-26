@@ -67,7 +67,7 @@ export async function laporanStok() {
   const items = await prisma.item.findMany({ orderBy: { kode: "asc" } });
   const stokMap = await getStokAkhirMap(items.map((i) => i.id));
   return items.map((i) => {
-    const stok = stokMap.get(i.id) ?? i.stokAwal;
+    const stok = stokMap[i.id] ?? i.stokAwal;
     return {
       kode: i.kode,
       nama: i.nama,
