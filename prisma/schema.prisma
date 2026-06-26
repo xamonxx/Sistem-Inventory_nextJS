@@ -2,7 +2,8 @@
 // Stok = turunan StockLedger. Uang pakai Decimal. Harga di-snapshot di detail.
 
 generator client {
-  provider = "prisma-client-js"
+  provider      = "prisma-client-js"
+  binaryTargets = ["native", "rhel-openssl-1.1.x"]
 }
 
 datasource db {

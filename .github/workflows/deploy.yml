@@ -1,0 +1,65 @@
+name: Build & Deploy to Hostinger
+
+on:
+  push:
+    branches: [master]
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Create .env for build
+        run: |
+          cat > .env << 'EOF'
+          DATABASE_URL="${{ secrets.DATABASE_URL }}"
+          AUTH_SECRET="${{ secrets.AUTH_SECRET }}"
+          NEXT_PUBLIC_APP_URL="${{ secrets.NEXT_PUBLIC_APP_URL }}"
+          NEXT_PUBLIC_COMPANY_NAME="${{ secrets.NEXT_PUBLIC_COMPANY_NAME }}"
+          NEXT_PUBLIC_COMPANY_ADDRESS="${{ secrets.NEXT_PUBLIC_COMPANY_ADDRESS }}"
+          COOKIE_SECURE="true"
+          NODE_ENV="production"
+          EOF
+
+      - name: Generate Prisma client
+        run: npx prisma generate
+
+      - name: Build Next.js
+        run: npm run build
+
+      - name: Deploy to Hostinger via SSH
+        uses: appleboy/ssh-action@v1
+        with:
+          host: 153.92.9.128
+          port: 65002
+          username: u603012205
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          script: |
+            export PATH=/opt/alt/alt-nodejs22/root/usr/bin:$PATH
+            cd ~/domains/gudangmki.com/public_html
+            git pull origin master
+            npm ci --production=false
+            npx prisma generate
+            touch tmp/restart.txt 2>/dev/null || true
+
+      - name: Upload built .next folder
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: 153.92.9.128
+          port: 65002
+          username: u603012205
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          source: ".next"
+          target: "~/domains/gudangmki.com/public_html/"
