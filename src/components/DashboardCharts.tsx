@@ -66,7 +66,7 @@ export function DashboardCharts({ revenueTrend, topItems, projectSales, showMarg
               <Tooltip 
                 contentStyle={{ backgroundColor: "#fff", border: "1px solid #e2e8f0", borderRadius: "12px", boxShadow: "0 4px 12px rgba(0,0,0,0.05)" }}
                 labelStyle={{ fontWeight: "bold", color: "#0f172a" }}
-                formatter={(v: number) => [formatRupiah(v), undefined]} 
+                formatter={(v: unknown) => [formatRupiah(v as number), undefined]} 
               />
               <Legend verticalAlign="top" height={36} iconType="circle" />
               <Area name="Omset" type="monotone" dataKey="omset" stroke="#059669" strokeWidth={2} fillOpacity={1} fill="url(#colorOmset)" />
@@ -92,7 +92,7 @@ export function DashboardCharts({ revenueTrend, topItems, projectSales, showMarg
                 <YAxis type="category" dataKey="nama" width={80} tick={{ fontSize: 10, fill: "#94a3b8" }} />
                 <Tooltip 
                   contentStyle={{ backgroundColor: "#fff", border: "1px solid #e2e8f0", borderRadius: "12px" }}
-                  formatter={(v: number) => [formatRupiah(v), undefined]} 
+                  formatter={(v: unknown) => [formatRupiah(v as number), undefined]} 
                 />
                 <Bar name="Omset" dataKey="total" fill="#059669" radius={[0, 6, 6, 0]} />
               </BarChart>
@@ -133,7 +133,7 @@ export function DashboardCharts({ revenueTrend, topItems, projectSales, showMarg
                 <YAxis tick={{ fontSize: 10, fill: "#94a3b8" }} tickFormatter={(v) => `${v}%`} />
                 <Tooltip 
                   contentStyle={{ backgroundColor: "#fff", border: "1px solid #e2e8f0", borderRadius: "12px" }}
-                  formatter={(v: number) => [`${v}%`, "Margin (%)"]} 
+                  formatter={(v: unknown) => [`${v as number}%`, "Margin (%)"]} 
                 />
                 <Line name="Margin %" type="monotone" dataKey="marginPct" stroke="#ef4444" strokeWidth={2.5} activeDot={{ r: 6 }} />
               </LineChart>

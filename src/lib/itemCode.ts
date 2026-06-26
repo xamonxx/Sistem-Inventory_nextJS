@@ -1,4 +1,4 @@
-import type { PrismaClient, Prisma } from "@prisma/client";
+import type { Prisma } from "@prisma/client";
 
 /**
  * Auto-generate kode barang yang mudah dihafal & dicari.
@@ -12,7 +12,7 @@ import type { PrismaClient, Prisma } from "@prisma/client";
  * Contoh: "BB Min 18mm New" -> PC-BBM-001, "Multi Polos 9mm" -> PC-MUP-001.
  */
 
-type DbClient = PrismaClient | Prisma.TransactionClient;
+type DbClient = Prisma.TransactionClient;
 
 function cleanLetters(tok: string): string {
   return tok.replace(/[^A-Za-z]/g, "");

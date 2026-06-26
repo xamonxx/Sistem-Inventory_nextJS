@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useState, useMemo, useEffect } from "react";
 import {
@@ -76,8 +76,10 @@ const TOOLTIP_STYLE = {
   itemStyle: { color: "#334155" },
 };
 
-const fmtAxis = (v: number) =>
-  v >= 1_000_000 ? `${(v / 1_000_000).toFixed(1)}jt` : v >= 1000 ? `${Math.round(v / 1000)}rb` : `${v}`;
+const fmtAxis = (v: unknown) => {
+  const n = v as number;
+  return n >= 1_000_000 ? `${(n / 1_000_000).toFixed(1)}jt` : n >= 1000 ? `${Math.round(n / 1000)}rb` : `${n}`;
+};
 const shortName = (v: string) => (v.length > 16 ? v.slice(0, 15) + "…" : v);
 
 // ===== Reusable surface (shadcn "Card") =====
@@ -306,9 +308,9 @@ export function LaporanClient({ role, marginData, terlaris, stokData, piutangDat
       {/* ===== KPI cards ===== */}
       <section className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <StatCard icon={TrendingUp} tone="emerald" label="Total Pendapatan" value={formatRupiah(totalOmset)} hint="Akumulasi omset penjualan" />
-        <StatCard icon={BarChart3} tone="blue" label="Margin Keuntungan" value={isGudang ? formatRupiah(totalMargin) : "🔒 Dibatasi"} hint="Laba kotor setelah modal" />
+        <StatCard icon={BarChart3} tone="blue" label="Margin Keuntungan" value={isGudang ? formatRupiah(totalMargin) : "ðŸ”’ Dibatasi"} hint="Laba kotor setelah modal" />
         <StatCard icon={Wallet} tone="amber" label="Outstanding Piutang" value={formatRupiah(totalPiutang)} hint="Tagihan belum tertagih" />
-        <StatCard icon={Archive} tone="slate" label="Nilai Aset Persediaan" value={isGudang ? formatRupiah(totalAsetValue) : "🔒 Dibatasi"} hint="Valuasi stok gudang" />
+        <StatCard icon={Archive} tone="slate" label="Nilai Aset Persediaan" value={isGudang ? formatRupiah(totalAsetValue) : "ðŸ”’ Dibatasi"} hint="Valuasi stok gudang" />
       </section>
 
       {/* ====================== RINGKASAN ====================== */}
@@ -336,7 +338,7 @@ export function LaporanClient({ role, marginData, terlaris, stokData, piutangDat
                   <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" horizontal={false} />
                   <XAxis type="number" tick={{ fontSize: 10, fill: "#94a3b8" }} tickFormatter={fmtAxis} />
                   <YAxis type="category" dataKey="nama" width={130} tick={{ fontSize: 10, fill: "#64748b" }} />
-                  <Tooltip {...TOOLTIP_STYLE} cursor={{ fill: "rgba(5,150,105,0.05)" }} formatter={(v: number) => [formatRupiah(v), "Omset"]} />
+                  <Tooltip {...TOOLTIP_STYLE} cursor={{ fill: "rgba(5,150,105,0.05)" }} formatter={(v: unknown) => [formatRupiah(v as number), "Omset"]} />
                   <Bar dataKey="omset" fill="url(#omsetBar)" radius={[0, 6, 6, 0]} barSize={18}>
                     <LabelList dataKey="omset" position="right" formatter={fmtAxis} fontSize={10} fill="#64748b" />
                   </Bar>
@@ -403,7 +405,7 @@ export function LaporanClient({ role, marginData, terlaris, stokData, piutangDat
                   {warningStok.length === 0 && (
                     <tr>
                       <Td colSpan={4} className="py-12 text-center text-sm text-slate-400">
-                        Semua stok aman. Tidak ada barang di bawah limit. 👍
+                        Semua stok aman. Tidak ada barang di bawah limit. ðŸ‘
                       </Td>
                     </tr>
                   )}
@@ -439,9 +441,9 @@ export function LaporanClient({ role, marginData, terlaris, stokData, piutangDat
                   <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" horizontal={false} />
                   <XAxis type="number" allowDecimals={false} tick={{ fontSize: 10, fill: "#94a3b8" }} />
                   <YAxis type="category" dataKey="nama" width={130} tick={{ fontSize: 10, fill: "#64748b" }} />
-                  <Tooltip {...TOOLTIP_STYLE} cursor={{ fill: "rgba(16,185,129,0.05)" }} formatter={(v: number) => [`${v} unit`, "Qty Terjual"]} />
+                  <Tooltip {...TOOLTIP_STYLE} cursor={{ fill: "rgba(16,185,129,0.05)" }} formatter={(v: unknown) => [`${v as number} unit`, "Qty Terjual"]} />
                   <Bar dataKey="qty" fill="url(#qtyBar)" radius={[0, 6, 6, 0]} barSize={18}>
-                    <LabelList dataKey="qty" position="right" formatter={(v: number) => `${v}`} fontSize={10} fill="#64748b" />
+                    <LabelList dataKey="qty" position="right" formatter={(v: unknown) => `${v as number}`} fontSize={10} fill="#64748b" />
                   </Bar>
                 </BarChart>
               </ResponsiveContainer>
@@ -490,7 +492,7 @@ export function LaporanClient({ role, marginData, terlaris, stokData, piutangDat
                   <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" horizontal={false} />
                   <XAxis type="number" tick={{ fontSize: 10, fill: "#94a3b8" }} tickFormatter={fmtAxis} />
                   <YAxis type="category" dataKey="nama" width={130} tick={{ fontSize: 10, fill: "#64748b" }} />
-                  <Tooltip {...TOOLTIP_STYLE} cursor={{ fill: "rgba(59,130,246,0.05)" }} formatter={(v: number, n) => [formatRupiah(v), n as string]} />
+                  <Tooltip {...TOOLTIP_STYLE} cursor={{ fill: "rgba(59,130,246,0.05)" }} formatter={(v: unknown, n: unknown) => [formatRupiah(v as number), n as string]} />
                   <Legend verticalAlign="top" height={30} iconType="circle" wrapperStyle={{ fontSize: 11 }} />
                   <Bar name="Omset" dataKey="omset" fill="#cbd5e1" radius={[0, 5, 5, 0]} barSize={10} />
                   <Bar name="Margin" dataKey="margin" fill="#10b981" radius={[0, 5, 5, 0]} barSize={10} />
@@ -568,7 +570,7 @@ export function LaporanClient({ role, marginData, terlaris, stokData, piutangDat
               {!mounted ? (
                 <ChartSkeleton h={260} />
               ) : agingPie.length === 0 ? (
-                <EmptyChart h={260} text="Tidak ada piutang outstanding. 👍" />
+                <EmptyChart h={260} text="Tidak ada piutang outstanding. ðŸ‘" />
               ) : (
                 <ResponsiveContainer width="100%" height={260}>
                   <PieChart>
@@ -577,7 +579,7 @@ export function LaporanClient({ role, marginData, terlaris, stokData, piutangDat
                         <Cell key={i} fill={entry.color} />
                       ))}
                     </Pie>
-                    <Tooltip {...TOOLTIP_STYLE} formatter={(v: number, n) => [formatRupiah(v), n as string]} />
+                    <Tooltip {...TOOLTIP_STYLE} formatter={(v: unknown, n: unknown) => [formatRupiah(v as number), n as string]} />
                   </PieChart>
                 </ResponsiveContainer>
               )}
@@ -619,7 +621,7 @@ export function LaporanClient({ role, marginData, terlaris, stokData, piutangDat
                         <Td className="text-center font-mono text-xs font-semibold text-slate-500">{p.ageDays} Hari</Td>
                         <Td className="text-right font-mono text-slate-600">{formatRupiah(p.total)}</Td>
                         <Td className={cn("text-right font-mono font-bold", p.status === "LUNAS" ? "text-slate-400" : "text-rose-600")}>
-                          {p.status === "LUNAS" ? "—" : formatRupiah(p.sisa)}
+                          {p.status === "LUNAS" ? "â€”" : formatRupiah(p.sisa)}
                         </Td>
                         <Td className="text-center">
                           <Badge tone={badgeColor}>{p.status === "LUNAS" ? "LUNAS" : p.ageGroup}</Badge>
@@ -641,7 +643,7 @@ export function LaporanClient({ role, marginData, terlaris, stokData, piutangDat
           {isGudang && (
             <Panel
               title="10 Aset Persediaan Terbesar"
-              desc="Nilai aset = harga beli × sisa stok"
+              desc="Nilai aset = harga beli Ã— sisa stok"
               icon={<div className="flex h-9 w-9 items-center justify-center rounded-xl border border-blue-100 bg-blue-50 text-blue-600"><Archive size={17} /></div>}
             >
               {!mounted ? (
@@ -660,7 +662,7 @@ export function LaporanClient({ role, marginData, terlaris, stokData, piutangDat
                     <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" horizontal={false} />
                     <XAxis type="number" tick={{ fontSize: 10, fill: "#94a3b8" }} tickFormatter={fmtAxis} />
                     <YAxis type="category" dataKey="name" width={130} tick={{ fontSize: 10, fill: "#64748b" }} />
-                    <Tooltip {...TOOLTIP_STYLE} cursor={{ fill: "rgba(37,99,235,0.05)" }} formatter={(v: number) => [formatRupiah(v), "Nilai Aset"]} />
+                    <Tooltip {...TOOLTIP_STYLE} cursor={{ fill: "rgba(37,99,235,0.05)" }} formatter={(v: unknown) => [formatRupiah(v as number), "Nilai Aset"]} />
                     <Bar dataKey="nilai" fill="url(#asetBar)" radius={[0, 6, 6, 0]} barSize={18}>
                       <LabelList dataKey="nilai" position="right" formatter={fmtAxis} fontSize={10} fill="#64748b" />
                     </Bar>
@@ -673,7 +675,7 @@ export function LaporanClient({ role, marginData, terlaris, stokData, piutangDat
           <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
             <Panel
               title="Fast-Moving"
-              desc="Terjual ≥ 15 unit dalam siklus"
+              desc="Terjual â‰¥ 15 unit dalam siklus"
               icon={<div className="flex h-9 w-9 items-center justify-center rounded-xl border border-emerald-100 bg-emerald-50 text-emerald-600"><CheckCircle size={17} /></div>}
             >
               <Table className="border-none shadow-none bg-transparent rounded-none">
@@ -735,7 +737,7 @@ export function LaporanClient({ role, marginData, terlaris, stokData, piutangDat
                   ))}
                   {inventoryHealth.slowMoving.length === 0 && (
                     <tr>
-                      <Td colSpan={4} className="py-12 text-center text-sm text-slate-400">Perputaran semua barang normal/baik. 👍</Td>
+                      <Td colSpan={4} className="py-12 text-center text-sm text-slate-400">Perputaran semua barang normal/baik. ðŸ‘</Td>
                     </tr>
                   )}
                 </tbody>
@@ -744,7 +746,7 @@ export function LaporanClient({ role, marginData, terlaris, stokData, piutangDat
             </Panel>
           </div>
 
-          <Panel title="Detail Valuasi & Posisi Aset Persediaan" desc="Nilai aset dihitung dari Harga Beli × Sisa Stok">
+          <Panel title="Detail Valuasi & Posisi Aset Persediaan" desc="Nilai aset dihitung dari Harga Beli Ã— Sisa Stok">
             <Table className="border-none shadow-none bg-transparent rounded-none">
               <thead>
                 <tr>
@@ -762,9 +764,9 @@ export function LaporanClient({ role, marginData, terlaris, stokData, piutangDat
                     <Td className="font-mono text-xs text-slate-400">{s.kode}</Td>
                     <Td className="font-semibold text-slate-700">{s.nama}</Td>
                     <Td className="text-right font-mono font-bold text-slate-600">{s.stokAkhir} pcs</Td>
-                    <Td className="text-right font-mono text-xs text-slate-500">{isGudang ? formatRupiah(s.hargaBeli) : "🔒"}</Td>
+                    <Td className="text-right font-mono text-xs text-slate-500">{isGudang ? formatRupiah(s.hargaBeli) : "ðŸ”’"}</Td>
                     <Td className="text-right font-mono text-xs text-slate-500">{formatRupiah(s.hargaJual)}</Td>
-                    <Td className="text-right font-mono font-semibold text-slate-800">{isGudang ? formatRupiah(s.nilaiAset) : "🔒 Dibatasi"}</Td>
+                    <Td className="text-right font-mono font-semibold text-slate-800">{isGudang ? formatRupiah(s.nilaiAset) : "ðŸ”’ Dibatasi"}</Td>
                   </tr>
                 ))}
               </tbody>

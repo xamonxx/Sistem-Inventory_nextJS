@@ -22,7 +22,7 @@ export function OmsetChart({ data }: { data: { label: string; omset: number }[] 
           tickFormatter={(v) => (v >= 1_000_000 ? `${v / 1_000_000}jt` : `${v / 1000}rb`)}
           width={48}
         />
-        <Tooltip formatter={(v: number) => formatRupiah(v)} />
+        <Tooltip formatter={(v: unknown) => formatRupiah(v as number)} />
         <Bar dataKey="omset" fill="#1d4ed8" radius={[4, 4, 0, 0]} />
       </BarChart>
     </ResponsiveContainer>
