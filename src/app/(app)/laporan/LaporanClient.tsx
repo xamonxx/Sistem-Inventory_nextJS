@@ -253,10 +253,6 @@ export function LaporanClient({ role, marginData, terlaris, stokData, piutangDat
   const slowPg = usePagination(inventoryHealth.slowMoving, 10);
   const valPg = usePagination(stokData, 10);
 
-  function triggerExport(type: string) {
-    toast.success(`Mengunduh excel laporan ${type}...`);
-    window.location.href = `/api/export?type=${type}`;
-  }
 
   const tabs: { key: TabKey; label: string; icon: React.ElementType }[] = [
     { key: "ringkasan", label: "Ringkasan", icon: LayoutGrid },
@@ -303,12 +299,6 @@ export function LaporanClient({ role, marginData, terlaris, stokData, piutangDat
             className="inline-flex items-center gap-1.5 rounded-lg border border-border bg-white px-3 py-1.5 text-xs font-semibold text-slate-600 shadow-xs transition hover:bg-slate-50 cursor-pointer"
           >
             <Printer size={14} /> Cetak PDF
-          </button>
-          <button
-            onClick={() => triggerExport(activeTab)}
-            className="inline-flex items-center gap-1.5 rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-1.5 text-xs font-semibold text-emerald-700 shadow-xs transition hover:bg-emerald-100 cursor-pointer"
-          >
-            <Download size={14} /> Ekspor Excel
           </button>
         </div>
       </div>
