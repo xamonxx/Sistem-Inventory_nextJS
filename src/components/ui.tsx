@@ -58,6 +58,74 @@ export const Input = React.forwardRef<HTMLInputElement, React.InputHTMLAttribute
 );
 Input.displayName = "Input";
 
+export const Textarea = React.forwardRef<HTMLTextAreaElement, React.TextareaHTMLAttributes<HTMLTextAreaElement>>(
+  ({ className, ...props }, ref) => {
+    return (
+      <textarea
+        ref={ref}
+        className={cn(
+          "w-full rounded-[12px] border border-border bg-white px-4 py-2.5 text-sm outline-none transition-all resize-y",
+          "focus:border-[var(--primary)] focus:ring-4 focus:ring-[var(--primary)]/10",
+          "disabled:bg-slate-50 disabled:text-slate-400 placeholder:text-slate-400/80",
+          className
+        )}
+        {...props}
+      />
+    );
+  }
+);
+Textarea.displayName = "Textarea";
+
+/**
+ * Indikator batas karakter (mis. 12/60). Berubah kuning saat mendekati batas
+ * (>=90%) dan merah saat batas tercapai sebagai peringatan ke pengguna.
+ */
+export function CharCounter({
+  value,
+  max,
+  className,
+}: {
+  value: string | null | undefined;
+  max: number;
+  className?: string;
+}) {
+  const len = (value ?? "").length;
+  const ratio = max > 0 ? len / max : 0;
+  const tone =
+    len >= max ? "text-rose-500" : ratio >= 0.9 ? "text-amber-500" : "text-slate-400";
+  return (
+    <span
+      aria-live="polite"
+      className={cn("text-[10px] font-semibold tabular-nums select-none", tone, className)}
+    >
+      {len}/{max}
+    </span>
+  );
+}
+
+/**
+ * Label + counter dalam satu baris. Memudahkan pasang indikator batas karakter
+ * di atas input secara konsisten.
+ */
+export function LabelWithCounter({
+  children,
+  value,
+  max,
+  className,
+}: {
+  children: React.ReactNode;
+  value: string | null | undefined;
+  max: number;
+  className?: string;
+}) {
+  return (
+    <div className="flex items-center justify-between gap-2">
+      <Label className={cn("mb-0", className)}>{children}</Label>
+      <CharCounter value={value} max={max} />
+    </div>
+  );
+}
+
 // Helper to extract plain text string from React node
 function getLabelFromNode(node: React.ReactNode): string {
   if (node === null || node === undefined) return "";

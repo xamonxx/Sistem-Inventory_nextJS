@@ -3,7 +3,8 @@
 import { useState, useTransition, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { submitStockIn } from "./actions";
-import { Button, Card, Input, Label, Select, Table, Th, Td } from "@/components/ui";
+import { Button, Card, Input, Label, Select, Table, Th, Td, CharCounter } from "@/components/ui";
+import { FIELD_LIMITS } from "@/lib/fieldLimits";
 import { formatRupiah } from "@/lib/utils";
 import { Plus, Trash2, ArrowLeft, Save, Printer } from "lucide-react";
 import Link from "next/link";
@@ -120,26 +121,38 @@ export function StockInClient({ items }: { items: ItemOption[] }) {
             <h2 className="text-sm font-semibold text-foreground">Detail Penerimaan / Supplier</h2>
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
               <div>
-                <Label>Nama Supplier</Label>
+                <div className="flex items-center justify-between gap-2">
+                  <Label className="mb-0">Nama Supplier</Label>
+                  <CharCounter value={supplierName} max={FIELD_LIMITS.supplierName} />
+                </div>
                 <Input
                   value={supplierName}
                   onChange={(e) => setSupplierName(e.target.value)}
+                  maxLength={FIELD_LIMITS.supplierName}
                   placeholder="mis. PT Indo Plywood"
                 />
               </div>
               <div>
-                <Label>No. Referensi / Nota Uang</Label>
+                <div className="flex items-center justify-between gap-2">
+                  <Label className="mb-0">No. Referensi / Nota Uang</Label>
+                  <CharCounter value={referenceNo} max={FIELD_LIMITS.referenceNo} />
+                </div>
                 <Input
                   value={referenceNo}
                   onChange={(e) => setReferenceNo(e.target.value)}
+                  maxLength={FIELD_LIMITS.referenceNo}
                   placeholder="mis. SJ-10294"
                 />
               </div>
               <div>
-                <Label>Catatan Tambahan</Label>
+                <div className="flex items-center justify-between gap-2">
+                  <Label className="mb-0">Catatan Tambahan</Label>
+                  <CharCounter value={notes} max={FIELD_LIMITS.notes} />
+                </div>
                 <Input
                   value={notes}
                   onChange={(e) => setNotes(e.target.value)}
+                  maxLength={FIELD_LIMITS.notes}
                   placeholder="mis. Plywood 18mm premium"
                 />
               </div>
@@ -148,7 +161,7 @@ export function StockInClient({ items }: { items: ItemOption[] }) {
 
           {/* Batch table grid */}
           <div className="overflow-x-auto rounded-xl border border-border bg-card shadow-sm">
-            <Table>
+            <Table className="border-none shadow-none bg-transparent rounded-none">
               <thead>
                 <tr>
                   <Th>Pilih Barang</Th>
@@ -179,6 +192,7 @@ export function StockInClient({ items }: { items: ItemOption[] }) {
                         <Input
                           type="number"
                           min={1}
+                          max={FIELD_LIMITS.maxQty}
                           value={l.qty}
                           onChange={(e) => updateRow(index, "qty", parseInt(e.target.value) || 1)}
                           className="text-center font-mono font-semibold"
@@ -187,6 +201,8 @@ export function StockInClient({ items }: { items: ItemOption[] }) {
                       <Td>
                         <Input
                           type="number"
+                          min={0}
+                          max={FIELD_LIMITS.maxMoney}
                           value={l.unitCost}
                           onChange={(e) => updateRow(index, "unitCost", parseInt(e.target.value) || 0)}
                           className="text-right font-mono"

@@ -19,6 +19,26 @@ const STATUS: Record<string, { label: string; fg: string; bg: string }> = {
   DRAFT: { label: "DRAFT", fg: "#475569", bg: "#F1F5F9" },
 };
 
+function renderItemName(name: string) {
+  if (name.startsWith("[RETUR]")) {
+    return (
+      <span className="leading-tight">
+        <strong className="font-extrabold text-indigo-700 font-sans mr-1">[RETUR]</strong>
+        <span>{name.slice(7).trim()}</span>
+      </span>
+    );
+  }
+  if (name.startsWith("[GANTI]")) {
+    return (
+      <span className="leading-tight">
+        <strong className="font-extrabold text-emerald-700 font-sans mr-1">[GANTI]</strong>
+        <span>{name.slice(7).trim()}</span>
+      </span>
+    );
+  }
+  return <span className="leading-tight">{name}</span>;
+}
+
 export function InvoiceDocument({
   inv,
   qrDataUrl,
@@ -152,7 +172,7 @@ export function InvoiceDocument({
               {inv.items.map((it, i) => (
                 <tr key={i} className="border-b border-[#E5E7EB]">
                   <td className="h-[28px] px-3 font-mono font-semibold text-[#EA580C]">{it.kode}</td>
-                  <td className="h-[28px] px-3 font-medium text-[#111827]">{it.nama}</td>
+                  <td className="h-[28px] px-3 font-medium text-[#111827]">{renderItemName(it.nama)}</td>
                   <td className="h-[28px] px-3 text-center font-semibold tabular-nums">{it.qty}</td>
                   <td className="h-[28px] px-3 text-center text-[#64748B]">{it.satuan ?? "Unit"}</td>
                   <td className="h-[28px] px-3 text-right tabular-nums text-[#334155]">{formatRupiah(it.harga)}</td>
@@ -177,14 +197,16 @@ export function InvoiceDocument({
                 Mohon konfirmasi setelah melakukan pembayaran/transfer.
               </p>
             </div>
-            <div>
-              <Label>Pembayaran</Label>
-              <div className="mt-1.5 space-y-0.5 text-[10px]">
-                <div className="flex justify-between gap-6"><span className="text-[#94A3B8]">Bank BCA</span><span className="font-mono font-semibold tabular-nums text-[#111827]">7720 118 234</span></div>
-                <div className="flex justify-between gap-6"><span className="text-[#94A3B8]">Bank Mandiri</span><span className="font-mono font-semibold tabular-nums text-[#111827]">130 0098 7654</span></div>
-                <div className="flex justify-between gap-6"><span className="text-[#94A3B8]">Atas Nama</span><span className="font-semibold text-[#111827]">PT Putra Corporation</span></div>
+            {(inv.namaBank || inv.noRekening || inv.atasNama) && (
+              <div>
+                <Label>Pembayaran</Label>
+                <div className="mt-1.5 space-y-0.5 text-[10px]">
+                  {inv.namaBank && <div className="flex justify-between gap-6"><span className="text-[#94A3B8]">Nama Bank</span><span className="font-semibold text-[#111827]">{inv.namaBank}</span></div>}
+                  {inv.noRekening && <div className="flex justify-between gap-6"><span className="text-[#94A3B8]">No. Rekening</span><span className="font-mono font-semibold tabular-nums text-[#111827]">{inv.noRekening}</span></div>}
+                  {inv.atasNama && <div className="flex justify-between gap-6"><span className="text-[#94A3B8]">Atas Nama</span><span className="font-semibold text-[#111827]">{inv.atasNama}</span></div>}
+                </div>
               </div>
-            </div>
+            )}
           </div>
 
           {/* Right: totals (no discount line) */}

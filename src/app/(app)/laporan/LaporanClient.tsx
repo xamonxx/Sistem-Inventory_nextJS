@@ -339,14 +339,14 @@ export function LaporanClient({ role, marginData, terlaris, stokData, piutangDat
                 <BarChart data={terlarisChart} layout="vertical" margin={{ left: 8, right: 48 }}>
                   <defs>
                     <linearGradient id="omsetBar" x1="0" y1="0" x2="1" y2="0">
-                      <stop offset="0%" stopColor="#f0813f" />
-                      <stop offset="100%" stopColor="#d35a1f" />
+                      <stop offset="0%" stopColor="#34d399" />
+                      <stop offset="100%" stopColor="#059669" />
                     </linearGradient>
                   </defs>
                   <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" horizontal={false} />
                   <XAxis type="number" tick={{ fontSize: 10, fill: "#94a3b8" }} tickFormatter={fmtAxis} />
                   <YAxis type="category" dataKey="nama" width={130} tick={{ fontSize: 10, fill: "#64748b" }} />
-                  <Tooltip {...TOOLTIP_STYLE} cursor={{ fill: "rgba(211,90,31,0.05)" }} formatter={(v: number) => [formatRupiah(v), "Omset"]} />
+                  <Tooltip {...TOOLTIP_STYLE} cursor={{ fill: "rgba(5,150,105,0.05)" }} formatter={(v: number) => [formatRupiah(v), "Omset"]} />
                   <Bar dataKey="omset" fill="url(#omsetBar)" radius={[0, 6, 6, 0]} barSize={18}>
                     <LabelList dataKey="omset" position="right" formatter={fmtAxis} fontSize={10} fill="#64748b" />
                   </Bar>
@@ -361,7 +361,7 @@ export function LaporanClient({ role, marginData, terlaris, stokData, piutangDat
               desc="Berdasarkan kuantitas unit terjual"
               icon={<div className="flex h-9 w-9 items-center justify-center rounded-xl border border-emerald-100 bg-emerald-50 text-emerald-600"><Boxes size={17} /></div>}
             >
-              <Table>
+              <Table className="border-none shadow-none bg-transparent rounded-none">
                 <thead>
                   <tr>
                     <Th className="w-10 text-center">#</Th>
@@ -390,7 +390,7 @@ export function LaporanClient({ role, marginData, terlaris, stokData, piutangDat
               icon={<div className="flex h-9 w-9 items-center justify-center rounded-xl border border-rose-100 bg-rose-50 text-rose-600"><ShieldAlert size={17} /></div>}
               action={<Badge tone="red">Tindakan Cepat</Badge>}
             >
-              <Table>
+              <Table className="border-none shadow-none bg-transparent rounded-none">
                 <thead>
                   <tr>
                     <Th>SKU</Th>
@@ -459,7 +459,7 @@ export function LaporanClient({ role, marginData, terlaris, stokData, piutangDat
           </Panel>
 
           <Panel title="Daftar Omset Produk Terjual" desc="Total volume omset barang dagang">
-            <Table>
+            <Table className="border-none shadow-none bg-transparent rounded-none">
               <thead>
                 <tr>
                   <Th>Nama Barang</Th>
@@ -510,7 +510,7 @@ export function LaporanClient({ role, marginData, terlaris, stokData, piutangDat
           </Panel>
 
           <Panel title="Analisis Margin Bersih Penjualan" desc="Evaluasi produk paling menguntungkan">
-            <Table>
+            <Table className="border-none shadow-none bg-transparent rounded-none">
               <thead>
                 <tr>
                   <Th>Nama Barang</Th>
@@ -605,7 +605,7 @@ export function LaporanClient({ role, marginData, terlaris, stokData, piutangDat
             </Panel>
 
             <Panel title="Analisis Umur Piutang (Aging List)" desc="Invoice dengan sisa outstanding" className="lg:col-span-2">
-              <Table>
+              <Table className="border-none shadow-none bg-transparent rounded-none">
                 <thead>
                   <tr>
                     <Th>No. Invoice</Th>
@@ -686,7 +686,7 @@ export function LaporanClient({ role, marginData, terlaris, stokData, piutangDat
               desc="Terjual ≥ 15 unit dalam siklus"
               icon={<div className="flex h-9 w-9 items-center justify-center rounded-xl border border-emerald-100 bg-emerald-50 text-emerald-600"><CheckCircle size={17} /></div>}
             >
-              <Table>
+              <Table className="border-none shadow-none bg-transparent rounded-none">
                 <thead>
                   <tr>
                     <Th>SKU</Th>
@@ -723,7 +723,7 @@ export function LaporanClient({ role, marginData, terlaris, stokData, piutangDat
               desc="Perputaran rendah atau stok mati"
               icon={<div className="flex h-9 w-9 items-center justify-center rounded-xl border border-amber-100 bg-amber-50 text-amber-600"><AlertTriangle size={17} /></div>}
             >
-              <Table>
+              <Table className="border-none shadow-none bg-transparent rounded-none">
                 <thead>
                   <tr>
                     <Th>SKU</Th>
@@ -755,7 +755,7 @@ export function LaporanClient({ role, marginData, terlaris, stokData, piutangDat
           </div>
 
           <Panel title="Detail Valuasi & Posisi Aset Persediaan" desc="Nilai aset dihitung dari Harga Beli × Sisa Stok">
-            <Table>
+            <Table className="border-none shadow-none bg-transparent rounded-none">
               <thead>
                 <tr>
                   <Th>SKU</Th>

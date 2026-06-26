@@ -3,7 +3,8 @@
 import { Fragment, useState, useTransition, useMemo, useRef, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { createReturn, findTransactionByCode } from "./actions";
-import { Button, Card, Input, Label, Select, Table, Th, Td } from "@/components/ui";
+import { Button, Card, Input, Label, Select, Table, Th, Td, CharCounter } from "@/components/ui";
+import { FIELD_LIMITS } from "@/lib/fieldLimits";
 import { formatRupiah } from "@/lib/utils";
 import {
   Search,
@@ -389,11 +390,12 @@ export function ReturClient({
           <div className="space-y-5 p-6">
 
             <div className="relative" ref={suggestionRef}>
-              <Label>Nomor Transaksi Asli (PCxxxxx)</Label>
+              <Label>Nomor Transaksi Asli (PCxxxxx) atau Nomor Invoice (INV-xxxxx)</Label>
               <div className="relative">
                 <Search size={18} className="absolute left-3.5 top-3 text-slate-400" />
                 <Input
                   value={searchCode}
+                  maxLength={40}
                   onChange={(e) => {
                     setSearchCode(e.target.value);
                     setShowSuggestions(true);
@@ -402,7 +404,7 @@ export function ReturClient({
                   onKeyDown={(e) => {
                     if (e.key === "Enter") handleFindTrx();
                   }}
-                  placeholder="mis. PC00001 atau nama pelanggan"
+                  placeholder="mis. PC00001, INV-00007, atau nama pelanggan"
                   className="h-11 pl-10"
                 />
               </div>
@@ -515,10 +517,14 @@ export function ReturClient({
 
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <div>
-                <Label>Alasan Pengembalian / Penukaran</Label>
+                <div className="flex items-center justify-between gap-2">
+                  <Label className="mb-0">Alasan Pengembalian / Penukaran</Label>
+                  <CharCounter value={alasan} max={FIELD_LIMITS.alasan} />
+                </div>
                 <Input
                   value={alasan}
                   onChange={(e) => setAlasan(e.target.value)}
+                  maxLength={FIELD_LIMITS.alasan}
                   placeholder="mis. salah beli ukuran, cacat fisik plywood"
                 />
               </div>
@@ -567,6 +573,7 @@ export function ReturClient({
                 <Input
                   value={repQuery}
                   onChange={(e) => setRepQuery(e.target.value)}
+                  maxLength={FIELD_LIMITS.search}
                   placeholder="Cari berdasarkan kode / nama barang pengganti..."
                   className="h-11 pl-10"
                 />
@@ -629,6 +636,8 @@ export function ReturClient({
                         </button>
                         <input
                           type="number"
+                          min={1}
+                          max={FIELD_LIMITS.maxQty}
                           value={l.qty}
                           onChange={(e) => updateRepQty(l.itemId, parseInt(e.target.value) || 1)}
                           className="h-8 w-14 rounded-md border border-border text-center font-mono text-sm font-bold"

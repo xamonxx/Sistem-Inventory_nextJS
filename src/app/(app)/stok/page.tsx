@@ -3,7 +3,21 @@ import { prisma } from "@/lib/prisma";
 import { StokForm } from "./StokForm";
 import { StokClient } from "./StokClient";
 
-export default async function StokPage() {
+// Cache stok page for 45 seconds (balances dynamic filters with performance)
+export const revalidate = 45;
+
+export default async function StokPage({
+  searchParams,
+}: {
+  searchParams: Promise<{
+    itemId?: string;
+    tipe?: string;
+    search?: string;
+    startDate?: string;
+    endDate?: string;
+    page?: string;
+  }>;
+}) {
   const user = await requireUser();
 
   if (user.role !== "ADMIN_GUDANG") {
@@ -18,6 +32,14 @@ export default async function StokPage() {
   }
 
   const canEdit = user.role === "ADMIN_GUDANG";
+  const params = await searchParams;
+
+  // Parse filters from search params
+  const itemIdFilter = params.itemId ? parseInt(params.itemId) : undefined;
+  const tipeFilter = params.tipe && params.tipe !== "ALL" ? params.tipe : undefined;
+  const searchQuery = params.search?.trim() || undefined;
+  const startDate = params.startDate || undefined;
+  const endDate = params.endDate || undefined;
 
   // Fetch items for selection options
   const items = await prisma.item.findMany({
@@ -26,15 +48,51 @@ export default async function StokPage() {
     select: { id: true, kode: true, nama: true },
   });
 
-  // Fetch full stock ledgers movement history
+  // Build WHERE clause for server-side filtering
+  const where: any = {};
+  
+  if (itemIdFilter) {
+    where.itemId = itemIdFilter;
+  }
+  
+  if (tipeFilter) {
+    where.tipe = tipeFilter;
+  }
+  
+  if (searchQuery) {
+    where.OR = [
+      { item: { nama: { contains: searchQuery } } },
+      { keterangan: { contains: searchQuery } },
+    ];
+  }
+  
+  if (startDate || endDate) {
+    where.tanggal = {};
+    if (startDate) {
+      where.tanggal.gte = new Date(startDate);
+    }
+    if (endDate) {
+      where.tanggal.lte = new Date(endDate + "T23:59:59");
+    }
+  }
+
+  // Fetch filtered stock ledgers (server-side filtering reduces data transfer)
+  // If filtering by single item, fetch all records for accurate running balance
+  // Otherwise, limit to recent 300 records
+  const take = itemIdFilter ? undefined : 300;
+  
   const ledgers = await prisma.stockLedger.findMany({
+    where,
     orderBy: { id: "desc" },
-    take: 300,
+    take,
     include: {
       item: true,
       user: true,
     },
   });
+
+  // Get total count for pagination info
+  const totalCount = await prisma.stockLedger.count({ where });
 
   // Format ledger rows for Client Component
   const formattedLedgers = ledgers.map((l) => ({
@@ -69,7 +127,12 @@ export default async function StokPage() {
         </div>
       )}
 
-      <StokClient initialLedgers={formattedLedgers} items={items} canEdit={canEdit} />
+      <StokClient 
+        initialLedgers={formattedLedgers} 
+        items={items} 
+        canEdit={canEdit}
+        totalCount={totalCount}
+      />
     </div>
   );
 }

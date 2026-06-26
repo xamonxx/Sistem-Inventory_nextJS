@@ -3,6 +3,7 @@
 import { useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { Table, Th, Td, Badge, Input, Select, Button, Card, Label } from "@/components/ui";
+import { FIELD_LIMITS } from "@/lib/fieldLimits";
 import { Pagination, usePagination } from "@/components/Pagination";
 import { formatTanggal } from "@/lib/utils";
 import { Search, Eye, X, HelpCircle, History, Trash2 } from "lucide-react";
@@ -100,6 +101,7 @@ export function LogAktivitasClient({ initialLogs }: { initialLogs: LogRow[] }) {
           <Input
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
+            maxLength={FIELD_LIMITS.search}
             placeholder="Cari berdasarkan operator / ID target..."
             className="pl-9 h-11"
           />
@@ -128,7 +130,7 @@ export function LogAktivitasClient({ initialLogs }: { initialLogs: LogRow[] }) {
       </Card>
 
       {/* Audit table grid */}
-      <div className="overflow-x-auto rounded-xl border border-border bg-card shadow-sm">
+      <div className="w-full">
         <Table>
           <thead>
             <tr>

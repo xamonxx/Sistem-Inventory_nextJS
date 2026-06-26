@@ -4,6 +4,9 @@ import { getStokAkhirMap } from "@/lib/stock";
 import { BarangForm } from "./BarangForm";
 import { BarangClient } from "./BarangClient";
 
+// Cache barang page for 120 seconds (item list is relatively static)
+export const revalidate = 120;
+
 export default async function BarangPage() {
   const user = await requireUser();
 
@@ -37,7 +40,7 @@ export default async function BarangPage() {
     stokAwal: it.stokAwal,
     minStok: it.minStok,
     aktif: it.aktif,
-    stok: stokMap.get(it.id) ?? it.stokAwal,
+    stok: stokMap[it.id] ?? it.stokAwal,
   }));
 
   return (

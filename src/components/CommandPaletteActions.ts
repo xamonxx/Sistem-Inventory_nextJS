@@ -15,7 +15,8 @@ export async function universalSearch(query: string): Promise<SearchResult[]> {
   const session = await getSession();
   if (!session) return [];
 
-  const q = query.trim().toLowerCase();
+  // Batasi panjang query untuk mencegah penyalahgunaan/beban berlebih.
+  const q = String(query ?? "").trim().toLowerCase().slice(0, 80);
   if (!q) return [];
 
   const results: SearchResult[] = [];

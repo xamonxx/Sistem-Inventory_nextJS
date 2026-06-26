@@ -1,8 +1,10 @@
 "use client";
 
 import { useState, useTransition, useMemo, useEffect, useRef } from "react";
-import { getItemHistory, toggleAktif } from "./actions";
+import { getItemHistory, toggleAktif, logBarcodePrint } from "./actions";
+import QRCode from "qrcode";
 import { Button, Card, Input, Label, Select, Table, Th, Td, Badge } from "@/components/ui";
+import { FIELD_LIMITS } from "@/lib/fieldLimits";
 import { Drawer } from "@/components/Drawer";
 import { formatRupiah, formatTanggal, cn } from "@/lib/utils";
 import { printArea } from "@/lib/print";
@@ -64,6 +66,8 @@ export function BarangClient({
   const [showSystemStock, setShowSystemStock] = useState(true);
   const [showSOOptions, setShowSOOptions] = useState(false);
   const [pending, startTransition] = useTransition();
+  const [openBarcodePreview, setOpenBarcodePreview] = useState(false);
+  const [qrCodeUrl, setQrCodeUrl] = useState("");
 
   const soOptionsRef = useRef<HTMLDivElement>(null);
 
@@ -76,6 +80,17 @@ export function BarangClient({
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
+
+  // Generate QR code URL on item selection
+  useEffect(() => {
+    if (selectedItem) {
+      QRCode.toDataURL(selectedItem.kode, { margin: 1, width: 120 })
+        .then((url) => setQrCodeUrl(url))
+        .catch((err) => console.error("Error generating QR code:", err));
+    } else {
+      setQrCodeUrl("");
+    }
+  }, [selectedItem]);
 
   // Statistics calculation
   const stats = useMemo(() => {
@@ -179,8 +194,21 @@ export function BarangClient({
   }
 
   function handleDuplicateProduct(item: ItemData) {
-    toast.info(`Menduplikasi produk "${item.nama}"...`);
-    // Duplication trigger logic or redirect to prefilled creation
+    setSelectedItem(null); // Close drawer
+    window.dispatchEvent(
+      new CustomEvent("edit-barang", {
+        detail: {
+          id: undefined,
+          kode: "",
+          nama: `${item.nama} (Duplikat)`,
+          hargaBeli: Number(item.hargaBeli),
+          hargaJual: Number(item.hargaJual),
+          stokAwal: 0, // Reset physical stock to 0 for duplicated product
+          minStok: item.minStok,
+          aktif: item.aktif,
+        },
+      })
+    );
   }
 
   return (
@@ -230,6 +258,7 @@ export function BarangClient({
           <Input
             value={q}
             onChange={(e) => setQ(e.target.value)}
+            maxLength={FIELD_LIMITS.search}
             placeholder="Cari berdasarkan Kode SKU, Barcode, Nama Plywood..."
             className="pl-9 h-10 rounded-xl"
           />
@@ -294,9 +323,7 @@ export function BarangClient({
         </div>
       </Card>
 
-      {/* 3. Inventory Modern Grid Table */}
-      <div className="overflow-hidden rounded-[18px] border border-border bg-white shadow-[var(--shadow-card)]">
-        <Table>
+      <Table>
           <thead>
             <tr>
               <Th>Kode SKU</Th>
@@ -391,7 +418,6 @@ export function BarangClient({
             </tfoot>
           )}
         </Table>
-      </div>
 
       {/* Pagination controls */}
       {totalPages > 1 && (
@@ -449,7 +475,7 @@ export function BarangClient({
                   >
                     <Archive size={13} /> {selectedItem.aktif ? "Arsipkan Produk" : "Aktifkan Produk"}
                   </Button>
-                  <Button size="sm" variant="outline" onClick={() => toast.info("Mencetak barcode label...")}>
+                  <Button size="sm" variant="outline" onClick={() => setOpenBarcodePreview(true)}>
                     <Printer size={13} /> Cetak Label Barcode
                   </Button>
                 </>
@@ -522,8 +548,8 @@ export function BarangClient({
                 {loadingHistory && <RefreshCw size={12} className="animate-spin text-slate-400" />}
               </div>
               
-              <div className="overflow-hidden rounded-xl border border-border bg-white">
-                <Table className="text-xs">
+              <div className="w-full">
+                <Table className="text-xs shadow-none">
                   <thead>
                     <tr className="bg-slate-50 text-[10px] text-muted">
                       <Th className="py-2.5">Tanggal</Th>
@@ -661,6 +687,141 @@ export function BarangClient({
                   </div>
                 </div>
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+      {/* 6. Barcode Label Print Preview Modal */}
+      {canEdit && openBarcodePreview && selectedItem && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 p-4 backdrop-blur-xs no-print" onClick={() => setOpenBarcodePreview(false)}>
+          <div onClick={(e) => e.stopPropagation()} className="w-full max-w-sm overflow-hidden rounded-2xl bg-white shadow-2xl border border-border anim-rise">
+            <div className="flex items-center justify-between border-b border-border px-4 py-3.5">
+              <h3 className="font-bold text-slate-900 text-sm">
+                Pratinjau Label Barcode / QR
+              </h3>
+              <button onClick={() => setOpenBarcodePreview(false)} className="text-slate-400 hover:text-slate-700 transition cursor-pointer">
+                <X size={18} />
+              </button>
+            </div>
+            
+            {/* Preview Box */}
+            <div className="p-6 bg-slate-50 flex flex-col items-center justify-center min-h-[220px]">
+              <p className="text-xs text-slate-450 font-bold mb-3 uppercase">Tampilan Label (Stiker 50x30mm)</p>
+              
+              {/* This is the printable area */}
+              <div 
+                className="print-area"
+                style={{
+                  backgroundColor: "#ffffff",
+                  display: "inline-block",
+                  padding: "0",
+                  margin: "0"
+                }}
+              >
+                <table 
+                  className="font-sans" 
+                  style={{
+                    width: "250px",
+                    height: "130px",
+                    border: "2px dashed #000000",
+                    backgroundColor: "#ffffff",
+                    color: "#000000",
+                    borderCollapse: "collapse",
+                    boxSizing: "border-box",
+                    fontFamily: "sans-serif"
+                  }}
+                >
+                  <tbody>
+                    <tr>
+                      {/* Left Column: QR Code + SKU */}
+                      <td 
+                        style={{
+                          width: "95px",
+                          textAlign: "center",
+                          verticalAlign: "middle",
+                          padding: "8px",
+                          boxSizing: "border-box"
+                        }}
+                      >
+                        {qrCodeUrl ? (
+                          <img 
+                            src={qrCodeUrl} 
+                            style={{
+                              width: "75px",
+                              height: "75px",
+                              display: "inline-block",
+                              objectFit: "contain"
+                            }} 
+                            alt="QR Code" 
+                          />
+                        ) : (
+                          <div style={{ fontSize: "8px", fontWeight: "bold", color: "#666" }}>Memuat...</div>
+                        )}
+                        <div 
+                          style={{
+                            fontSize: "8px",
+                            fontFamily: "monospace",
+                            fontWeight: "bold",
+                            marginTop: "4px",
+                            color: "#333",
+                            whiteSpace: "nowrap"
+                          }}
+                        >
+                          {selectedItem.kode}
+                        </div>
+                      </td>
+                      
+                      {/* Right Column: Name + Price */}
+                      <td 
+                        style={{
+                          verticalAlign: "middle",
+                          padding: "8px 12px 8px 0px",
+                          boxSizing: "border-box"
+                        }}
+                      >
+                        <div 
+                          style={{
+                            fontSize: "11px",
+                            fontWeight: "900",
+                            textTransform: "uppercase",
+                            lineHeight: "1.2",
+                            color: "#000000",
+                            wordBreak: "break-all",
+                            marginBottom: "6px"
+                          }}
+                        >
+                          {selectedItem.nama}
+                        </div>
+                        <div 
+                          style={{
+                            fontSize: "12px",
+                            fontWeight: "bold",
+                            color: "#000000"
+                          }}
+                        >
+                          {formatRupiah(Number(selectedItem.hargaJual))}
+                        </div>
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            <div className="flex justify-end gap-2.5 px-4 py-3 border-t border-border bg-slate-50/50">
+              <Button type="button" variant="outline" size="sm" onClick={() => setOpenBarcodePreview(false)}>
+                Batal
+              </Button>
+              <Button size="sm" onClick={() => {
+                printArea({ thermal: true });
+                startTransition(async () => {
+                  await logBarcodePrint(selectedItem.id, selectedItem.nama);
+                });
+                toast.success("Mencetak barcode label...");
+                setOpenBarcodePreview(false);
+              }}>
+                <Printer size={13} /> Cetak Label
+              </Button>
             </div>
           </div>
         </div>

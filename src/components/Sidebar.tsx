@@ -261,8 +261,8 @@ function SidebarContent({
           isCollapsed ? "lg:overflow-visible p-2" : "overflow-hidden p-3"
         )}>
           <div className={cn(
-            "flex items-center transition-all duration-200 w-full",
-            isCollapsed ? "justify-center bg-transparent border-transparent p-0" : "bg-[#131a26]/40 border border-slate-800/50 rounded-xl p-2.5 gap-3"
+            "flex items-center transition-all duration-200 w-full border rounded-xl",
+            isCollapsed ? "justify-center bg-transparent border-transparent p-0" : "bg-[#131a26]/40 border-slate-800/50 p-2.5 gap-3"
           )}>
             <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-[#1c2434] text-xs font-bold text-white uppercase border border-slate-700/60">
               {initials}
@@ -283,10 +283,10 @@ function SidebarContent({
               await logoutAction();
             }}
             className={cn(
-              "group relative flex items-center rounded-xl text-slate-400 transition-all duration-200 hover:text-rose-400 cursor-pointer w-full overflow-visible",
+              "group relative flex items-center rounded-xl text-slate-400 transition-all duration-200 hover:text-rose-400 cursor-pointer w-full overflow-visible border",
               isCollapsed
-                ? "lg:justify-center lg:py-2.5"
-                : "px-3 py-2 bg-[#131a26]/20 border border-slate-800/40 hover:bg-rose-500/10 hover:border-rose-500/20 hover:text-rose-450 mt-2 text-xs font-semibold"
+                ? "lg:justify-center lg:py-2.5 border-transparent bg-transparent"
+                : "px-3 py-2 bg-[#131a26]/20 border-slate-800/40 hover:bg-rose-500/10 hover:border-rose-500/20 hover:text-rose-450 mt-2 text-xs font-semibold"
             )}
           >
             <div className="flex items-center justify-center shrink-0 w-5 h-5">

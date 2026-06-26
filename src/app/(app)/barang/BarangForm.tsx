@@ -1,12 +1,13 @@
 "use client";
 
 import { useActionState, useEffect, useRef, useState } from "react";
-import { saveItem } from "./actions";
-import { Button, Input, Label } from "@/components/ui";
-import { Plus, X } from "lucide-react";
+import { saveItem, suggestItemCode } from "./actions";
+import { Button, Input, Label, CharCounter } from "@/components/ui";
+import { FIELD_LIMITS } from "@/lib/fieldLimits";
+import { Plus, X, Wand2 } from "lucide-react";
 
 export type ItemRow = {
-  id: number;
+  id?: number;
   kode: string;
   nama: string;
   hargaBeli: number;
@@ -19,8 +20,36 @@ export type ItemRow = {
 export function BarangForm({ canEdit }: { canEdit: boolean }) {
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState<ItemRow | null>(null);
+  const [kode, setKode] = useState("");
+  const [nama, setNama] = useState("");
+  const [suggesting, setSuggesting] = useState(false);
   const [state, formAction, pending] = useActionState(saveItem, null);
   const formRef = useRef<HTMLFormElement>(null);
+
+  // Sinkronkan field terkontrol saat dialog dibuka / mode edit berubah.
+  useEffect(() => {
+    setKode(editing?.kode ?? "");
+    setNama(editing?.nama ?? "");
+  }, [editing, open]);
+
+  async function autoCode() {
+    if (!nama.trim()) return;
+    setSuggesting(true);
+    try {
+      const k = await suggestItemCode(nama);
+      if (k) setKode(k);
+    } finally {
+      setSuggesting(false);
+    }
+  }
+
+  // Saat tambah barang baru: isi kode otomatis ketika user selesai mengetik nama
+  // dan kode masih kosong.
+  async function onNamaBlur() {
+    if (!editing && !kode.trim() && nama.trim()) {
+      await autoCode();
+    }
+  }
 
   useEffect(() => {
     if (state && "ok" in state && state.ok) {
@@ -84,12 +113,45 @@ export function BarangForm({ canEdit }: { canEdit: boolean }) {
               
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <Label>Kode Barang (unik)</Label>
-                  <Input name="kode" defaultValue={editing?.kode ?? ""} placeholder="PC-00001" required />
+                  <div className="flex items-center justify-between gap-2">
+                    <Label className="mb-0">Nama Barang</Label>
+                    <CharCounter value={nama} max={FIELD_LIMITS.namaBarang} />
+                  </div>
+                  <Input
+                    name="nama"
+                    value={nama}
+                    onChange={(e) => setNama(e.target.value)}
+                    onBlur={onNamaBlur}
+                    maxLength={FIELD_LIMITS.namaBarang}
+                    placeholder="BB Min 18mm New"
+                    required
+                  />
                 </div>
                 <div>
-                  <Label>Nama Barang</Label>
-                  <Input name="nama" defaultValue={editing?.nama ?? ""} placeholder="BB Min 18mm New" required />
+                  <Label>Kode Barang (otomatis)</Label>
+                  <div className="flex gap-1.5">
+                    <Input
+                      name="kode"
+                      value={kode}
+                      onChange={(e) => setKode(e.target.value)}
+                      maxLength={FIELD_LIMITS.kodeBarang}
+                      placeholder="otomatis dari nama"
+                      className="flex-1"
+                    />
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={autoCode}
+                      disabled={suggesting || !nama.trim()}
+                      title="Buat kode otomatis dari nama"
+                      className="px-2.5 shrink-0"
+                    >
+                      <Wand2 size={16} />
+                    </Button>
+                  </div>
+                  <p className="mt-1 text-[11px] text-slate-500">
+                    Kosongkan untuk dibuat otomatis (mis. PC-BBM-001).
+                  </p>
                 </div>
               </div>
 

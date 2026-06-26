@@ -12,8 +12,8 @@
   --border: #e2e8f0;
   --line-strong: #cbd5e1;
 
-  --primary: #d35a1f;        /* premium rust orange */
-  --primary-strong: #b94d18;
+  --primary: #d97706;        /* warm amber 600 */
+  --primary-strong: #b45309; /* amber 700 */
   --steel: #64748b;          /* slate gray */
 
   --success: #10b981;
@@ -93,6 +93,9 @@ h3,
   font-family: var(--font-display);
   letter-spacing: -0.01em;
   font-weight: 700;
+}
+
+h3 {
   color: #0f172a;
 }
 

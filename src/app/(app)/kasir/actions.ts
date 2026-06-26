@@ -1,31 +1,38 @@
 "use server";
 
+import { revalidatePath, revalidateTag } from "next/cache";
 import { z } from "zod";
 import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { requireRole } from "@/lib/auth";
 import { nextDocNumber } from "@/lib/counters";
 import { logActivity } from "@/lib/activity";
+import { FIELD_LIMITS } from "@/lib/fieldLimits";
+import { dbId, money, qtyPositive } from "@/lib/validation";
 
 const itemSchema = z.object({
-  itemId: z.number().int(),
-  qty: z.number().int().positive(),
-  discount: z.number().min(0).default(0),
+  itemId: dbId,
+  qty: qtyPositive,
+  discount: money.default(0),
 });
 
 const paymentComponentSchema = z.object({
   tipe: z.enum(["CASH", "TRANSFER", "CREDIT"]),
-  jumlah: z.number().positive(),
+  jumlah: money.refine((n) => n > 0, "Jumlah pembayaran harus lebih dari 0."),
 });
 
 const schema = z.object({
   tipe: z.enum(["RETAIL", "PROJECT"]),
-  namaClient: z.string().trim().optional().default(""),
-  alamat: z.string().trim().optional().default(""),
-  namaWs: z.string().trim().optional().default(""),
-  projectNama: z.string().trim().optional().default(""),
-  projectGroupNama: z.string().trim().optional().default(""),
+  namaClient: z.string().trim().max(FIELD_LIMITS.namaClient, `Nama klien maksimal ${FIELD_LIMITS.namaClient} karakter.`).optional().default(""),
+  alamat: z.string().trim().max(FIELD_LIMITS.alamat, `Alamat maksimal ${FIELD_LIMITS.alamat} karakter.`).optional().default(""),
+  namaWs: z.string().trim().max(FIELD_LIMITS.namaWs, `Nama workshop maksimal ${FIELD_LIMITS.namaWs} karakter.`).optional().default(""),
+  projectNama: z.string().trim().max(FIELD_LIMITS.projectNama, `Nama proyek maksimal ${FIELD_LIMITS.projectNama} karakter.`).optional().default(""),
+  projectGroupNama: z.string().trim().max(FIELD_LIMITS.projectGroupNama, `Grup proyek maksimal ${FIELD_LIMITS.projectGroupNama} karakter.`).optional().default(""),
   paymentMethod: z.enum(["CASH", "TRANSFER", "CREDIT"]),
+  // Info bank opsional (untuk transfer/kredit)
+  namaBank: z.string().trim().max(FIELD_LIMITS.namaBank, `Nama bank maksimal ${FIELD_LIMITS.namaBank} karakter.`).optional().default(""),
+  noRekening: z.string().trim().max(FIELD_LIMITS.noRekening, `No. rekening maksimal ${FIELD_LIMITS.noRekening} karakter.`).optional().default(""),
+  atasNama: z.string().trim().max(FIELD_LIMITS.atasNama, `Atas nama maksimal ${FIELD_LIMITS.atasNama} karakter.`).optional().default(""),
   payments: z.array(paymentComponentSchema).optional().default([]),
   buatInvoice: z.boolean().optional().default(true),
   items: z.array(itemSchema).min(1, "Minimal 1 barang di keranjang."),
@@ -146,6 +153,10 @@ export async function createTransaction(payload: KasirPayload) {
           namaClient: d.namaClient || null,
           alamat: d.alamat || null,
           namaWs: d.namaWs || null,
+          // Simpan info bank hanya bila metode non-tunai (transfer/kredit/split)
+          namaBank: d.paymentMethod !== "CASH" ? (d.namaBank || null) : null,
+          noRekening: d.paymentMethod !== "CASH" ? (d.noRekening || null) : null,
+          atasNama: d.paymentMethod !== "CASH" ? (d.atasNama || null) : null,
           userId: user.id,
           grandTotal: new Prisma.Decimal(0),
         },
@@ -245,6 +256,13 @@ export async function createTransaction(payload: KasirPayload) {
       entitasId: result.id,
       detail: { noTransaksi: result.noTransaksi, total: result.grandTotal, tipe: d.tipe, paymentCount: effectivePayments.length },
     });
+
+    // Invalidate caches after successful transaction
+    revalidatePath("/");        // Dashboard shows today's revenue
+    revalidatePath("/stok");    // Stock levels changed
+    revalidatePath("/kasir");   // Cashier page
+    revalidatePath("/invoice"); // Invoice list if created
+    revalidateTag("stock");     // Invalidate stock cache
 
     return { ok: true, ...result };
   } catch (error: any) {

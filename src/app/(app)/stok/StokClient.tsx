@@ -2,12 +2,14 @@
 
 import { useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { Table, Th, Td, Badge, Input, Select, Card, Label, Button } from "@/components/ui";
+import { Table, Th, Td, Badge, Input, Select, Card, Label, Button, CharCounter } from "@/components/ui";
+import { FIELD_LIMITS } from "@/lib/fieldLimits";
 import { Pagination, usePagination } from "@/components/Pagination";
 import { formatTanggal } from "@/lib/utils";
 import { Search, ArrowDownCircle, ArrowUpCircle, RefreshCcw, RotateCcw, List, Activity, Calendar, User, X } from "lucide-react";
 import { barangMasuk, koreksiStok } from "./actions";
 import { toast } from "sonner";
+import { DatePicker } from "@/components/DatePicker";
 
 type ItemOption = { id: number; kode: string; nama: string };
 type LedgerRow = {
@@ -223,11 +225,11 @@ export function StokClient({
         </div>
         <div>
           <Label>Mulai Tanggal</Label>
-          <Input type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} />
+          <DatePicker value={startDate} onChange={(val) => setStartDate(val)} />
         </div>
         <div>
           <Label>Hingga Tanggal</Label>
-          <Input type="date" value={endDate} onChange={(e) => setEndDate(e.target.value)} />
+          <DatePicker value={endDate} onChange={(val) => setEndDate(val)} align="right" />
         </div>
         <div>
           <Label>Cari Detail / Keterangan</Label>
@@ -236,6 +238,7 @@ export function StokClient({
             <Input
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
+              maxLength={FIELD_LIMITS.search}
               placeholder="Nomor PC / referensi..."
               className="pl-8"
             />
@@ -470,20 +473,24 @@ export function StokClient({
               {updateTab === "MASUK" ? (
                 <div>
                   <Label>Qty Masuk</Label>
-                  <Input type="number" min={1} value={qtyMasuk} onChange={(e) => setQtyMasuk(e.target.value)} required />
+                  <Input type="number" min={1} max={FIELD_LIMITS.maxQty} value={qtyMasuk} onChange={(e) => setQtyMasuk(e.target.value)} required />
                 </div>
               ) : (
                 <div>
                   <Label>Stok Seharusnya (Hasil Opname)</Label>
-                  <Input type="number" value={stokSeharusnya} onChange={(e) => setStokSeharusnya(e.target.value)} placeholder="Masukkan stok fisik ril" required />
+                  <Input type="number" min={0} max={FIELD_LIMITS.maxQty} value={stokSeharusnya} onChange={(e) => setStokSeharusnya(e.target.value)} placeholder="Masukkan stok fisik ril" required />
                 </div>
               )}
 
               <div>
-                <Label>Keterangan / Referensi</Label>
+                <div className="flex items-center justify-between gap-2">
+                  <Label className="mb-0">Keterangan / Referensi</Label>
+                  <CharCounter value={keterangan} max={FIELD_LIMITS.keterangan} />
+                </div>
                 <Input
                   value={keterangan}
                   onChange={(e) => setKeterangan(e.target.value)}
+                  maxLength={FIELD_LIMITS.keterangan}
                   placeholder={updateTab === "MASUK" ? "mis. dari supplier X" : "mis. stok opname Juni"}
                   required={updateTab === "KOREKSI"}
                 />

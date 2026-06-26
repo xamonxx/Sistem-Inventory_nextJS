@@ -4,33 +4,100 @@ import { InvoiceClient, type InvoiceRow, type InvoiceItem } from "./InvoiceClien
 
 const VERIFY_BASE = process.env.NEXT_PUBLIC_APP_URL ?? "https://putracorp.co.id";
 
+// Cache invoice page for 60 seconds (invoices don't change frequently)
+export const revalidate = 60;
+
 export default async function InvoicePage() {
   const user = await requireUser();
   const canBayar = user.role === "ADMIN_KASIR";
 
-  // Query invoices including projects, clients, and payments
+  // Query invoices with selective field fetching (optimized from deep includes)
+  // Only fetch fields that are actually used in the UI
   const invoices = await prisma.invoice.findMany({
-    orderBy: { id: "desc" }, // terbaru ditambahkan tampil paling atas
-    include: {
-      project: true,
-      client: true,
+    orderBy: { id: "desc" },
+    take: 100, // Limit to recent 100 invoices for performance
+    select: {
+      id: true,
+      noInvoice: true,
+      namaClient: true,
+      alamat: true,
+      namaWs: true,
+      total: true,
+      totalDibayar: true,
+      status: true,
+      tanggal: true,
+      client: {
+        select: { nama: true }
+      },
+      project: {
+        select: { nama: true }
+      },
       payments: {
+        select: {
+          id: true,
+          tanggal: true,
+          tipe: true,
+          jumlah: true,
+          keterangan: true,
+        },
         orderBy: { id: "desc" },
       },
       transaction: {
-        include: {
-          items: { include: { item: true } },
-        },
+        select: {
+          noTransaksi: true,
+          namaBank: true,
+          noRekening: true,
+          atasNama: true,
+          items: {
+            select: {
+              itemId: true,
+              namaSnapshot: true,
+              qty: true,
+              hargaSnapshot: true,
+              subtotal: true,
+              item: {
+                select: { kode: true }
+              }
+            }
+          }
+        }
       },
       return: {
-        include: {
-          items: {
-            include: { item: true, itemGanti: true },
+        select: {
+          transaction: {
+            select: {
+              noTransaksi: true,
+              namaBank: true,
+              noRekening: true,
+              atasNama: true,
+            }
           },
-          transaction: true,
-        },
-      },
-    },
+          items: {
+            select: {
+              itemId: true,
+              namaSnapshot: true,
+              qtyReturned: true,
+              hargaSnapshot: true,
+              subtotal: true,
+              namaGantiSnapshot: true,
+              qtyGanti: true,
+              hargaGantiSnapshot: true,
+              subtotalGanti: true,
+              item: {
+                select: { kode: true }
+              },
+              itemGanti: {
+                select: {
+                  id: true,
+                  kode: true,
+                  nama: true,
+                }
+              }
+            }
+          }
+        }
+      }
+    }
   });
 
   // Hitung jumlah verifikasi semua invoice dalam SATU query (hindari N+1).
@@ -67,6 +134,7 @@ export default async function InvoicePage() {
     let items: InvoiceItem[] = [];
     if (inv.transaction) {
       items = inv.transaction.items.map((it) => ({
+        itemId: it.itemId,
         kode: it.item?.kode ?? "-",
         nama: it.namaSnapshot,
         qty: it.qty,
@@ -78,6 +146,7 @@ export default async function InvoicePage() {
       items = [];
       for (const ri of r.items) {
         items.push({
+          itemId: ri.itemId,
           kode: ri.item.kode,
           nama: `[RETUR] ${ri.namaSnapshot}`,
           qty: ri.qtyReturned,
@@ -86,6 +155,7 @@ export default async function InvoicePage() {
         });
         if (ri.itemGanti && ri.qtyGanti) {
           items.push({
+            itemId: ri.itemGanti.id,
             kode: ri.itemGanti.kode,
             nama: `[GANTI] ${ri.namaGantiSnapshot ?? ri.itemGanti.nama}`,
             qty: ri.qtyGanti,
@@ -102,6 +172,9 @@ export default async function InvoicePage() {
       namaClient: inv.namaClient ?? inv.client?.nama ?? "-",
       alamat: inv.alamat,
       namaWs: inv.namaWs,
+      namaBank: inv.transaction?.namaBank ?? inv.return?.transaction?.namaBank ?? null,
+      noRekening: inv.transaction?.noRekening ?? inv.return?.transaction?.noRekening ?? null,
+      atasNama: inv.transaction?.atasNama ?? inv.return?.transaction?.atasNama ?? null,
       total: totalVal,
       totalDibayar: paidVal,
       status: computedStatus,

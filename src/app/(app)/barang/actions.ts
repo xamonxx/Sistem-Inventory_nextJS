@@ -1,24 +1,35 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
+import { revalidatePath, revalidateTag } from "next/cache";
 import { z } from "zod";
 import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { requireRole } from "@/lib/auth";
 import { logActivity } from "@/lib/activity";
+import { nextItemCode } from "@/lib/itemCode";
+import { FIELD_LIMITS } from "@/lib/fieldLimits";
+import { dbId, strictBool, requiredText, money, boundedInt, safeError, firstIssue, type ActionResult } from "@/lib/validation";
 
 const schema = z.object({
-  id: z.coerce.number().optional(),
-  kode: z.string().trim().min(1, "Kode wajib diisi"),
-  nama: z.string().trim().min(1, "Nama wajib diisi"),
-  hargaBeli: z.coerce.number().min(0),
-  hargaJual: z.coerce.number().min(0),
-  stokAwal: z.coerce.number().int(),
-  minStok: z.coerce.number().int().min(0),
-  aktif: z.coerce.boolean().optional().default(true),
+  id: dbId.optional(),
+  // Kode boleh dikosongkan saat tambah barang -> di-generate otomatis (PC-XXX-NNN).
+  // Bila diisi manual: batasi panjang & charset (allowlist).
+  kode: z
+    .string()
+    .trim()
+    .max(FIELD_LIMITS.kodeBarang, `Kode maksimal ${FIELD_LIMITS.kodeBarang} karakter`)
+    .regex(/^[A-Za-z0-9._/-]*$/, "Kode hanya boleh huruf, angka, dan . _ / -")
+    .optional()
+    .default(""),
+  nama: requiredText(FIELD_LIMITS.namaBarang, "Nama"),
+  hargaBeli: money,
+  hargaJual: money,
+  stokAwal: boundedInt,
+  minStok: boundedInt.refine((n) => n >= 0, "Minimum stok tidak boleh negatif."),
+  aktif: strictBool.optional().default(true),
 });
 
-export async function saveItem(_prev: unknown, formData: FormData) {
+export async function saveItem(_prev: unknown, formData: FormData): Promise<ActionResult> {
   // Harga & stok awal HANYA boleh ADMIN_GUDANG
   const user = await requireRole("ADMIN_GUDANG");
 
@@ -34,14 +45,23 @@ export async function saveItem(_prev: unknown, formData: FormData) {
   });
 
   if (!parsed.success) {
-    return { error: parsed.error.issues[0]?.message ?? "Data tidak valid." };
+    return { error: firstIssue(parsed.error) };
   }
   const d = parsed.data;
 
+  // Resolusi kode: saat tambah barang tanpa kode -> generate otomatis (PC-XXX-NNN).
+  let kode = d.kode;
+  if (!d.id && !kode) {
+    kode = await nextItemCode(prisma, d.nama);
+  }
+  if (!kode) {
+    return { error: "Kode wajib diisi." };
+  }
+
   // Cek kode unik (selain dirinya sendiri saat edit)
-  const dup = await prisma.item.findUnique({ where: { kode: d.kode } });
+  const dup = await prisma.item.findUnique({ where: { kode } });
   if (dup && dup.id !== d.id) {
-    return { error: `Kode "${d.kode}" sudah dipakai barang lain.` };
+    return { error: `Kode "${kode}" sudah dipakai barang lain.` };
   }
 
   try {
@@ -50,7 +70,7 @@ export async function saveItem(_prev: unknown, formData: FormData) {
       const updated = await prisma.item.update({
         where: { id: d.id },
         data: {
-          kode: d.kode,
+          kode,
           nama: d.nama,
           hargaBeli: new Prisma.Decimal(d.hargaBeli),
           hargaJual: new Prisma.Decimal(d.hargaJual),
@@ -73,7 +93,7 @@ export async function saveItem(_prev: unknown, formData: FormData) {
     } else {
       const created = await prisma.item.create({
         data: {
-          kode: d.kode,
+          kode,
           nama: d.nama,
           hargaBeli: new Prisma.Decimal(d.hargaBeli),
           hargaJual: new Prisma.Decimal(d.hargaJual),
@@ -87,30 +107,52 @@ export async function saveItem(_prev: unknown, formData: FormData) {
         aksi: "CREATE_BARANG",
         entitas: "Item",
         entitasId: created.id,
-        detail: { kode: d.kode, nama: d.nama },
+        detail: { kode, nama: d.nama },
       });
     }
   } catch (e) {
     if (e instanceof Prisma.PrismaClientKnownRequestError && e.code === "P2002") {
-      return { error: `Kode "${d.kode}" sudah dipakai (unik).` };
+      return { error: `Kode "${kode}" sudah dipakai (unik).` };
     }
-    throw e;
+    return safeError(e, "Gagal menyimpan barang.");
   }
 
+  revalidatePath("/barang");
+  revalidatePath("/");        // Dashboard shows stock alerts
+  revalidatePath("/stok");    // Stock page shows levels
+  revalidateTag("stock");     // Invalidate stock cache (stokAwal changed)
+  return { ok: true };
+}
+
+/** Sarankan kode otomatis untuk nama barang (dipakai tombol "Auto" di form). */
+export async function suggestItemCode(nama: string): Promise<string> {
+  await requireRole("ADMIN_GUDANG");
+  const clean = String(nama ?? "").trim().slice(0, FIELD_LIMITS.namaBarang);
+  if (!clean) return "";
+  return nextItemCode(prisma, clean);
+}
+
+export async function toggleAktif(id: number, aktif: boolean): Promise<ActionResult> {
+  const user = await requireRole("ADMIN_GUDANG");
+  const parsed = z.object({ id: dbId, aktif: strictBool }).safeParse({ id, aktif });
+  if (!parsed.success) return { error: firstIssue(parsed.error) };
+
+  try {
+    await prisma.item.update({ where: { id: parsed.data.id }, data: { aktif: parsed.data.aktif } });
+    await logActivity({ userId: user.id, aksi: "TOGGLE_BARANG", entitas: "Item", entitasId: parsed.data.id, detail: { aktif: parsed.data.aktif } });
+  } catch (e) {
+    return safeError(e, "Gagal mengubah status barang.");
+  }
   revalidatePath("/barang");
   return { ok: true };
 }
 
-export async function toggleAktif(id: number, aktif: boolean) {
-  const user = await requireRole("ADMIN_GUDANG");
-  await prisma.item.update({ where: { id }, data: { aktif } });
-  await logActivity({ userId: user.id, aksi: "TOGGLE_BARANG", entitas: "Item", entitasId: id, detail: { aktif } });
-  revalidatePath("/barang");
-}
-
 export async function getItemHistory(itemId: number) {
+  await requireRole("ADMIN_KASIR", "ADMIN_GUDANG");
+  const parsed = dbId.safeParse(itemId);
+  if (!parsed.success) return [];
   const ledger = await prisma.stockLedger.findMany({
-    where: { itemId },
+    where: { itemId: parsed.data },
     orderBy: { id: "desc" },
     take: 10,
     include: { user: true },
@@ -123,4 +165,20 @@ export async function getItemHistory(itemId: number) {
     keterangan: l.keterangan,
     user: l.user?.nama ?? "-",
   }));
+}
+
+export async function logBarcodePrint(itemId: number, nama: string): Promise<ActionResult> {
+  const user = await requireRole("ADMIN_GUDANG");
+  try {
+    await logActivity({
+      userId: user.id,
+      aksi: "PRINT_BARCODE",
+      entitas: "Item",
+      entitasId: itemId,
+      detail: { nama },
+    });
+    return { ok: true };
+  } catch (e) {
+    return safeError(e, "Gagal mencatat audit cetak barcode.");
+  }
 }

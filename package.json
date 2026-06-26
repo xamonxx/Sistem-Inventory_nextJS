@@ -12,6 +12,10 @@
     "prisma:migrate": "prisma migrate dev",
     "prisma:push": "prisma db push",
     "db:seed": "tsx prisma/seed.ts",
+    "db:clear": "tsx prisma/clear.ts",
+    "db:add-items": "tsx scripts/add-items.ts",
+    "db:regen-codes": "tsx scripts/regen-codes.ts",
+    "test:security": "tsx scripts/security-test.ts",
     "import:xlsx": "tsx scripts/import-xlsx.ts"
   },
   "prisma": {

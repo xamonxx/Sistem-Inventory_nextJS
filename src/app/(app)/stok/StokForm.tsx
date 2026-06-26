@@ -3,7 +3,8 @@
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { barangMasuk, koreksiStok } from "./actions";
-import { Button, Card, Input, Label, Select } from "@/components/ui";
+import { Button, Card, Input, Label, Select, CharCounter } from "@/components/ui";
+import { FIELD_LIMITS } from "@/lib/fieldLimits";
 import { saveItem } from "../barang/actions";
 import { toast } from "sonner";
 import { X, ArrowDownCircle, RefreshCcw, PackagePlus } from "lucide-react";
@@ -246,13 +247,15 @@ export function StokForm({ items }: { items: Item[] }) {
               {stokTab === "MASUK" ? (
                 <div>
                   <Label>Qty Masuk</Label>
-                  <Input type="number" min={1} value={qtyMasuk} onChange={(e) => setQtyMasuk(e.target.value)} required />
+                  <Input type="number" min={1} max={FIELD_LIMITS.maxQty} value={qtyMasuk} onChange={(e) => setQtyMasuk(e.target.value)} required />
                 </div>
               ) : (
                 <div>
                   <Label>Stok Seharusnya (hasil opname)</Label>
                   <Input
                     type="number"
+                    min={0}
+                    max={FIELD_LIMITS.maxQty}
                     value={stokSeharusnya}
                     onChange={(e) => setStokSeharusnya(e.target.value)}
                     placeholder="Masukkan stok fisik riil"
@@ -262,10 +265,14 @@ export function StokForm({ items }: { items: Item[] }) {
               )}
 
               <div>
-                <Label>Keterangan {stokTab === "MASUK" && "(opsional)"}</Label>
+                <div className="flex items-center justify-between gap-2">
+                  <Label className="mb-0">Keterangan {stokTab === "MASUK" && "(opsional)"}</Label>
+                  <CharCounter value={keterangan} max={FIELD_LIMITS.keterangan} />
+                </div>
                 <Input
                   value={keterangan}
                   onChange={(e) => setKeterangan(e.target.value)}
+                  maxLength={FIELD_LIMITS.keterangan}
                   placeholder={stokTab === "MASUK" ? "mis. dari supplier X" : "mis. stok opname Juni"}
                   required={stokTab === "KOREKSI"}
                 />
@@ -316,30 +323,33 @@ export function StokForm({ items }: { items: Item[] }) {
                   <Input value={newKode} disabled className="bg-slate-50 font-mono text-slate-500 cursor-not-allowed" />
                 </div>
                 <div>
-                  <Label>Nama Barang</Label>
-                  <Input value={nama} onChange={(e) => setNama(e.target.value)} placeholder="Nama barang baru" required />
+                  <div className="flex items-center justify-between gap-2">
+                    <Label className="mb-0">Nama Barang</Label>
+                    <CharCounter value={nama} max={FIELD_LIMITS.namaBarang} />
+                  </div>
+                  <Input value={nama} onChange={(e) => setNama(e.target.value)} maxLength={FIELD_LIMITS.namaBarang} placeholder="Nama barang baru" required />
                 </div>
               </div>
 
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <Label>Harga Beli (Rp)</Label>
-                  <Input type="number" min={0} value={hargaBeli} onChange={(e) => setHargaBeli(e.target.value)} required />
+                  <Input type="number" min={0} max={FIELD_LIMITS.maxMoney} value={hargaBeli} onChange={(e) => setHargaBeli(e.target.value)} required />
                 </div>
                 <div>
                   <Label>Harga Jual (Rp)</Label>
-                  <Input type="number" min={0} value={hargaJual} onChange={(e) => setHargaJual(e.target.value)} required />
+                  <Input type="number" min={0} max={FIELD_LIMITS.maxMoney} value={hargaJual} onChange={(e) => setHargaJual(e.target.value)} required />
                 </div>
               </div>
 
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <Label>Stok Awal</Label>
-                  <Input type="number" min={0} value={stokAwal} onChange={(e) => setStokAwal(e.target.value)} required />
+                  <Input type="number" min={0} max={FIELD_LIMITS.maxQty} value={stokAwal} onChange={(e) => setStokAwal(e.target.value)} required />
                 </div>
                 <div>
                   <Label>Min. Stok (Peringatan)</Label>
-                  <Input type="number" min={0} value={minStok} onChange={(e) => setMinStok(e.target.value)} required />
+                  <Input type="number" min={0} max={FIELD_LIMITS.maxQty} value={minStok} onChange={(e) => setMinStok(e.target.value)} required />
                 </div>
               </div>
 

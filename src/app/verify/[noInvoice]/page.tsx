@@ -37,7 +37,10 @@ export default async function VerifyInvoicePage({
 }: {
   params: Promise<{ noInvoice: string }>;
 }) {
-  const { noInvoice } = await params;
+  const { noInvoice: rawNoInvoice } = await params;
+  // Normalisasi & batasi panjang param rute publik.
+  const noInvoice = String(rawNoInvoice ?? "").trim().slice(0, 40);
+  if (!noInvoice) notFound();
 
   const invoice = await prisma.invoice.findUnique({
     where: { noInvoice },
@@ -50,8 +53,8 @@ export default async function VerifyInvoicePage({
   if (!invoice) notFound();
 
   const headersList = await headers();
-  const ip = headersList.get("x-forwarded-for") ?? headersList.get("x-real-ip") ?? "127.0.0.1";
-  const userAgent = headersList.get("user-agent") ?? "";
+  const ip = (headersList.get("x-forwarded-for")?.split(",")[0]?.trim() ?? headersList.get("x-real-ip") ?? "127.0.0.1").slice(0, 64);
+  const userAgent = (headersList.get("user-agent") ?? "").slice(0, 300);
   const localNetwork = isLocalIP(ip);
 
   const sisa = Number(invoice.total) - Number(invoice.totalDibayar);

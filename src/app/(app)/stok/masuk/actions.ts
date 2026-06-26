@@ -1,22 +1,25 @@
 "use server";
 
+import { revalidatePath, revalidateTag } from "next/cache";
 import { z } from "zod";
 import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { requireRole } from "@/lib/auth";
 import { logActivity } from "@/lib/activity";
+import { FIELD_LIMITS } from "@/lib/fieldLimits";
+import { dbId, money, qtyPositive, optionalText, safeError, firstIssue } from "@/lib/validation";
 
 const itemSchema = z.object({
-  itemId: z.number().int(),
-  qty: z.number().int().positive(),
-  unitCost: z.number().min(0),
+  itemId: dbId,
+  qty: qtyPositive,
+  unitCost: money,
 });
 
 const schema = z.object({
-  supplierName: z.string().trim().optional().default(""),
-  referenceNo: z.string().trim().optional().default(""),
-  notes: z.string().trim().optional().default(""),
-  items: z.array(itemSchema).min(1, "Minimal 1 barang harus dimasukkan."),
+  supplierName: optionalText(FIELD_LIMITS.supplierName, "Nama supplier"),
+  referenceNo: optionalText(FIELD_LIMITS.referenceNo, "No. referensi"),
+  notes: optionalText(FIELD_LIMITS.notes, "Catatan"),
+  items: z.array(itemSchema).min(1, "Minimal 1 barang harus dimasukkan.").max(500, "Terlalu banyak item."),
 });
 
 export type StockInPayload = z.infer<typeof schema>;
@@ -26,7 +29,7 @@ export async function submitStockIn(payload: StockInPayload) {
 
   const parsed = schema.safeParse(payload);
   if (!parsed.success) {
-    return { error: parsed.error.issues[0]?.message ?? "Data tidak valid." };
+    return { error: firstIssue(parsed.error) };
   }
   const d = parsed.data;
 
@@ -89,9 +92,15 @@ export async function submitStockIn(payload: StockInPayload) {
       detail: { supplier: d.supplierName, ref: d.referenceNo, itemsCount: result.totalItems, total: result.totalAmount },
     });
 
+    // Invalidate caches after successful batch stock-in
+    revalidatePath("/");            // Dashboard shows inventory value
+    revalidatePath("/stok");        // Stock levels changed
+    revalidatePath("/stok/masuk");  // Stock-in page
+    revalidatePath("/barang");      // Item prices (hargaBeli) changed
+    revalidateTag("stock");         // Invalidate stock cache
+
     return result;
-  } catch (error: any) {
-    console.error("Batch Stock In error:", error);
-    return { error: error.message ?? "Gagal menyimpan batch stock-in." };
+  } catch (error) {
+    return safeError(error, "Gagal menyimpan batch stock-in.");
   }
 }

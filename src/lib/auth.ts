@@ -5,9 +5,25 @@ import { SignJWT, jwtVerify } from "jose";
 import type { Role } from "@prisma/client";
 
 const COOKIE = "si_session";
-const secret = new TextEncoder().encode(
-  process.env.AUTH_SECRET ?? "dev-secret-ganti-di-produksi-minimal-32-karakter"
-);
+
+function resolveSecret(): Uint8Array {
+  const fromEnv = process.env.AUTH_SECRET;
+  // Fail-closed di produksi: jangan pernah memakai secret default yang lemah,
+  // karena bisa dipakai untuk memalsukan token sesi (forge JWT).
+  if (process.env.NODE_ENV === "production") {
+    if (!fromEnv || fromEnv.length < 32) {
+      throw new Error(
+        "AUTH_SECRET wajib di-set minimal 32 karakter di produksi."
+      );
+    }
+    return new TextEncoder().encode(fromEnv);
+  }
+  return new TextEncoder().encode(
+    fromEnv ?? "dev-secret-ganti-di-produksi-minimal-32-karakter"
+  );
+}
+
+const secret = resolveSecret();
 
 export type SessionUser = {
   id: number;
@@ -43,18 +59,26 @@ export async function destroySession() {
 export async function getSession(): Promise<SessionUser | null> {
   const store = await cookies();
   const token = store.get(COOKIE)?.value;
-  console.log("[DEBUG getSession] token found:", !!token);
   if (!token) return null;
   try {
     const { payload } = await jwtVerify(token, secret);
+    // Validasi bentuk payload — tolak token yang strukturnya tidak sesuai.
+    if (
+      typeof payload.id !== "number" ||
+      typeof payload.username !== "string" ||
+      typeof payload.nama !== "string" ||
+      (payload.role !== "ADMIN_KASIR" && payload.role !== "ADMIN_GUDANG")
+    ) {
+      return null;
+    }
     return {
-      id: payload.id as number,
-      username: payload.username as string,
-      nama: payload.nama as string,
+      id: payload.id,
+      username: payload.username,
+      nama: payload.nama,
       role: payload.role as Role,
     };
-  } catch (err) {
-    console.error("[DEBUG getSession] jwtVerify error:", err);
+  } catch {
+    // Token invalid/kedaluwarsa — jangan bocorkan detail.
     return null;
   }
 }

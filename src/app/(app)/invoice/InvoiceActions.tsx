@@ -4,6 +4,7 @@ import { useState, useTransition, useRef, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { bayarInvoice } from "./actions";
 import { Button, Card, Input, Label, Select } from "@/components/ui";
+import { FIELD_LIMITS } from "@/lib/fieldLimits";
 import { formatRupiah, formatTanggal } from "@/lib/utils";
 import { MessageCircle, Wallet, Printer, X, Download, Mail, Link2 } from "lucide-react";
 import { toast } from "sonner";
@@ -27,6 +28,9 @@ export type InvoiceRow = {
   namaClient: string;
   alamat: string | null;
   namaWs: string | null;
+  namaBank?: string | null;
+  noRekening?: string | null;
+  atasNama?: string | null;
   total: number;
   totalDibayar: number;
   status: "DRAFT" | "PENDING" | "PARTIAL" | "PAID" | "OVERDUE";
@@ -183,6 +187,8 @@ export function InvoiceActions({ inv, canBayar }: { inv: InvoiceRow; canBayar: b
                 <Label>Jumlah Nominal Bayar (Rp)</Label>
                 <Input
                   type="number"
+                  min={0}
+                  max={FIELD_LIMITS.maxMoney}
                   value={jumlah}
                   onChange={(e) => setJumlah(parseInt(e.target.value) || 0)}
                   className="font-mono font-semibold h-11 text-base text-right pr-3"

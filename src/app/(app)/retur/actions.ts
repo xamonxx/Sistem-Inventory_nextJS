@@ -1,34 +1,37 @@
 "use server";
 
+import { revalidatePath, revalidateTag } from "next/cache";
 import { z } from "zod";
 import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { requireRole } from "@/lib/auth";
 import { nextDocNumber } from "@/lib/counters";
 import { logActivity } from "@/lib/activity";
+import { FIELD_LIMITS } from "@/lib/fieldLimits";
+import { dbId, money, qtyPositive, optionalText, safeError, firstIssue } from "@/lib/validation";
 
 const returnItemSchema = z.object({
-  transactionItemId: z.number().int().positive(),
-  itemId: z.number().int().positive(),
-  qtyReturned: z.number().int().positive(),
-  hargaSnapshot: z.number().positive(),
-  namaSnapshot: z.string(),
+  transactionItemId: dbId,
+  itemId: dbId,
+  qtyReturned: qtyPositive,
+  hargaSnapshot: money.refine((n) => n > 0, "Harga tidak valid."),
+  namaSnapshot: optionalText(FIELD_LIMITS.namaBarang, "Nama barang"),
 });
 
 const replacementItemSchema = z.object({
-  itemId: z.number().int().positive(),
-  qtyReplacement: z.number().int().positive(),
+  itemId: dbId,
+  qtyReplacement: qtyPositive,
 });
 
 const schema = z.object({
   tipe: z.enum(["RETUR", "TUKAR"]),
-  transactionId: z.number().int().positive(),
-  returnItems: z.array(returnItemSchema).min(1, "Minimal 1 barang diretur."),
-  replacementItems: z.array(replacementItemSchema).optional().default([]),
-  alasan: z.string().trim().optional().default(""),
-  namaClient: z.string().trim().optional().default(""),
-  alamat: z.string().trim().optional().default(""),
-  namaWs: z.string().trim().optional().default(""),
+  transactionId: dbId,
+  returnItems: z.array(returnItemSchema).min(1, "Minimal 1 barang diretur.").max(200, "Terlalu banyak item."),
+  replacementItems: z.array(replacementItemSchema).max(200, "Terlalu banyak item.").optional().default([]),
+  alasan: optionalText(FIELD_LIMITS.alasan, "Alasan"),
+  namaClient: optionalText(FIELD_LIMITS.namaClient, "Nama klien"),
+  alamat: optionalText(FIELD_LIMITS.alamat, "Alamat"),
+  namaWs: optionalText(FIELD_LIMITS.namaWs, "Nama workshop"),
 }).refine((d) => {
   if (d.tipe === "TUKAR" && d.replacementItems.length === 0) return false;
   return true;
@@ -43,7 +46,7 @@ export async function createReturn(payload: ReturPayload) {
 
   const parsed = schema.safeParse(payload);
   if (!parsed.success) {
-    return { error: parsed.error.issues[0]?.message ?? "Data tidak valid." };
+    return { error: firstIssue(parsed.error) };
   }
   const d = parsed.data;
 
@@ -125,6 +128,7 @@ export async function createReturn(payload: ReturPayload) {
   }
   const selisih = totalGanti - totalRetur;
 
+  try {
   const result = await prisma.$transaction(async (tx) => {
     const noReturn = await nextDocNumber(tx, "return");
 
@@ -220,6 +224,13 @@ export async function createReturn(payload: ReturPayload) {
     detail: { noReturn: result.noReturn, selisih: result.selisih, itemCount: d.returnItems.length },
   });
 
+  // Invalidate caches after successful return/exchange
+  revalidatePath("/");        // Dashboard shows stock alerts
+  revalidatePath("/stok");    // Stock levels changed
+  revalidatePath("/retur");   // Return page
+  revalidatePath("/invoice"); // Invoice list if created
+  revalidateTag("stock");     // Invalidate stock cache
+
   const returnItemNames = d.returnItems.map((ri) => ri.namaSnapshot).join(", ");
   const gantiItemNames = replacementItems.map((ri) => ri.nama).join(", ");
 
@@ -234,19 +245,65 @@ export async function createReturn(payload: ReturPayload) {
     namaGanti: gantiItemNames || null,
     qtyGanti: replacementItems.reduce((s, ri) => s + ri.qtyReplacement, 0),
   };
+  } catch (e) {
+    return safeError(e, "Gagal memproses retur.");
+  }
 }
 
 export async function findTransactionByCode(code: string) {
-  const user = await requireRole("ADMIN_KASIR", "ADMIN_GUDANG");
-  const trx = await prisma.transaction.findUnique({
-    where: { noTransaksi: code },
-    include: {
-      items: {
-        include: { item: true },
-      },
-    },
+  await requireRole("ADMIN_KASIR", "ADMIN_GUDANG");
+  // Batasi panjang & normalisasi kode transaksi sebelum query.
+  let searchCode = String(code ?? "").trim().slice(0, 40);
+  if (!searchCode) return { error: "Kode transaksi atau nomor invoice wajib diisi." };
+
+  // Normalisasi input jika huruf kecil (contoh: inv-00007 -> INV-00007, pc00005 -> PC00005)
+  if (searchCode.toLowerCase().startsWith("inv-")) {
+    searchCode = "INV-" + searchCode.slice(4);
+  } else if (searchCode.toLowerCase().startsWith("pc")) {
+    searchCode = "PC" + searchCode.slice(2);
+  }
+
+  let trx = null;
+
+  // 1. Coba cari sebagai Invoice terlebih dahulu
+  const inv = await prisma.invoice.findUnique({
+    where: { noInvoice: searchCode },
+    include: { return: true },
   });
-  if (!trx) return { error: "Transaksi tidak ditemukan." };
+
+  if (inv) {
+    let targetTrxId = inv.transactionId;
+    if (!targetTrxId && inv.returnId && inv.return) {
+      targetTrxId = inv.return.transactionId;
+    }
+
+    if (targetTrxId) {
+      trx = await prisma.transaction.findUnique({
+        where: { id: targetTrxId },
+        include: {
+          items: {
+            include: { item: true },
+          },
+        },
+      });
+    }
+  }
+
+  // 2. Jika tidak ditemukan lewat Invoice, cari langsung ke Transaction
+  if (!trx) {
+    trx = await prisma.transaction.findUnique({
+      where: { noTransaksi: searchCode },
+      include: {
+        items: {
+          include: { item: true },
+        },
+      },
+    });
+  }
+
+  if (!trx) {
+    return { error: "Transaksi atau invoice tidak ditemukan." };
+  }
 
   // Hitung qty yang sudah diretur untuk setiap item
   const returnedQtys = await prisma.returnItem.groupBy({

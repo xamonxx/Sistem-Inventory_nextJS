@@ -5,6 +5,7 @@ import { getStokAkhirMap } from "@/lib/stock";
 import { formatRupiah, formatTanggal } from "@/lib/utils";
 import { Card, Badge } from "@/components/ui";
 import { DashboardCharts } from "@/components/DashboardCharts";
+import { DatePicker } from "@/components/DatePicker";
 import {
   TrendingUp,
   Package,
@@ -32,6 +33,16 @@ function addDays(d: Date, days: number) {
   return result;
 }
 
+// Terima hanya format YYYY-MM-DD yang valid; selain itu pakai fallback.
+function parseDateParam(value: string | undefined, fallback: Date, endOfDay = false): Date {
+  if (!value || !/^\d{4}-\d{2}-\d{2}$/.test(value)) return fallback;
+  const d = new Date(value + (endOfDay ? "T23:59:59" : "T00:00:00"));
+  return isNaN(d.getTime()) ? fallback : d;
+}
+
+// Cache dashboard for 30 seconds (balances real-time data with performance)
+export const revalidate = 30;
+
 export default async function DashboardPage({
   searchParams,
 }: {
@@ -44,9 +55,9 @@ export default async function DashboardPage({
   const today = startOfDay(now);
   const tomorrow = new Date(today.getTime() + 86400000);
 
-  // Parse filters & mode
-  const dateFrom = params.from ? new Date(params.from) : startOfDay(new Date(now.getTime() - 29 * 86400000));
-  const dateTo = params.to ? new Date(params.to + "T23:59:59") : new Date();
+  // Parse filters & mode (validasi format tanggal supaya query tidak menerima Invalid Date)
+  const dateFrom = parseDateParam(params.from, startOfDay(new Date(now.getTime() - 29 * 86400000)));
+  const dateTo = parseDateParam(params.to, new Date(), true);
   const isOwnerMode = user.role !== "ADMIN_KASIR" && params.mode === "owner";
 
   const isGudang = user.role === "ADMIN_GUDANG";
@@ -93,31 +104,65 @@ export default async function DashboardPage({
   const activeProjectsCount = await prisma.project.count();
   const activeClientsCount = await prisma.client.count();
 
-  // 6. Revenue & Margin Trend
+  // 6. Revenue & Margin Trend (Optimized: 2 queries instead of 60)
   const chartDays = 30;
+  const chartStartDate = startOfDay(new Date(now.getTime() - (chartDays - 1) * 86400000));
+  
+  // Fetch all transactions for the entire period in ONE query
+  const allTransactions = await prisma.transaction.findMany({
+    where: { tanggal: { gte: chartStartDate } },
+    select: { tanggal: true, grandTotal: true },
+  });
+
+  // Fetch all transaction items for margin calculation in ONE query (if needed)
+  let allTransactionItems: Array<{ tanggal: Date; qty: number; hargaSnapshot: any; hargaBeliSnapshot: any }> = [];
+  if (isGudang) {
+    allTransactionItems = await prisma.transactionItem.findMany({
+      where: { transaction: { tanggal: { gte: chartStartDate } } },
+      select: { 
+        qty: true, 
+        hargaSnapshot: true, 
+        hargaBeliSnapshot: true,
+        transaction: { select: { tanggal: true } }
+      },
+    }).then(items => items.map(it => ({
+      tanggal: it.transaction.tanggal,
+      qty: it.qty,
+      hargaSnapshot: it.hargaSnapshot,
+      hargaBeliSnapshot: it.hargaBeliSnapshot,
+    })));
+  }
+
+  // Group data by date in memory
+  const dateMap = new Map<string, { omset: number; margin: number }>();
+  
+  // Process transactions
+  for (const trx of allTransactions) {
+    const dateKey = trx.tanggal.toISOString().split('T')[0];
+    const existing = dateMap.get(dateKey) ?? { omset: 0, margin: 0 };
+    existing.omset += Number(trx.grandTotal);
+    dateMap.set(dateKey, existing);
+  }
+
+  // Process transaction items for margin
+  for (const item of allTransactionItems) {
+    const dateKey = item.tanggal.toISOString().split('T')[0];
+    const existing = dateMap.get(dateKey) ?? { omset: 0, margin: 0 };
+    existing.margin += (Number(item.hargaSnapshot) - Number(item.hargaBeliSnapshot)) * item.qty;
+    dateMap.set(dateKey, existing);
+  }
+
+  // Build trend data array with all 30 days (including zeros)
   const trendData: { tanggal: string; omset: number; margin: number }[] = [];
   for (let i = chartDays - 1; i >= 0; i--) {
     const d = startOfDay(new Date(now.getTime() - i * 86400000));
-    const dEnd = new Date(d.getTime() + 86400000);
-
-    const aggTrx = await prisma.transaction.aggregate({
-      where: { tanggal: { gte: d, lt: dEnd } },
-      _sum: { grandTotal: true },
-    });
-
-    let dayMargin = 0;
-    if (isGudang) {
-      const dayItems = await prisma.transactionItem.findMany({
-        where: { transaction: { tanggal: { gte: d, lt: dEnd } } },
-        select: { qty: true, hargaSnapshot: true, hargaBeliSnapshot: true },
-      });
-      dayMargin = dayItems.reduce((acc, it) => acc + (Number(it.hargaSnapshot) - Number(it.hargaBeliSnapshot)) * it.qty, 0);
-    }
-
+    const dateKey = d.toISOString().split('T')[0];
+    const data = dateMap.get(dateKey) ?? { omset: 0, margin: 0 };
+    
     trendData.push({
       tanggal: new Intl.DateTimeFormat("id-ID", { day: "2-digit", month: "short" }).format(d),
-      omset: Number(aggTrx._sum.grandTotal ?? 0),
-      margin: dayMargin,
+      omset: data.omset,
+      margin: data.margin,
     });
   }
 
@@ -161,7 +206,7 @@ export default async function DashboardPage({
   const stokMap = await getStokAkhirMap();
   const allStok = items.map((it) => ({
     ...it,
-    stok: stokMap.get(it.id) ?? it.stokAwal,
+    stok: stokMap[it.id] ?? it.stokAwal,
   }));
 
   const lowStockItems = allStok.filter((it) => it.stok >= 0 && it.stok < it.minStok).sort((a, b) => a.stok - b.stok);
@@ -212,14 +257,14 @@ export default async function DashboardPage({
     blue: "#3b82f6",
     amber: "#f59e0b",
     red: "#ef4444",
-    primary: "#d35a1f",
+    primary: "#d97706",
     slate: "#64748b",
   };
 
   return (
     <div className="space-y-8">
       {/* Dashboard Top Header */}
-      <header className="anim-rise flex flex-col gap-5 sm:flex-row sm:items-center sm:justify-between border-b border-border pb-6">
+      <header className="relative z-20 anim-rise flex flex-col gap-5 sm:flex-row sm:items-center sm:justify-between border-b border-border pb-6">
         <div>
           <p className="u-label flex items-center gap-2 text-[var(--primary)] font-bold">
             <span className="inline-block h-[2px] w-6 bg-[var(--primary)]" />
@@ -262,18 +307,17 @@ export default async function DashboardPage({
           )}
 
           <form className="flex flex-wrap items-center gap-2 w-full sm:w-auto">
-            <input
-              type="date"
+            <DatePicker
               name="from"
               defaultValue={params.from ?? ""}
-              className="flex-1 sm:flex-none h-10 min-w-0 rounded-xl border border-border bg-white px-3 text-xs font-semibold text-slate-700 shadow-xs outline-none focus:border-[var(--primary)]"
+              className="flex-1 sm:flex-none h-10 min-w-[130px] sm:w-36 text-xs font-semibold"
             />
             <span className="text-xs text-slate-400 font-bold">s/d</span>
-            <input
-              type="date"
+            <DatePicker
               name="to"
               defaultValue={params.to ?? ""}
-              className="flex-1 sm:flex-none h-10 min-w-0 rounded-xl border border-border bg-white px-3 text-xs font-semibold text-slate-700 shadow-xs outline-none focus:border-[var(--primary)]"
+              align="right"
+              className="flex-1 sm:flex-none h-10 min-w-[130px] sm:w-36 text-xs font-semibold"
             />
             {params.mode && <input type="hidden" name="mode" value={params.mode} />}
             <button className="flex-1 sm:flex-none h-10 rounded-xl bg-[var(--primary)] px-4 text-xs font-bold text-white shadow-md hover:bg-[var(--primary-strong)] cursor-pointer transition">

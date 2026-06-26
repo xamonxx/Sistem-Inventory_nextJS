@@ -21,6 +21,9 @@ export interface KasirState {
   projectNama: string;
   projectGroupNama: string;
   paymentMethod: "CASH" | "TRANSFER" | "CREDIT";
+  namaBank: string; // opsional, untuk transfer/kredit
+  noRekening: string; // opsional, untuk transfer/kredit
+  atasNama: string; // opsional, untuk transfer/kredit
   buatInvoice: boolean;
   globalDiscount: number; // nilai mentah diskon total transaksi
   globalDiscountType: DiscType;
@@ -33,6 +36,9 @@ export interface KasirState {
   setProjectNama: (nama: string) => void;
   setProjectGroupNama: (nama: string) => void;
   setPaymentMethod: (method: "CASH" | "TRANSFER" | "CREDIT") => void;
+  setNamaBank: (val: string) => void;
+  setNoRekening: (val: string) => void;
+  setAtasNama: (val: string) => void;
   setBuatInvoice: (val: boolean) => void;
   setGlobalDiscount: (val: number) => void;
   setGlobalDiscountType: (type: DiscType) => void;
@@ -54,6 +60,9 @@ export const useKasirStore = create<KasirState>((set) => ({
   projectNama: "",
   projectGroupNama: "",
   paymentMethod: "CASH",
+  namaBank: "",
+  noRekening: "",
+  atasNama: "",
   buatInvoice: true,
   globalDiscount: 0,
   globalDiscountType: "RP",
@@ -65,6 +74,9 @@ export const useKasirStore = create<KasirState>((set) => ({
   setProjectNama: (projectNama) => set({ projectNama }),
   setProjectGroupNama: (projectGroupNama) => set({ projectGroupNama }),
   setPaymentMethod: (paymentMethod) => set({ paymentMethod }),
+  setNamaBank: (namaBank) => set({ namaBank }),
+  setNoRekening: (noRekening) => set({ noRekening }),
+  setAtasNama: (atasNama) => set({ atasNama }),
   setBuatInvoice: (buatInvoice) => set({ buatInvoice }),
   setGlobalDiscount: (globalDiscount) => set({ globalDiscount: Math.max(0, globalDiscount) }),
   setGlobalDiscountType: (globalDiscountType) => set({ globalDiscountType }),
@@ -123,6 +135,9 @@ export const useKasirStore = create<KasirState>((set) => ({
       projectNama: "",
       projectGroupNama: "",
       paymentMethod: "CASH",
+      namaBank: "",
+      noRekening: "",
+      atasNama: "",
       buatInvoice: true,
       globalDiscount: 0,
       globalDiscountType: "RP",

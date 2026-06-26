@@ -46,7 +46,7 @@ export function TopNav({ nama, role }: TopNavProps) {
       {/* Right controls */}
       <div className="flex items-center gap-4">
         {/* Notification Bell */}
-        <NotificationCenter />
+        <NotificationCenter role={role} />
 
         {/* Vertical divider line */}
         <span className="h-6 w-px bg-border" />

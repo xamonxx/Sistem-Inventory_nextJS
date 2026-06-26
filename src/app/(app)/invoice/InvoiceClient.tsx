@@ -2,12 +2,14 @@
 
 import { useState, useTransition, useMemo, useRef, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { bayarInvoice } from "./actions";
+import { bayarInvoice, updateInvoice, deleteInvoice, deleteInvoices, updateInvoiceAndItems } from "./actions";
 import { Button, Card, Input, Label, Select, Table, Th, Td, Badge } from "@/components/ui";
+import { FIELD_LIMITS } from "@/lib/fieldLimits";
 import { Drawer } from "@/components/Drawer";
 import { Pagination, usePagination } from "@/components/Pagination";
 import { InvoiceDocument } from "@/components/InvoiceDocument";
 import { Nota } from "@/components/Nota";
+import { ModernDialog } from "@/components/ModernDialog";
 import { printArea } from "@/lib/print";
 import { formatRupiah, formatTanggal, cn } from "@/lib/utils";
 import { toPng } from "html-to-image";
@@ -28,10 +30,18 @@ import {
   X,
   Copy,
   Camera,
+  Pencil,
+  Trash2,
+  Hash,
+  DollarSign,
+  User,
+  Building2,
+  ShoppingBag,
 } from "lucide-react";
 import { toast } from "sonner";
 
 export type InvoiceItem = {
+  itemId: number;
   kode: string;
   nama: string;
   qty: number;
@@ -53,6 +63,9 @@ export type InvoiceRow = {
   namaClient: string;
   alamat: string | null;
   namaWs: string | null;
+  namaBank?: string | null;
+  noRekening?: string | null;
+  atasNama?: string | null;
   total: number;
   totalDibayar: number;
   status: "DRAFT" | "PENDING" | "PARTIAL" | "PAID" | "OVERDUE";
@@ -82,6 +95,13 @@ export function InvoiceClient({ initialInvoices, canBayar }: InvoiceClientProps)
   const [paymentMethod, setPaymentMethod] = useState<"CASH" | "TRANSFER">("CASH");
   const [isPending, startTransition] = useTransition();
   const [printFormat, setPrintFormat] = useState<"a4" | "thermal" | null>(null);
+
+  // Delete states
+  const [isDeleteConfirmOpen, setIsDeleteConfirmOpen] = useState(false);
+
+  // Selection states
+  const [selectedInvoiceIds, setSelectedInvoiceIds] = useState<number[]>([]);
+  const [isBulkDeleteConfirmOpen, setIsBulkDeleteConfirmOpen] = useState(false);
 
   // Lock body scroll when print preview is open
   useEffect(() => {
@@ -163,10 +183,66 @@ export function InvoiceClient({ initialInvoices, canBayar }: InvoiceClientProps)
         ...invoice,
         totalDibayar: invoice.totalDibayar + paymentAmount,
         status: (invoice.totalDibayar + paymentAmount >= invoice.total) ? "PAID" as const : "PARTIAL" as const,
-        payments: res.payment ? [res.payment as PaymentRow, ...(invoice.payments || [])] : (invoice.payments || [])
+        payments: (res && "payment" in res && res.payment) ? [res.payment as PaymentRow, ...(invoice.payments || [])] : (invoice.payments || [])
       };
       setSelectedInvoice(updatedInvoice);
       setPaymentAmount(0);
+      router.refresh();
+    });
+  }
+
+
+
+  // Handle delete invoice
+  function handleDeleteInvoice() {
+    if (!selectedInvoice) return;
+
+    startTransition(async () => {
+      const res = await deleteInvoice(selectedInvoice.id);
+      if (res && "error" in res && res.error) {
+        toast.error(res.error);
+        return;
+      }
+      toast.success("Invoice berhasil dihapus!");
+      setIsDeleteConfirmOpen(false);
+      setSelectedInvoice(null);
+      router.refresh();
+    });
+  }
+
+  // Handle toggle selection for a single invoice
+  function handleToggleSelect(id: number) {
+    setSelectedInvoiceIds((prev) =>
+      prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]
+    );
+  }
+
+  // Handle toggle select all on the current page
+  function handleToggleSelectAll(currentPageIds: number[]) {
+    const allSelected = currentPageIds.every((id) => selectedInvoiceIds.includes(id));
+    if (allSelected) {
+      setSelectedInvoiceIds((prev) => prev.filter((id) => !currentPageIds.includes(id)));
+    } else {
+      setSelectedInvoiceIds((prev) => {
+        const toAdd = currentPageIds.filter((id) => !prev.includes(id));
+        return [...prev, ...toAdd];
+      });
+    }
+  }
+
+  // Handle bulk delete action
+  function handleBulkDelete() {
+    if (selectedInvoiceIds.length === 0) return;
+
+    startTransition(async () => {
+      const res = await deleteInvoices(selectedInvoiceIds);
+      if (res && "error" in res && res.error) {
+        toast.error(res.error);
+        return;
+      }
+      toast.success(`${selectedInvoiceIds.length} invoice berhasil dihapus!`);
+      setSelectedInvoiceIds([]);
+      setIsBulkDeleteConfirmOpen(false);
       router.refresh();
     });
   }
@@ -286,6 +362,7 @@ export function InvoiceClient({ initialInvoices, canBayar }: InvoiceClientProps)
             <Input
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
+              maxLength={FIELD_LIMITS.search}
               placeholder="Cari berdasarkan Nomor Invoice, Klien, atau nama Proyek..."
               className="pl-9 h-10 rounded-xl"
             />
@@ -310,6 +387,17 @@ export function InvoiceClient({ initialInvoices, canBayar }: InvoiceClientProps)
             >
               <SlidersHorizontal size={14} /> Kolom
             </Button>
+
+            {canBayar && selectedInvoiceIds.length > 0 && (
+              <Button
+                variant="danger"
+                size="sm"
+                onClick={() => setIsBulkDeleteConfirmOpen(true)}
+                className="h-10 rounded-xl px-4 gap-1.5 font-bold animate-fade-in bg-red-600 hover:bg-red-700 text-white border-transparent cursor-pointer"
+              >
+                <Trash2 size={14} /> Hapus Terpilih ({selectedInvoiceIds.length})
+              </Button>
+            )}
           </div>
         </div>
 
@@ -329,10 +417,23 @@ export function InvoiceClient({ initialInvoices, canBayar }: InvoiceClientProps)
       </Card>
 
       {/* 3. Modern Data Grid Invoice Table */}
-      <div className="overflow-hidden rounded-[18px] border border-border bg-white shadow-[var(--shadow-card)]">
+      <div className="w-full">
         <Table>
           <thead>
             <tr>
+              {canBayar && (
+                <Th className="w-12 text-center">
+                  <input
+                    type="checkbox"
+                    checked={
+                      invoicePg.pageData.length > 0 &&
+                      invoicePg.pageData.every((inv) => selectedInvoiceIds.includes(inv.id))
+                    }
+                    onChange={() => handleToggleSelectAll(invoicePg.pageData.map((inv) => inv.id))}
+                    className="h-4 w-4 rounded border-slate-350 text-[var(--primary)] focus:ring-transparent cursor-pointer"
+                  />
+                </Th>
+              )}
               <Th>No. Invoice</Th>
               <Th>Tanggal</Th>
               <Th>Klien / Pelanggan</Th>
@@ -355,6 +456,16 @@ export function InvoiceClient({ initialInvoices, canBayar }: InvoiceClientProps)
                   onClick={() => setSelectedInvoice(inv)}
                   className="hover:bg-slate-50/50 cursor-pointer transition-colors duration-150 group"
                 >
+                  {canBayar && (
+                    <Td className="text-center" onClick={(e) => e.stopPropagation()}>
+                      <input
+                        type="checkbox"
+                        checked={selectedInvoiceIds.includes(inv.id)}
+                        onChange={() => handleToggleSelect(inv.id)}
+                        className="h-4 w-4 rounded border-slate-350 text-[var(--primary)] focus:ring-transparent cursor-pointer"
+                      />
+                    </Td>
+                  )}
                   <Td className="group-hover:text-[var(--primary)]">
                     <div className="font-mono text-xs font-bold text-slate-850">{inv.noInvoice}</div>
                     {inv.noTransaksi && (
@@ -391,13 +502,38 @@ export function InvoiceClient({ initialInvoices, canBayar }: InvoiceClientProps)
                     {inv.status === "DRAFT" && <Badge tone="slate">Draft</Badge>}
                   </Td>
                   <Td className="text-center" onClick={(e) => e.stopPropagation()}>
-                    <button
-                      onClick={() => setSelectedInvoice(inv)}
-                      className="flex h-9 w-9 items-center justify-center rounded-xl bg-slate-50 border border-border text-slate-500 hover:bg-[var(--primary)] hover:text-white transition mx-auto cursor-pointer"
-                      title="Buka detail drawer"
-                    >
-                      <Eye size={14} />
-                    </button>
+                    <div className="flex items-center justify-center gap-1.5">
+                      <button
+                        onClick={() => setSelectedInvoice(inv)}
+                        className="flex h-9 w-9 items-center justify-center rounded-xl bg-slate-50 border border-border text-slate-500 hover:bg-[var(--primary)] hover:text-white transition cursor-pointer"
+                        title="Buka detail drawer"
+                      >
+                        <Eye size={14} />
+                      </button>
+                      {canBayar && (
+                        <>
+                          <button
+                            onClick={() => {
+                              router.push(`/invoice/edit/${inv.id}`);
+                            }}
+                            className="flex h-9 w-9 items-center justify-center rounded-xl bg-blue-50 border border-blue-200 text-blue-700 hover:bg-blue-600 hover:text-white hover:border-transparent transition cursor-pointer"
+                            title="Edit Invoice & Barang"
+                          >
+                            <Pencil size={14} />
+                          </button>
+                          <button
+                            onClick={() => {
+                              setSelectedInvoice(inv);
+                              setIsDeleteConfirmOpen(true);
+                            }}
+                            className="flex h-9 w-9 items-center justify-center rounded-xl bg-red-50 border border-red-200 text-red-700 hover:bg-red-650 hover:text-white hover:border-transparent transition cursor-pointer"
+                            title="Hapus Invoice"
+                          >
+                            <Trash2 size={14} />
+                          </button>
+                        </>
+                      )}
+                    </div>
                   </Td>
                 </tr>
               );
@@ -405,7 +541,7 @@ export function InvoiceClient({ initialInvoices, canBayar }: InvoiceClientProps)
 
             {filteredInvoices.length === 0 && (
               <tr>
-                <Td colSpan={10} className="py-16 text-center text-slate-400 select-none">
+                <Td colSpan={11} className="py-16 text-center text-slate-400 select-none">
                   <FileText className="mx-auto text-slate-200 mb-2" size={32} />
                   <p className="font-semibold text-sm">Tidak Ada Invoice Terdaftar</p>
                   <p className="text-xs">Data tagihan kosong atau tidak cocok dengan pencarian.</p>
@@ -432,94 +568,132 @@ export function InvoiceClient({ initialInvoices, canBayar }: InvoiceClientProps)
         {selectedInvoice && (
           <div className="space-y-6">
             {/* Document Codes Metadata Panel */}
-            <div className="flex flex-col sm:flex-row gap-3">
-              <div className="flex-1 bg-slate-50/50 border border-slate-200 p-3 rounded-xl flex items-center justify-between">
-                <div>
-                  <span className="text-[10px] font-bold text-slate-400 uppercase">No. Invoice</span>
-                  <p className="font-mono text-sm font-bold text-slate-800 mt-0.5">{selectedInvoice.noInvoice}</p>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="bg-slate-50/40 border border-slate-200/85 p-3.5 rounded-2xl flex items-center justify-between shadow-3xs">
+                <div className="flex items-center gap-3">
+                  <div className="p-2 bg-slate-100 text-slate-550 rounded-xl">
+                    <Hash size={15} />
+                  </div>
+                  <div>
+                    <span className="text-[9px] font-extrabold text-slate-400 uppercase tracking-wider">No. Invoice</span>
+                    <p className="font-mono text-xs font-bold text-slate-850 mt-0.5">{selectedInvoice.noInvoice}</p>
+                  </div>
                 </div>
                 <button
                   type="button"
                   onClick={() => handleCopyText(selectedInvoice.noInvoice, "No. Invoice")}
-                  className="flex h-8 w-8 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-450 hover:bg-slate-100 hover:text-slate-700 transition cursor-pointer"
+                  className="flex h-8 w-8 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-450 hover:bg-slate-50 hover:text-slate-800 transition shadow-3xs cursor-pointer active:scale-95 shrink-0"
                   title="Salin No. Invoice"
                 >
-                  <Copy size={13} />
+                  <Copy size={12} />
                 </button>
               </div>
 
-              {selectedInvoice.noTransaksi && (
-                <div className="flex-1 bg-slate-50/50 border border-slate-200 p-3 rounded-xl flex items-center justify-between">
-                  <div>
-                    <span className="text-[10px] font-bold text-slate-400 uppercase">No. Transaksi Asli</span>
-                    <p className="font-mono text-sm font-bold text-slate-800 mt-0.5">{selectedInvoice.noTransaksi}</p>
+              {selectedInvoice.noTransaksi ? (
+                <div className="bg-slate-50/40 border border-slate-200/85 p-3.5 rounded-2xl flex items-center justify-between shadow-3xs">
+                  <div className="flex items-center gap-3">
+                    <div className="p-2 bg-slate-100 text-slate-550 rounded-xl">
+                      <FileText size={15} />
+                    </div>
+                    <div>
+                      <span className="text-[9px] font-extrabold text-slate-400 uppercase tracking-wider">No. Transaksi Asli</span>
+                      <p className="font-mono text-xs font-bold text-slate-850 mt-0.5">{selectedInvoice.noTransaksi}</p>
+                    </div>
                   </div>
                   <button
                     type="button"
                     onClick={() => handleCopyText(selectedInvoice.noTransaksi!, "No. Transaksi")}
-                    className="flex h-8 w-8 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-450 hover:bg-slate-100 hover:text-slate-700 transition cursor-pointer"
+                    className="flex h-8 w-8 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-450 hover:bg-slate-50 hover:text-slate-800 transition shadow-3xs cursor-pointer active:scale-95 shrink-0"
                     title="Salin No. Transaksi"
                   >
-                    <Copy size={13} />
+                    <Copy size={12} />
                   </button>
+                </div>
+              ) : (
+                <div className="bg-slate-50/20 border border-dashed border-slate-200/80 p-3.5 rounded-2xl flex items-center justify-center text-slate-400 text-xs shadow-3xs">
+                  Tidak Terikat Transaksi Asli
                 </div>
               )}
             </div>
 
             {/* Status & Summary Header */}
-            <div className="flex items-center justify-between bg-slate-50 border border-border p-4 rounded-xl">
-              <div>
-                <p className="text-[10px] font-bold text-slate-450 uppercase">Status Pembayaran</p>
-                <div className="mt-1 flex items-center gap-2">
-                  {selectedInvoice.status === "PAID" && <Badge tone="green">Lunas</Badge>}
-                  {selectedInvoice.status === "PARTIAL" && <Badge tone="blue">Cicilan Aktif</Badge>}
-                  {selectedInvoice.status === "PENDING" && <Badge tone="amber">Pending</Badge>}
-                  {selectedInvoice.status === "DRAFT" && <Badge tone="slate">Draft</Badge>}
+            {(() => {
+              const sisaTagihan = selectedInvoice.total - selectedInvoice.totalDibayar;
+              const isPaid = selectedInvoice.status === "PAID" || sisaTagihan <= 0;
+              return (
+                <div className={cn(
+                  "flex items-center justify-between border p-5 rounded-2xl transition-all shadow-xs",
+                  isPaid 
+                    ? "bg-emerald-50/30 border-emerald-100/50 text-emerald-800"
+                    : selectedInvoice.status === "PARTIAL"
+                    ? "bg-blue-50/20 border-blue-100/50 text-blue-800"
+                    : "bg-amber-50/20 border-amber-100/50 text-amber-800"
+                )}>
+                  <div>
+                    <p className="text-[10px] font-bold text-slate-450 uppercase tracking-wide">Status Pembayaran</p>
+                    <div className="mt-1.5">
+                      {isPaid && <Badge tone="green" className="px-2.5 py-1 font-bold">Lunas</Badge>}
+                      {!isPaid && selectedInvoice.status === "PARTIAL" && <Badge tone="blue" className="px-2.5 py-1 font-bold">Cicilan Aktif</Badge>}
+                      {!isPaid && selectedInvoice.status === "PENDING" && <Badge tone="amber" className="px-2.5 py-1 font-bold">Pending</Badge>}
+                      {!isPaid && selectedInvoice.status === "DRAFT" && <Badge tone="slate" className="px-2.5 py-1 font-bold">Draft</Badge>}
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-[10px] font-bold text-slate-450 uppercase tracking-wide">Sisa Tagihan</p>
+                    <p className={cn(
+                      "text-xl font-extrabold font-mono mt-1",
+                      isPaid ? "text-emerald-700" : "text-amber-700"
+                    )}>
+                      {formatRupiah(sisaTagihan)}
+                    </p>
+                  </div>
                 </div>
-              </div>
-              <div className="text-right">
-                <p className="text-[10px] font-bold text-slate-450 uppercase">Sisa Tagihan</p>
-                <p className="text-lg font-extrabold text-slate-800 font-mono mt-0.5">
-                  {formatRupiah(selectedInvoice.total - selectedInvoice.totalDibayar)}
-                </p>
-              </div>
-            </div>
+              );
+            })()}
 
             {/* Quick Actions Panel */}
             <div className="flex flex-wrap gap-2">
-              <Button size="sm" variant="outline" onClick={() => setPrintFormat("a4")}>
-                <Printer size={13} /> Cetak Faktur
+              <Button size="sm" variant="outline" className="h-9 px-3 text-xs font-semibold rounded-xl flex items-center gap-1.5 shadow-xs border-slate-200" onClick={() => setPrintFormat("a4")}>
+                <Printer size={14} className="stroke-[2]" /> Cetak Faktur
               </Button>
-              <Button size="sm" variant="outline" onClick={() => setPrintFormat("thermal")}>
-                <Printer size={13} /> Thermal (80mm)
+              <Button size="sm" variant="outline" className="h-9 px-3 text-xs font-semibold rounded-xl flex items-center gap-1.5 shadow-xs border-slate-200" onClick={() => setPrintFormat("thermal")}>
+                <Printer size={14} className="stroke-[2]" /> Thermal (80mm)
               </Button>
-              <Button size="sm" variant="success" className="bg-[#0ec17f] hover:bg-[#0ca86e] text-white border-transparent" onClick={() => handleSendWhatsApp(selectedInvoice)}>
-                <MessageCircle size={13} /> Kirim WhatsApp
+              <Button size="sm" variant="success" className="h-9 px-3 text-xs font-semibold rounded-xl flex items-center gap-1.5 shadow-xs bg-emerald-600 hover:bg-emerald-700 text-white border-transparent" onClick={() => handleSendWhatsApp(selectedInvoice)}>
+                <MessageCircle size={14} className="stroke-[2]" /> Kirim WhatsApp
               </Button>
-              <Button size="sm" variant="outline" onClick={() => handleCopyLink(selectedInvoice.verifyUrl ?? "")}>
-                <Link2 size={13} /> Salin Link Verifikasi
+              <Button size="sm" variant="outline" className="h-9 px-3 text-xs font-semibold rounded-xl flex items-center gap-1.5 shadow-xs border-slate-200" onClick={() => handleCopyLink(selectedInvoice.verifyUrl ?? "")}>
+                <Link2 size={14} className="stroke-[2]" /> Salin Link Verifikasi
               </Button>
             </div>
 
             {/* Instalment payment panel inside drawer */}
             {canBayar && selectedInvoice.total - selectedInvoice.totalDibayar > 0 && (
-              <div className="rounded-xl border border-dashed border-border bg-slate-50 p-4.5 space-y-3">
-                <Label>Input Pembayaran Cicilan / Piutang</Label>
-                <div className="flex gap-2">
-                  <div className="flex-1">
-                    <Input
+              <div className="rounded-2xl border border-slate-200 bg-slate-50/40 p-5 space-y-4 shadow-sm">
+                <div className="flex items-center gap-2">
+                  <div className="p-1.5 bg-primary/10 rounded-lg text-primary">
+                    <DollarSign size={14} className="stroke-[2.5]" />
+                  </div>
+                  <Label className="mb-0 text-xs font-bold text-slate-850">Input Pembayaran Cicilan / Piutang</Label>
+                </div>
+                <div className="flex flex-col sm:flex-row gap-3">
+                  <div className="flex-1 relative">
+                    <span className="absolute left-3.5 top-1/2 -translate-y-1/2 font-bold text-xs text-slate-450 font-mono">Rp</span>
+                    <input
                       type="number"
+                      min={0}
+                      max={FIELD_LIMITS.maxMoney}
                       value={paymentAmount || ""}
                       onChange={(e) => setPaymentAmount(parseInt(e.target.value) || 0)}
                       placeholder="Ketik nominal cicilan..."
-                      className="h-10 font-mono font-bold text-sm bg-white"
+                      className="h-10 w-full pl-9 pr-4 rounded-xl border border-slate-200 bg-white font-mono font-bold text-xs outline-none transition-all focus:border-[var(--primary)] focus:ring-4 focus:ring-[var(--primary)]/10"
                     />
                   </div>
-                  <div className="w-36 shrink-0">
+                  <div className="w-full sm:w-36 shrink-0">
                     <Select
                       value={paymentMethod}
                       onChange={(e) => setPaymentMethod(e.target.value as "CASH" | "TRANSFER")}
-                      className="h-10 text-xs bg-white border border-border"
+                      className="h-10 text-xs bg-white border border-slate-200 rounded-xl w-full"
                     >
                       <option value="CASH">Tunai (Cash)</option>
                       <option value="TRANSFER">Transfer Bank</option>
@@ -528,27 +702,31 @@ export function InvoiceClient({ initialInvoices, canBayar }: InvoiceClientProps)
                   <Button
                     onClick={() => handlePayInstalment(selectedInvoice)}
                     disabled={isPending || paymentAmount <= 0}
-                    className="h-10 shrink-0 text-xs px-4"
+                    className="h-10 shrink-0 text-xs px-5 rounded-xl font-bold bg-primary hover:bg-primary-strong transition-all shadow-xs"
                   >
                     {isPending ? "Proses..." : "Simpan"}
                   </Button>
                 </div>
-                <div className="flex gap-1.5 flex-wrap">
+                <div className="flex gap-2 flex-wrap items-center">
+                  <span className="text-[10px] font-semibold text-slate-450">Pintas:</span>
                   <button
+                    type="button"
                     onClick={() => setPaymentAmount(selectedInvoice.total - selectedInvoice.totalDibayar)}
-                    className="rounded border border-emerald-250 bg-emerald-50 px-2 py-0.5 text-[10px] font-bold text-emerald-700 hover:bg-emerald-100 cursor-pointer"
+                    className="rounded-lg border border-emerald-200 bg-emerald-50 px-2.5 py-1 text-[10px] font-bold text-emerald-700 hover:bg-emerald-100 transition-all cursor-pointer shadow-2xs"
                   >
                     Bayar Lunas
                   </button>
                   <button
+                    type="button"
                     onClick={() => setPaymentAmount(1000000)}
-                    className="rounded border border-border bg-white px-2 py-0.5 text-[10px] font-semibold text-slate-650 hover:bg-slate-100 font-mono cursor-pointer"
+                    className="rounded-lg border border-slate-200 bg-white px-2.5 py-1 text-[10px] font-semibold text-slate-650 hover:bg-slate-50 transition-all font-mono cursor-pointer shadow-2xs"
                   >
                     1jt
                   </button>
                   <button
+                    type="button"
                     onClick={() => setPaymentAmount(5000000)}
-                    className="rounded border border-border bg-white px-2 py-0.5 text-[10px] font-semibold text-slate-650 hover:bg-slate-100 font-mono cursor-pointer"
+                    className="rounded-lg border border-slate-200 bg-white px-2.5 py-1 text-[10px] font-semibold text-slate-650 hover:bg-slate-50 transition-all font-mono cursor-pointer shadow-2xs"
                   >
                     5jt
                   </button>
@@ -558,28 +736,28 @@ export function InvoiceClient({ initialInvoices, canBayar }: InvoiceClientProps)
 
             {/* Payment History Panel */}
             {selectedInvoice.payments && selectedInvoice.payments.length > 0 && (
-              <div className="space-y-2">
+              <div className="space-y-2.5">
                 <div className="flex justify-between items-center px-1">
-                  <p className="text-[10px] font-bold text-slate-450 uppercase">Riwayat Pembayaran / Cicilan</p>
-                  <Badge tone="green">{selectedInvoice.payments.length}x Pembayaran</Badge>
+                  <p className="text-[10px] font-extrabold text-slate-450 uppercase tracking-wider">Riwayat Pembayaran / Cicilan</p>
+                  <Badge tone="green" className="text-[9px] px-2 py-0.5 font-bold">{selectedInvoice.payments.length}x Pembayaran</Badge>
                 </div>
-                <div className="divide-y divide-slate-100 rounded-xl border border-border bg-white p-1">
+                <div className="rounded-2xl border border-slate-200 bg-white shadow-sm overflow-hidden divide-y divide-slate-100">
                   {selectedInvoice.payments.map((pay) => (
-                    <div key={pay.id} className="flex justify-between items-center p-3 text-xs">
-                      <div className="space-y-0.5">
-                        <p className="font-semibold text-slate-700">{formatTanggal(pay.tanggal)}</p>
-                        <p className="text-[10px] text-slate-400">ID Pembayaran: #{pay.id}</p>
+                    <div key={pay.id} className="flex justify-between items-center p-3.5 hover:bg-slate-50/55 transition-colors text-xs">
+                      <div className="space-y-1">
+                        <p className="font-bold text-slate-700">{formatTanggal(pay.tanggal)}</p>
+                        <p className="text-[10px] text-slate-400 font-semibold font-mono">ID: #{pay.id}</p>
                       </div>
                       <div className="flex items-center gap-3">
                         <span className={cn(
-                          "inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold border",
+                          "inline-flex items-center px-2 py-0.5 rounded-full text-[9px] font-bold border shadow-3xs",
                           pay.tipe === "TRANSFER"
-                            ? "bg-blue-50 text-blue-700 border-blue-200"
-                            : "bg-emerald-50 text-emerald-700 border-emerald-250"
+                            ? "bg-blue-50 text-blue-700 border-blue-100"
+                            : "bg-emerald-50 text-emerald-700 border-emerald-100"
                         )}>
                           {pay.tipe}
                         </span>
-                        <p className="font-mono font-bold text-slate-850 text-sm">
+                        <p className="font-mono font-extrabold text-slate-800 text-xs">
                           {formatRupiah(pay.jumlah)}
                         </p>
                       </div>
@@ -590,72 +768,112 @@ export function InvoiceClient({ initialInvoices, canBayar }: InvoiceClientProps)
             )}
 
             {/* Verification Status */}
-            <div className="rounded-xl border border-border p-4 bg-white">
+            <div className="rounded-2xl border border-slate-200 p-5 bg-white shadow-sm space-y-3">
               <div className="flex items-center justify-between">
-                <p className="text-[10px] font-bold text-slate-450 uppercase">Verifikasi Invoice</p>
+                <p className="text-[10px] font-extrabold text-slate-450 uppercase tracking-wider">Verifikasi Invoice</p>
                 {(selectedInvoice.verifCount ?? 0) > 0 ? (
-                  <Badge tone="green">{selectedInvoice.verifCount}x Diverifikasi</Badge>
+                  <Badge tone="green" className="text-[9px] px-2 py-0.5 font-bold">{selectedInvoice.verifCount}x Diverifikasi</Badge>
                 ) : (
-                  <Badge tone="slate">Belum Diverifikasi</Badge>
+                  <Badge tone="slate" className="text-[9px] px-2 py-0.5 font-bold">Belum Diverifikasi</Badge>
                 )}
               </div>
-              <p className="text-xs text-slate-500 mt-2">
+              <p className="text-xs text-slate-500 leading-relaxed">
                 Scan QR code pada faktur untuk verifikasi. Hasil verifikasi tercatat otomatis di audit trail.
               </p>
               {selectedInvoice.verifyUrl && (
-                <div className="mt-2 flex items-center gap-2 text-xs text-slate-500 bg-slate-50 rounded-lg p-2 border border-border break-all font-mono">
-                  <Link2 size={12} className="shrink-0 text-slate-400" />
-                  {selectedInvoice.verifyUrl}
+                <div className="flex items-center justify-between gap-2 text-xs text-slate-500 bg-slate-50 rounded-xl p-3 border border-slate-200 break-all font-mono shadow-3xs">
+                  <div className="flex items-center gap-2 min-w-0">
+                    <Link2 size={13} className="shrink-0 text-slate-455" />
+                    <span className="truncate">{selectedInvoice.verifyUrl}</span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => handleCopyLink(selectedInvoice.verifyUrl ?? "")}
+                    className="flex h-7 w-7 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-455 hover:bg-slate-100 hover:text-slate-700 transition cursor-pointer shrink-0 shadow-3xs active:scale-95"
+                    title="Salin Link Verifikasi"
+                  >
+                    <Copy size={12} />
+                  </button>
                 </div>
               )}
             </div>
 
-
-
             {/* Customer info card */}
-            <div className="grid grid-cols-2 gap-4">
-              <div className="rounded-xl border border-border p-4 bg-white">
-                <p className="text-[10px] font-bold text-slate-450 uppercase mb-1">Informasi Klien</p>
-                <p className="text-sm font-bold text-slate-850">{selectedInvoice.namaClient}</p>
-                <p className="text-xs text-slate-500 mt-1">{selectedInvoice.alamat ?? "Tidak ada alamat tercatat."}</p>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="rounded-2xl border border-slate-200 p-5 bg-white shadow-sm space-y-2">
+                <div className="flex items-center gap-1.5 text-slate-450">
+                  <User size={13} className="stroke-[2.5]" />
+                  <p className="text-[10px] font-extrabold uppercase tracking-wider">Informasi Klien</p>
+                </div>
+                <div className="space-y-1">
+                  <p className="text-sm font-extrabold text-slate-850">{selectedInvoice.namaClient}</p>
+                  <p className="text-xs text-slate-500 leading-relaxed">{selectedInvoice.alamat ?? "Tidak ada alamat tercatat."}</p>
+                </div>
               </div>
-              <div className="rounded-xl border border-border p-4 bg-white">
-                <p className="text-[10px] font-bold text-slate-450 uppercase mb-1">Informasi Proyek &amp; WS</p>
-                <p className="text-sm font-bold text-slate-800">{selectedInvoice.projectName ?? "Eceran / Umum"}</p>
-                <p className="text-xs text-slate-500 mt-1">WS: {selectedInvoice.namaWs ?? "—"}</p>
-                {selectedInvoice.noTransaksi && (
-                  <p className="text-xs font-semibold text-slate-600 mt-2 pt-2 border-t border-dashed border-slate-100 flex justify-between">
-                    <span>No. Transaksi Asli:</span>
-                    <span className="font-mono text-slate-800 font-bold bg-slate-50 px-1.5 py-0.5 rounded border border-slate-200">{selectedInvoice.noTransaksi}</span>
-                  </p>
-                )}
+              <div className="rounded-2xl border border-slate-200 p-5 bg-white shadow-sm space-y-2">
+                <div className="flex items-center gap-1.5 text-slate-455">
+                  <Building2 size={13} className="stroke-[2.5]" />
+                  <p className="text-[10px] font-extrabold uppercase tracking-wider">Informasi Proyek &amp; WS</p>
+                </div>
+                <div className="space-y-1">
+                  <p className="text-sm font-extrabold text-slate-800">{selectedInvoice.projectName ?? "Eceran / Umum"}</p>
+                  <p className="text-xs text-slate-500">WS: {selectedInvoice.namaWs ?? "—"}</p>
+                  {selectedInvoice.noTransaksi && (
+                    <div className="text-[11px] font-semibold text-slate-650 mt-3 pt-3 border-t border-dashed border-slate-200/80 flex justify-between items-center">
+                      <span>No. Transaksi Asli:</span>
+                      <span className="font-mono text-slate-800 font-extrabold bg-slate-50 px-2 py-0.5 rounded-lg border border-slate-200/80 shadow-3xs">{selectedInvoice.noTransaksi}</span>
+                    </div>
+                  )}
+                </div>
               </div>
             </div>
 
             {/* Invoice Line Items */}
-            <div className="space-y-2">
-              <Label>Daftar Barang Terbeli</Label>
+            <div className="space-y-3">
+              <div className="flex items-center gap-2">
+                <div className="p-1.5 bg-primary/10 rounded-lg text-primary">
+                  <ShoppingBag size={14} className="stroke-[2.5]" />
+                </div>
+                <Label className="mb-0 text-xs font-bold text-slate-800">Daftar Barang Terbeli</Label>
+              </div>
               <Table>
                 <thead>
                   <tr>
-                    <Th>Barang</Th>
-                    <Th className="text-center">Qty</Th>
-                    <Th className="text-right">Harga</Th>
-                    <Th className="text-right">Subtotal</Th>
+                    <Th className="h-10 text-[10px] px-4">Barang</Th>
+                    <Th className="h-10 text-[10px] text-center px-4">Qty</Th>
+                    <Th className="h-10 text-[10px] text-right px-4">Harga</Th>
+                    <Th className="h-10 text-[10px] text-right px-4">Subtotal</Th>
                   </tr>
                 </thead>
-                <tbody>
-                  {selectedInvoice.items.map((line, idx) => (
-                    <tr key={idx}>
-                      <Td>
-                        <div className="font-bold text-slate-850 text-xs">{line.nama}</div>
-                        <div className="font-mono text-[9px] text-slate-400 mt-0.5">{line.kode}</div>
-                      </Td>
-                      <Td className="text-center font-mono text-xs">{line.qty} unit</Td>
-                      <Td className="text-right font-mono text-xs">{formatRupiah(line.harga)}</Td>
-                      <Td className="text-right font-mono text-xs font-bold">{formatRupiah(line.subtotal)}</Td>
-                    </tr>
-                  ))}
+                <tbody className="divide-y divide-slate-100">
+                  {selectedInvoice.items.map((line, idx) => {
+                    const isRetur = line.nama.startsWith("[RETUR]");
+                    const isGanti = line.nama.startsWith("[GANTI]");
+                    const cleanNama = line.nama.replace(/^\[(RETUR|GANTI)\]\s*/, "");
+
+                    return (
+                      <tr key={idx} className={cn("hover:bg-slate-50/20 transition-colors", isRetur && "bg-red-50/5")}>
+                        <Td className="h-14 px-4 py-2 align-middle">
+                          <div className="flex flex-col gap-0.5">
+                            <div className="flex items-center gap-1.5 flex-wrap">
+                              {isRetur && <Badge tone="red" className="text-[8px] px-1.5 py-0.25 font-bold">Retur</Badge>}
+                              {isGanti && <Badge tone="green" className="text-[8px] px-1.5 py-0.25 font-bold">Pengganti</Badge>}
+                              <span className="font-bold text-slate-800 text-xs">{cleanNama}</span>
+                            </div>
+                            <span className="font-mono text-[9px] text-slate-400 bg-slate-50 px-1.5 py-0.5 rounded border border-slate-150/40 w-fit mt-1">{line.kode}</span>
+                          </div>
+                        </Td>
+                        <Td className="h-14 px-4 text-center font-mono text-xs text-slate-600 align-middle">{line.qty} unit</Td>
+                        <Td className="h-14 px-4 text-right font-mono text-xs text-slate-650 align-middle">{formatRupiah(line.harga)}</Td>
+                        <Td className={cn(
+                          "h-14 px-4 text-right font-mono text-xs font-extrabold align-middle",
+                          isRetur ? "text-red-650" : "text-slate-800"
+                        )}>
+                          {isRetur ? "-" : ""}{formatRupiah(Math.abs(line.subtotal))}
+                        </Td>
+                      </tr>
+                    );
+                  })}
                 </tbody>
               </Table>
             </div>
@@ -693,6 +911,9 @@ export function InvoiceClient({ initialInvoices, canBayar }: InvoiceClientProps)
                       namaClient: selectedInvoice.namaClient,
                       alamat: selectedInvoice.alamat,
                       namaWs: selectedInvoice.namaWs,
+                      namaBank: selectedInvoice.namaBank,
+                      noRekening: selectedInvoice.noRekening,
+                      atasNama: selectedInvoice.atasNama,
                       items: selectedInvoice.items.map((it) => ({
                         kode: it.kode,
                         nama: it.nama,
@@ -727,6 +948,34 @@ export function InvoiceClient({ initialInvoices, canBayar }: InvoiceClientProps)
           </div>
         </div>
       )}
+
+
+
+      {/* Delete Invoice Confirmation Dialog */}
+      {selectedInvoice && (
+        <ModernDialog
+          isOpen={isDeleteConfirmOpen}
+          onClose={() => setIsDeleteConfirmOpen(false)}
+          onConfirm={handleDeleteInvoice}
+          title="Hapus Invoice"
+          description={`Apakah Anda yakin ingin menghapus invoice ${selectedInvoice.noInvoice}? Semua riwayat cicilan/pembayaran yang terkait dengan invoice ini juga akan terhapus secara permanen.`}
+          confirmText={isPending ? "Menghapus..." : "Hapus Permanen"}
+          cancelText="Batal"
+          variant="danger"
+        />
+      )}
+
+      {/* Bulk Delete Invoices Confirmation Dialog */}
+      <ModernDialog
+        isOpen={isBulkDeleteConfirmOpen}
+        onClose={() => setIsBulkDeleteConfirmOpen(false)}
+        onConfirm={handleBulkDelete}
+        title="Hapus Beberapa Invoice Terpilih"
+        description={`Apakah Anda yakin ingin menghapus ${selectedInvoiceIds.length} invoice terpilih? Semua riwayat cicilan/pembayaran yang terkait dengan invoice-invoice tersebut juga akan terhapus secara permanen.`}
+        confirmText={isPending ? "Menghapus..." : "Hapus Terpilih"}
+        cancelText="Batal"
+        variant="danger"
+      />
     </div>
   );
 }

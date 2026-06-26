@@ -3,8 +3,9 @@
 import { prisma } from "@/lib/prisma";
 import { requireRole } from "@/lib/auth";
 import { logActivity } from "@/lib/activity";
+import { safeError, type ActionResult } from "@/lib/validation";
 
-export async function clearActivityLogs() {
+export async function clearActivityLogs(): Promise<ActionResult> {
   const user = await requireRole("ADMIN_GUDANG");
 
   try {
@@ -21,7 +22,7 @@ export async function clearActivityLogs() {
     });
 
     return { ok: true };
-  } catch (error: any) {
-    return { error: error?.message || "Gagal membersihkan log aktivitas." };
+  } catch (error) {
+    return safeError(error, "Gagal membersihkan log aktivitas.");
   }
 }

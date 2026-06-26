@@ -54,8 +54,7 @@ export default async function KartuStokPage({ params }: { params: Promise<{ id: 
 
       <div>
         <h2 className="mb-2 font-semibold">Riwayat Lengkap (Kartu Stok)</h2>
-        <div className="overflow-x-auto rounded-xl border border-border bg-card shadow-sm">
-          <Table>
+        <Table>
             <thead>
               <tr><Th>Tanggal</Th><Th>Tipe</Th><Th className="text-right">Qty</Th><Th className="text-right">Saldo</Th><Th>Keterangan</Th><Th>Oleh</Th></tr>
             </thead>
@@ -73,7 +72,6 @@ export default async function KartuStokPage({ params }: { params: Promise<{ id: 
               {rows.length === 0 && <tr><Td colSpan={6} className="py-8 text-center text-muted">Belum ada pergerakan. Stok = stok awal ({item.stokAwal}).</Td></tr>}
             </tbody>
           </Table>
-        </div>
       </div>
 
       <p className="text-xs text-muted">Harga beli saat ini: {formatRupiah(item.hargaBeli)} · Harga jual: {formatRupiah(item.hargaJual)}</p>

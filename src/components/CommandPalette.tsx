@@ -127,6 +127,7 @@ export function CommandPalette({ role }: { role: Role }) {
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             onKeyDown={handleKeyDown}
+            maxLength={80}
             placeholder="Cari barang, invoice, klien, proyek, atau aksi..."
             className="w-full bg-transparent text-slate-800 outline-none placeholder:text-slate-450 text-base"
           />

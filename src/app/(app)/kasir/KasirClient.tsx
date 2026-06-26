@@ -5,8 +5,9 @@ import { useRouter } from "next/navigation";
 import { createTransaction } from "./actions";
 import { useKasirStore, type CartLine } from "@/lib/kasirStore";
 import { computeCart } from "@/lib/cart";
-import { Button, Card, Input, Label, Select, Table, Th, Td, Badge } from "@/components/ui";
+import { Button, Card, Input, Label, Select, Table, Th, Td, Badge, Textarea, CharCounter } from "@/components/ui";
 import { formatRupiah, cn } from "@/lib/utils";
+import { FIELD_LIMITS } from "@/lib/fieldLimits";
 import {
   Search,
   Trash2,
@@ -48,6 +49,9 @@ export function KasirClient({ items }: { items: Item[] }) {
     projectNama,
     projectGroupNama,
     paymentMethod,
+    namaBank,
+    noRekening,
+    atasNama,
     buatInvoice,
     globalDiscount,
     globalDiscountType,
@@ -58,6 +62,9 @@ export function KasirClient({ items }: { items: Item[] }) {
     setProjectNama,
     setProjectGroupNama,
     setPaymentMethod,
+    setNamaBank,
+    setNoRekening,
+    setAtasNama,
     setBuatInvoice,
     setGlobalDiscount,
     setGlobalDiscountType,
@@ -344,6 +351,9 @@ export function KasirClient({ items }: { items: Item[] }) {
         projectNama,
         projectGroupNama,
         paymentMethod: isSplitActive ? (splitCredit > 0 ? "CREDIT" : "TRANSFER") : paymentMethod,
+        namaBank,
+        noRekening,
+        atasNama,
         payments,
         buatInvoice: isSplitActive ? (splitCredit > 0 || buatInvoice) : buatInvoice,
         items: cart.map((l, i) => ({ itemId: l.itemId, qty: l.qty, discount: computed.lines[i].finalDiscount })),
@@ -363,6 +373,9 @@ export function KasirClient({ items }: { items: Item[] }) {
           namaClient,
           alamat,
           namaWs,
+          namaBank: paymentMethod !== "CASH" || isSplitActive ? namaBank : "",
+          noRekening: paymentMethod !== "CASH" || isSplitActive ? noRekening : "",
+          atasNama: paymentMethod !== "CASH" || isSplitActive ? atasNama : "",
           items: cart.map((l, i) => ({
             kode: l.kode,
             nama: l.nama,
@@ -567,6 +580,7 @@ export function KasirClient({ items }: { items: Item[] }) {
                     value={q}
                     onChange={handleSearchChange}
                     onKeyDown={handleSearchKeyDown}
+                    maxLength={FIELD_LIMITS.search}
                     placeholder="Scan barcode atau ketik nama material... (Klik item di grid)"
                     className="h-11 w-full rounded-xl border border-border bg-slate-50/50 pl-10 pr-10 text-sm outline-none transition-all focus:border-[var(--primary)] focus:bg-white focus:ring-4 focus:ring-[var(--primary)]/10"
                   />
@@ -622,7 +636,7 @@ export function KasirClient({ items }: { items: Item[] }) {
 
                 {/* Desktop/Tablet Table Layout */}
                 <div className="hidden sm:block overflow-x-auto">
-                  <Table>
+                  <Table className="border-none shadow-none bg-transparent rounded-none">
                     <thead>
                       <tr>
                         <Th className="w-12 text-center">#</Th>
@@ -672,6 +686,7 @@ export function KasirClient({ items }: { items: Item[] }) {
                                   type="number"
                                   value={l.qty}
                                   min={1}
+                                  max={FIELD_LIMITS.maxQty}
                                   onChange={(e) => updateQty(l.itemId, parseInt(e.target.value) || 1)}
                                   className="h-8 w-11 rounded-lg border border-border text-center text-xs font-semibold font-mono outline-none"
                                 />
@@ -746,6 +761,7 @@ export function KasirClient({ items }: { items: Item[] }) {
                               type="number"
                               value={l.qty}
                               min={1}
+                              max={FIELD_LIMITS.maxQty}
                               onChange={(e) => updateQty(l.itemId, parseInt(e.target.value) || 1)}
                               className="w-9 text-center text-xs font-semibold font-mono outline-none bg-transparent"
                             />
@@ -804,24 +820,50 @@ export function KasirClient({ items }: { items: Item[] }) {
                     </div>
 
                     <div>
-                      <Label className="text-xs font-bold text-slate-655">
-                        Nama Klien / Pelanggan {tipe === "PROJECT" && <span className="text-rose-500 font-bold">*</span>}
-                      </Label>
+                      <div className="flex items-center justify-between gap-2">
+                        <Label className="text-xs font-bold text-slate-655 mb-0">
+                          Nama Klien / Pelanggan {tipe === "PROJECT" && <span className="text-rose-500 font-bold">*</span>}
+                        </Label>
+                        <CharCounter value={namaClient} max={FIELD_LIMITS.namaClient} />
+                      </div>
                       <Input
+                        id="namaClientInput"
                         value={namaClient}
                         onChange={(e) => setNamaClient(e.target.value)}
+                        maxLength={FIELD_LIMITS.namaClient}
                         placeholder="Nama klien (Ibu Indah / Toko Plywood)"
                         className="mt-1.5 h-10 rounded-xl"
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter") {
+                            e.preventDefault();
+                            document.getElementById("namaWsInput")?.focus();
+                          }
+                        }}
                       />
                     </div>
 
                     <div>
-                      <Label className="text-xs font-bold text-slate-655">Referensi Bengkel / Workshop</Label>
+                      <div className="flex items-center justify-between gap-2">
+                        <Label className="text-xs font-bold text-slate-655 mb-0">Referensi Bengkel / Workshop</Label>
+                        <CharCounter value={namaWs} max={FIELD_LIMITS.namaWs} />
+                      </div>
                       <Input
+                        id="namaWsInput"
                         value={namaWs}
                         onChange={(e) => setNamaWs(e.target.value)}
+                        maxLength={FIELD_LIMITS.namaWs}
                         placeholder="Nama Workshop (Budi Carpenter) - Opsional"
                         className="mt-1.5 h-10 rounded-xl"
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter") {
+                            e.preventDefault();
+                            if (tipe === "PROJECT") {
+                              document.getElementById("projectNamaInput")?.focus();
+                            } else {
+                              document.getElementById("btnLanjutPembayaran")?.focus();
+                            }
+                          }
+                        }}
                       />
                     </div>
                   </div>
@@ -831,32 +873,60 @@ export function KasirClient({ items }: { items: Item[] }) {
                     {tipe === "PROJECT" ? (
                       <div className="space-y-4.5 anim-rise">
                         <div>
-                          <Label className="text-xs font-bold text-slate-655">Nama Proyek</Label>
+                          <div className="flex items-center justify-between gap-2">
+                            <Label className="text-xs font-bold text-slate-655 mb-0">Nama Proyek</Label>
+                            <CharCounter value={projectNama} max={FIELD_LIMITS.projectNama} />
+                          </div>
                           <Input
+                            id="projectNamaInput"
                             value={projectNama}
                             onChange={(e) => setProjectNama(e.target.value)}
+                            maxLength={FIELD_LIMITS.projectNama}
                             placeholder="Nama Proyek (Renov Cluster A)"
                             className="mt-1.5 h-10 rounded-xl"
+                            onKeyDown={(e) => {
+                              if (e.key === "Enter") {
+                                e.preventDefault();
+                                document.getElementById("projectGroupInput")?.focus();
+                              }
+                            }}
                           />
                         </div>
 
                         <div>
-                          <Label className="text-xs font-bold text-slate-655">Grup Proyek</Label>
+                          <div className="flex items-center justify-between gap-2">
+                            <Label className="text-xs font-bold text-slate-655 mb-0">Grup Proyek</Label>
+                            <CharCounter value={projectGroupNama} max={FIELD_LIMITS.projectGroupNama} />
+                          </div>
                           <Input
+                            id="projectGroupInput"
                             value={projectGroupNama}
                             onChange={(e) => setProjectGroupNama(e.target.value)}
+                            maxLength={FIELD_LIMITS.projectGroupNama}
                             placeholder="Nama Group Proyek (Ciputra Group) - Opsional"
                             className="mt-1.5 h-10 rounded-xl"
+                            onKeyDown={(e) => {
+                              if (e.key === "Enter") {
+                                e.preventDefault();
+                                document.getElementById("alamatInput")?.focus();
+                              }
+                            }}
                           />
                         </div>
 
                         <div>
-                          <Label className="text-xs font-bold text-slate-655">Alamat Pengiriman</Label>
-                          <Input
+                          <div className="flex items-center justify-between gap-2">
+                            <Label className="text-xs font-bold text-slate-655 mb-0">Alamat Pengiriman</Label>
+                            <CharCounter value={alamat} max={FIELD_LIMITS.alamat} />
+                          </div>
+                          <Textarea
+                            id="alamatInput"
                             value={alamat}
                             onChange={(e) => setAlamat(e.target.value)}
+                            maxLength={FIELD_LIMITS.alamat}
+                            rows={3}
                             placeholder="Alamat lengkap tujuan material dikirim"
-                            className="mt-1.5 h-10 rounded-xl"
+                            className="mt-1.5 rounded-xl"
                           />
                         </div>
                       </div>
@@ -877,6 +947,7 @@ export function KasirClient({ items }: { items: Item[] }) {
                     &larr; Kembali ke Keranjang
                   </Button>
                   <Button
+                    id="btnLanjutPembayaran"
                     type="button"
                     onClick={() => setStep(3)}
                     disabled={tipe === "PROJECT" && !namaClient.trim()}
@@ -934,6 +1005,8 @@ export function KasirClient({ items }: { items: Item[] }) {
                               <Label className="text-[10px] font-bold text-slate-500">Tunai</Label>
                               <input
                                 type="number"
+                                min={0}
+                                max={FIELD_LIMITS.maxMoney}
                                 value={splitCash || ""}
                                 onChange={(e) => setSplitCash(parseInt(e.target.value) || 0)}
                                 placeholder="0"
@@ -944,6 +1017,8 @@ export function KasirClient({ items }: { items: Item[] }) {
                               <Label className="text-[10px] font-bold text-slate-500">Transfer</Label>
                               <input
                                 type="number"
+                                min={0}
+                                max={FIELD_LIMITS.maxMoney}
                                 value={splitTransfer || ""}
                                 onChange={(e) => setSplitTransfer(parseInt(e.target.value) || 0)}
                                 placeholder="0"
@@ -954,6 +1029,8 @@ export function KasirClient({ items }: { items: Item[] }) {
                               <Label className="text-[10px] font-bold text-slate-500">Tempo</Label>
                               <input
                                 type="number"
+                                min={0}
+                                max={FIELD_LIMITS.maxMoney}
                                 value={splitCredit || ""}
                                 onChange={(e) => setSplitCredit(parseInt(e.target.value) || 0)}
                                 placeholder="0"
@@ -970,6 +1047,57 @@ export function KasirClient({ items }: { items: Item[] }) {
                         </div>
                       )}
                     </div>
+
+                    {/* Info bank opsional (muncul untuk Transfer / Kredit / Split) */}
+                    {((!isSplitActive && paymentMethod !== "CASH") || isSplitActive) && (
+                      <div className="space-y-3 rounded-xl border border-dashed border-border bg-slate-50/40 p-3.5 anim-rise">
+                        <p className="text-[10px] font-bold text-slate-500 uppercase tracking-wide">
+                          Info Bank (opsional) — tampil di struk
+                        </p>
+                        <div className="grid grid-cols-2 gap-2.5">
+                          <div>
+                            <div className="flex items-center justify-between gap-2">
+                              <Label className="text-[10px] font-bold text-slate-500 mb-0">Nama Bank</Label>
+                              <CharCounter value={namaBank} max={FIELD_LIMITS.namaBank} />
+                            </div>
+                            <Input
+                              value={namaBank}
+                              onChange={(e) => setNamaBank(e.target.value)}
+                              maxLength={FIELD_LIMITS.namaBank}
+                              placeholder="mis. BCA / Mandiri"
+                              className="mt-1 h-9 rounded-lg text-xs"
+                            />
+                          </div>
+                          <div>
+                            <div className="flex items-center justify-between gap-2">
+                              <Label className="text-[10px] font-bold text-slate-500 mb-0">No. Rekening</Label>
+                              <CharCounter value={noRekening} max={FIELD_LIMITS.noRekening} />
+                            </div>
+                            <Input
+                              value={noRekening}
+                              onChange={(e) => setNoRekening(e.target.value)}
+                              maxLength={FIELD_LIMITS.noRekening}
+                              placeholder="mis. 7720118234"
+                              className="mt-1 h-9 rounded-lg text-xs font-mono"
+                            />
+                          </div>
+                        </div>
+                        <div>
+                          <div className="flex items-center justify-between gap-2">
+                            <Label className="text-[10px] font-bold text-slate-500 mb-0">Atas Nama</Label>
+                            <CharCounter value={atasNama} max={FIELD_LIMITS.atasNama} />
+                          </div>
+                          <Input
+                            value={atasNama}
+                            onChange={(e) => setAtasNama(e.target.value)}
+                            maxLength={FIELD_LIMITS.atasNama}
+                            placeholder="mis. PT Putra Corporation"
+                            className="mt-1 h-9 rounded-lg text-xs"
+                          />
+                        </div>
+                      </div>
+                    )}
+
                     {/* Auto invoice toggle */}
                     <label className="flex items-center gap-2 text-[10px] text-slate-650 bg-slate-50 p-3 rounded-xl border border-border select-none cursor-pointer">
                       <input
@@ -990,6 +1118,7 @@ export function KasirClient({ items }: { items: Item[] }) {
                         <Input
                           type="number"
                           min={0}
+                          max={FIELD_LIMITS.maxMoney}
                           value={cashReceived || ""}
                           onChange={(e) => setCashReceived(parseInt(e.target.value) || 0)}
                           placeholder="Jumlah uang diterima..."
@@ -1157,6 +1286,7 @@ export function KasirClient({ items }: { items: Item[] }) {
                     type="text"
                     value={holdCartName}
                     onChange={(e) => setHoldCartName(e.target.value)}
+                    maxLength={60}
                     placeholder="Label nama hold..."
                     className="h-9 w-full rounded-xl border border-border bg-slate-50/50 px-2.5 text-xs outline-none focus:border-[var(--primary)] focus:bg-white focus:ring-4 focus:ring-[var(--primary)]/10"
                   />

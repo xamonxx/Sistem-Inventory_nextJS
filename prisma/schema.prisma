@@ -142,6 +142,11 @@ model Transaction {
   alamat     String?
   namaWs     String?
 
+  // Info bank pembayaran (opsional, untuk metode Transfer/Kredit) — tampil di struk
+  namaBank   String?
+  noRekening String?
+  atasNama   String?
+
   grandTotal Decimal @default(0) @db.Decimal(15, 2)
   userId     Int?
   createdAt  DateTime @default(now())

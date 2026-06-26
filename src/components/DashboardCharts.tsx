@@ -47,8 +47,8 @@ export function DashboardCharts({ revenueTrend, topItems, projectSales, showMarg
             <AreaChart data={revenueTrend} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
               <defs>
                 <linearGradient id="colorOmset" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor="#d35a1f" stopOpacity={0.2} />
-                  <stop offset="95%" stopColor="#d35a1f" stopOpacity={0} />
+                  <stop offset="5%" stopColor="#059669" stopOpacity={0.2} />
+                  <stop offset="95%" stopColor="#059669" stopOpacity={0} />
                 </linearGradient>
                 {showMargin && (
                   <linearGradient id="colorMargin" x1="0" y1="0" x2="0" y2="1">
@@ -69,7 +69,7 @@ export function DashboardCharts({ revenueTrend, topItems, projectSales, showMarg
                 formatter={(v: number) => [formatRupiah(v), undefined]} 
               />
               <Legend verticalAlign="top" height={36} iconType="circle" />
-              <Area name="Omset" type="monotone" dataKey="omset" stroke="#d35a1f" strokeWidth={2} fillOpacity={1} fill="url(#colorOmset)" />
+              <Area name="Omset" type="monotone" dataKey="omset" stroke="#059669" strokeWidth={2} fillOpacity={1} fill="url(#colorOmset)" />
               {showMargin && (
                 <Area name="Margin" type="monotone" dataKey="margin" stroke="#10b981" strokeWidth={2} fillOpacity={1} fill="url(#colorMargin)" />
               )}
@@ -94,7 +94,7 @@ export function DashboardCharts({ revenueTrend, topItems, projectSales, showMarg
                   contentStyle={{ backgroundColor: "#fff", border: "1px solid #e2e8f0", borderRadius: "12px" }}
                   formatter={(v: number) => [formatRupiah(v), undefined]} 
                 />
-                <Bar name="Omset" dataKey="total" fill="#3b82f6" radius={[0, 6, 6, 0]} />
+                <Bar name="Omset" dataKey="total" fill="#059669" radius={[0, 6, 6, 0]} />
               </BarChart>
             </ResponsiveContainer>
           )}
@@ -114,7 +114,7 @@ export function DashboardCharts({ revenueTrend, topItems, projectSales, showMarg
                 <XAxis dataKey="nama" tick={{ fontSize: 9, fill: "#94a3b8" }} />
                 <YAxis tick={{ fontSize: 10, fill: "#94a3b8" }} />
                 <Tooltip contentStyle={{ backgroundColor: "#fff", border: "1px solid #e2e8f0", borderRadius: "12px" }} />
-                <Bar name="Qty Terjual" dataKey="qty" fill="#d35a1f" radius={[6, 6, 0, 0]} />
+                <Bar name="Qty Terjual" dataKey="qty" fill="#059669" radius={[6, 6, 0, 0]} />
               </BarChart>
             </ResponsiveContainer>
           )}

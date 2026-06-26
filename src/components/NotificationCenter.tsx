@@ -2,18 +2,23 @@
 
 import { useEffect, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { Bell, AlertTriangle, Info, BellRing, Sparkles, ChevronRight, X, RotateCw } from "lucide-react";
+import { Bell, AlertTriangle, Info, BellRing, Sparkles, ChevronRight, ChevronDown, ChevronUp, X, RotateCw } from "lucide-react";
 import { Drawer } from "./Drawer";
 import { fetchSystemNotifications, type SystemNotification } from "./NotificationActions";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 
-export function NotificationCenter() {
+interface NotificationCenterProps {
+  role?: string;
+}
+
+export function NotificationCenter({ role }: NotificationCenterProps) {
   const router = useRouter();
   const [isOpen, setIsOpen] = useState(false);
   const [notifications, setNotifications] = useState<SystemNotification[]>([]);
   const [isPending, startTransition] = useTransition();
   const [dismissedIds, setDismissedIds] = useState<string[]>([]);
+  const [expandedIds, setExpandedIds] = useState<string[]>([]);
 
   useEffect(() => {
     const saved = localStorage.getItem("si_dismissed_notifications");
@@ -41,12 +46,18 @@ export function NotificationCenter() {
     toast.success("Semua notifikasi dibersihkan");
   }
 
+  function toggleExpand(id: string) {
+    setExpandedIds(prev =>
+      prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]
+    );
+  }
+
   const visibleNotifications = notifications.filter(n => !dismissedIds.includes(n.id));
 
   function loadNotifications() {
     startTransition(async () => {
       try {
-        const data = await fetchSystemNotifications();
+        const data = await fetchSystemNotifications(role);
         setNotifications(data);
       } catch (err) {
         console.error("Failed to load notifications:", err);
@@ -60,7 +71,7 @@ export function NotificationCenter() {
     // Poll notifications every 60 seconds
     const interval = setInterval(loadNotifications, 60000);
     return () => clearInterval(interval);
-  }, []);
+  }, [role]);
 
   // Filter out danger/warning alerts to count badges
   const alertCount = visibleNotifications.filter(
@@ -83,6 +94,12 @@ export function NotificationCenter() {
     danger: "text-red-400 group-hover:text-red-600",
     warning: "text-amber-400 group-hover:text-amber-600",
     info: "text-blue-400 group-hover:text-blue-600",
+  };
+
+  const toggleColors = {
+    danger: "text-red-600 hover:text-red-800 hover:bg-red-100/60",
+    warning: "text-amber-600 hover:text-amber-800 hover:bg-amber-100/60",
+    info: "text-blue-600 hover:text-blue-800 hover:bg-blue-100/60",
   };
 
   function handleNotifClick(notif: SystemNotification) {
@@ -142,47 +159,78 @@ export function NotificationCenter() {
           </div>
 
           <div className="space-y-3">
-            {visibleNotifications.map((notif) => (
-              <div
-                key={notif.id}
-                onClick={() => handleNotifClick(notif)}
-                className={cn(
-                  "group relative w-full rounded-xl border p-4 flex items-start gap-3 text-xs leading-relaxed transition-all hover:shadow-sm cursor-pointer text-left",
-                  severityStyles[notif.severity]
-                )}
-              >
-                {icons[notif.severity]}
-                <div className="space-y-1 flex-1 min-w-0 pr-2">
-                  <div className="flex items-center justify-between gap-2">
-                    <span className="font-bold text-slate-900">{notif.title}</span>
-                    <span className="text-[10px] text-slate-455 font-medium font-mono shrink-0">
-                      {notif.time}
-                    </span>
-                  </div>
-                  <p className="text-slate-650">{notif.description}</p>
-                </div>
-                <div className="flex items-center gap-1 shrink-0 mt-0.5">
-                  <ChevronRight
-                    size={16}
-                    className={cn(
-                      "transition-transform group-hover:translate-x-0.5",
-                      arrowColors[notif.severity]
+            {visibleNotifications.map((notif) => {
+              const isExpanded = expandedIds.includes(notif.id);
+              const hasExpanded = !!notif.expandedDescription;
+              const displayText = isExpanded && notif.expandedDescription
+                ? notif.expandedDescription
+                : notif.description;
+
+              return (
+                <div
+                  key={notif.id}
+                  onClick={() => handleNotifClick(notif)}
+                  className={cn(
+                    "group relative w-full rounded-xl border p-4 flex items-start gap-3 text-xs leading-relaxed transition-all hover:shadow-sm cursor-pointer text-left",
+                    severityStyles[notif.severity]
+                  )}
+                >
+                  {icons[notif.severity]}
+                  <div className="space-y-1.5 flex-1 min-w-0 pr-2">
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="font-bold text-slate-900">{notif.title}</span>
+                      <span className="text-[10px] text-slate-455 font-medium font-mono shrink-0">
+                        {notif.time}
+                      </span>
+                    </div>
+                    <p className="text-slate-650 whitespace-pre-line">{displayText}</p>
+                    {hasExpanded && (
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          toggleExpand(notif.id);
+                        }}
+                        className={cn(
+                          "inline-flex items-center gap-1 text-[11px] font-bold px-2 py-1 rounded-md transition cursor-pointer mt-1",
+                          toggleColors[notif.severity]
+                        )}
+                      >
+                        {isExpanded ? (
+                          <>
+                            <ChevronUp size={12} /> Sembunyikan
+                          </>
+                        ) : (
+                          <>
+                            <ChevronDown size={12} /> Lihat Semua
+                          </>
+                        )}
+                      </button>
                     )}
-                  />
-                  <button
-                    type="button"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      handleDismiss(notif.id);
-                    }}
-                    className="text-slate-400 hover:text-slate-755 p-1.5 rounded-lg transition hover:bg-slate-200/40 shrink-0 cursor-pointer"
-                    title="Hapus notifikasi ini"
-                  >
-                    <X size={13} />
-                  </button>
+                  </div>
+                  <div className="flex items-center gap-1 shrink-0 mt-0.5">
+                    <ChevronRight
+                      size={16}
+                      className={cn(
+                        "transition-transform group-hover:translate-x-0.5",
+                        arrowColors[notif.severity]
+                      )}
+                    />
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleDismiss(notif.id);
+                      }}
+                      className="text-slate-400 hover:text-slate-755 p-1.5 rounded-lg transition hover:bg-slate-200/40 shrink-0 cursor-pointer"
+                      title="Hapus notifikasi ini"
+                    >
+                      <X size={13} />
+                    </button>
+                  </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
 
             {visibleNotifications.length === 0 && (
               <div className="py-12 text-center text-slate-400 space-y-2">
@@ -197,4 +245,3 @@ export function NotificationCenter() {
     </>
   );
 }
-

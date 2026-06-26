@@ -9,6 +9,9 @@ export type NotaData = {
   namaClient?: string | null;
   alamat?: string | null;
   namaWs?: string | null;
+  namaBank?: string | null; // opsional, untuk transfer/kredit
+  noRekening?: string | null; // opsional, untuk transfer/kredit
+  atasNama?: string | null; // opsional, untuk transfer/kredit
   items: NotaItem[];
   total: number;
   diskon?: number; // total diskon yang diberikan (Rp), opsional
@@ -22,6 +25,26 @@ const COMPANY = process.env.NEXT_PUBLIC_COMPANY_NAME ?? "PUTRA CORPORATION HARDW
 const ADDRESS = process.env.NEXT_PUBLIC_COMPANY_ADDRESS ?? "Jl. Nasional III, Cipatat, Bandung Barat, Jawa Barat (40554)";
 const PHONE = "0822-1234-5678";
 const EMAIL = "info@putracorp.co.id";
+
+function renderItemName(name: string, isThermal: boolean = false) {
+  if (name.startsWith("[RETUR]")) {
+    return (
+      <span className="leading-tight">
+        <strong className={`font-extrabold font-sans mr-1 ${isThermal ? "text-[#3730A3]" : "text-indigo-700"}`}>[RETUR]</strong>
+        <span>{name.slice(7).trim()}</span>
+      </span>
+    );
+  }
+  if (name.startsWith("[GANTI]")) {
+    return (
+      <span className="leading-tight">
+        <strong className={`font-extrabold font-sans mr-1 ${isThermal ? "text-[#166534]" : "text-emerald-700"}`}>[GANTI]</strong>
+        <span>{name.slice(7).trim()}</span>
+      </span>
+    );
+  }
+  return <span className="leading-tight">{name}</span>;
+}
 
 export function Nota({ data }: { data: NotaData }) {
   // Calculate due date (30 days from transaction date)
@@ -80,7 +103,9 @@ export function Nota({ data }: { data: NotaData }) {
           <tbody>
             {data.items.map((it, i) => (
               <tr key={i} className="align-top">
-                <td className="py-1 max-w-[120px] truncate">{it.nama}</td>
+                <td className="py-1 max-w-[140px] break-words whitespace-normal leading-tight">
+                  {renderItemName(it.nama, true)}
+                </td>
                 <td className="py-1 text-center">{it.qty}</td>
                 <td className="py-1 text-right">{formatRupiah(it.harga)}</td>
                 <td className="py-1 text-right">{formatRupiah(it.subtotal)}</td>
@@ -110,6 +135,13 @@ export function Nota({ data }: { data: NotaData }) {
             <div className="flex justify-between font-bold">
               <span>Uang Kembalian</span>
               <span>{formatRupiah(data.kembali)}</span>
+            </div>
+          )}
+          {(data.namaBank || data.noRekening || data.atasNama) && (
+            <div className="mt-2 border-t border-dashed border-slate-300 pt-2 space-y-1">
+              {data.namaBank && <Row k="Bank" v={data.namaBank} />}
+              {data.noRekening && <Row k="No. Rekening" v={data.noRekening} />}
+              {data.atasNama && <Row k="Atas Nama" v={data.atasNama} />}
             </div>
           )}
           {data.catatan && <p className="mt-2.5 italic text-[10px] leading-normal">{data.catatan}</p>}
@@ -224,7 +256,7 @@ export function Nota({ data }: { data: NotaData }) {
                 {data.items.map((it, i) => (
                   <tr key={i} className="border-b border-[#E5E7EB]">
                     <td className="h-[28px] px-3 font-mono font-semibold text-[#EA580C]">{it.kode ?? "-"}</td>
-                    <td className="h-[28px] px-3 font-medium text-[#111827]">{it.nama}</td>
+                    <td className="h-[28px] px-3 font-medium text-[#111827]">{renderItemName(it.nama)}</td>
                     <td className="h-[28px] px-3 text-center font-semibold tabular-nums">{it.qty}</td>
                     <td className="h-[28px] px-3 text-center text-[#64748B]">Unit</td>
                     <td className="h-[28px] px-3 text-right tabular-nums text-[#334155]">{formatRupiah(it.harga)}</td>
@@ -249,14 +281,16 @@ export function Nota({ data }: { data: NotaData }) {
                   Mohon konfirmasi setelah melakukan pembayaran/transfer.
                 </p>
               </div>
-              <div>
-                <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-[#94A3B8]">Pembayaran</p>
-                <div className="mt-1.5 space-y-0.5 text-[10px]">
-                  <div className="flex justify-between gap-6"><span className="text-[#94A3B8]">Bank BCA</span><span className="font-mono font-semibold tabular-nums text-[#111827]">7720 118 234</span></div>
-                  <div className="flex justify-between gap-6"><span className="text-[#94A3B8]">Bank Mandiri</span><span className="font-mono font-semibold tabular-nums text-[#111827]">130 0098 7654</span></div>
-                  <div className="flex justify-between gap-6"><span className="text-[#94A3B8]">Atas Nama</span><span className="font-semibold text-[#111827]">PT Putra Corporation</span></div>
+              {(data.namaBank || data.noRekening || data.atasNama) && (
+                <div>
+                  <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-[#94A3B8]">Pembayaran</p>
+                  <div className="mt-1.5 space-y-0.5 text-[10px]">
+                    {data.namaBank && <div className="flex justify-between gap-6"><span className="text-[#94A3B8]">Nama Bank</span><span className="font-semibold text-[#111827]">{data.namaBank}</span></div>}
+                    {data.noRekening && <div className="flex justify-between gap-6"><span className="text-[#94A3B8]">No. Rekening</span><span className="font-mono font-semibold tabular-nums text-[#111827]">{data.noRekening}</span></div>}
+                    {data.atasNama && <div className="flex justify-between gap-6"><span className="text-[#94A3B8]">Atas Nama</span><span className="font-semibold text-[#111827]">{data.atasNama}</span></div>}
+                  </div>
                 </div>
-              </div>
+              )}
             </div>
 
             {/* Right: totals */}
