@@ -23,7 +23,11 @@ function resolveSecret(): Uint8Array {
   );
 }
 
-const secret = resolveSecret();
+let _secret: Uint8Array | null = null;
+function getSecret(): Uint8Array {
+  if (!_secret) _secret = resolveSecret();
+  return _secret;
+}
 
 export type SessionUser = {
   id: number;
@@ -37,7 +41,7 @@ export async function createSession(user: SessionUser) {
     .setProtectedHeader({ alg: "HS256" })
     .setIssuedAt()
     .setExpirationTime("7d")
-    .sign(secret);
+    .sign(getSecret());
 
   const store = await cookies();
   store.set(COOKIE, token, {
@@ -61,7 +65,7 @@ export async function getSession(): Promise<SessionUser | null> {
   const token = store.get(COOKIE)?.value;
   if (!token) return null;
   try {
-    const { payload } = await jwtVerify(token, secret);
+    const { payload } = await jwtVerify(token, getSecret());
     // Validasi bentuk payload — tolak token yang strukturnya tidak sesuai.
     if (
       typeof payload.id !== "number" ||
