@@ -37,10 +37,11 @@ export async function saveItem(_prev: unknown, formData: FormData): Promise<Acti
     id: formData.get("id") || undefined,
     kode: formData.get("kode"),
     nama: formData.get("nama"),
-    hargaBeli: formData.get("hargaBeli"),
-    hargaJual: formData.get("hargaJual"),
-    stokAwal: formData.get("stokAwal"),
-    minStok: formData.get("minStok"),
+    // Field number boleh dikosongkan di form (pakai placeholder) -> default aman.
+    hargaBeli: formData.get("hargaBeli") || "0",
+    hargaJual: formData.get("hargaJual") || "0",
+    stokAwal: formData.get("stokAwal") || "0",
+    minStok: formData.get("minStok") || "10",
     aktif: formData.get("aktif") === "on" || formData.get("aktif") === "true",
   });
 
@@ -145,6 +146,64 @@ export async function toggleAktif(id: number, aktif: boolean): Promise<ActionRes
   }
   revalidatePath("/barang");
   return { ok: true };
+}
+
+/**
+ * Hapus permanen barang terpilih (ADMIN_GUDANG). Hanya barang yang TIDAK punya
+ * riwayat (transaksi, retur, kartu stok) yang boleh dihapus — supaya histori
+ * keuangan tidak rusak. Barang yang punya riwayat dikembalikan sebagai "blocked".
+ */
+export async function deleteItems(
+  ids: number[]
+): Promise<{ ok: boolean; error?: string; deletedIds?: number[]; blocked?: string[] }> {
+  const user = await requireRole("ADMIN_GUDANG");
+  const parsed = z.array(dbId).min(1).max(500).safeParse(ids);
+  if (!parsed.success) return { ok: false, error: "Pilihan barang tidak valid." };
+
+  const deletable: number[] = [];
+  const blocked: string[] = [];
+
+  for (const id of parsed.data) {
+    const item = await prisma.item.findUnique({
+      where: { id },
+      select: { id: true, nama: true, kode: true },
+    });
+    if (!item) continue;
+
+    const [tx, ret, retGanti, led] = await Promise.all([
+      prisma.transactionItem.count({ where: { itemId: id } }),
+      prisma.returnItem.count({ where: { itemId: id } }),
+      prisma.returnItem.count({ where: { itemGantiId: id } }),
+      prisma.stockLedger.count({ where: { itemId: id } }),
+    ]);
+
+    if (tx + ret + retGanti + led > 0) {
+      blocked.push(`${item.kode} · ${item.nama}`);
+    } else {
+      deletable.push(id);
+    }
+  }
+
+  if (deletable.length > 0) {
+    try {
+      await prisma.item.deleteMany({ where: { id: { in: deletable } } });
+      await logActivity({
+        userId: user.id,
+        aksi: "DELETE_BARANG",
+        entitas: "Item",
+        entitasId: deletable.join(","),
+        detail: { dihapus: deletable.length, jumlahDipilih: parsed.data.length },
+      });
+    } catch (e) {
+      return { ok: false, error: safeError(e, "Gagal menghapus barang.").error };
+    }
+  }
+
+  revalidatePath("/barang");
+  revalidatePath("/");
+  revalidatePath("/stok");
+  revalidateTag("stock");
+  return { ok: true, deletedIds: deletable, blocked };
 }
 
 export async function getItemHistory(itemId: number) {

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useTransition, useMemo, useEffect, useRef } from "react";
-import { getItemHistory, toggleAktif, logBarcodePrint } from "./actions";
+import { getItemHistory, toggleAktif, logBarcodePrint, deleteItems } from "./actions";
 import QRCode from "qrcode";
 import { Button, Card, Input, Label, Select, Table, Th, Td, Badge } from "@/components/ui";
 import { FIELD_LIMITS } from "@/lib/fieldLimits";
@@ -24,6 +24,8 @@ import {
   Pencil,
   Coins,
   X,
+  Trash2,
+  AlertTriangle,
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -68,6 +70,11 @@ export function BarangClient({
   const [pending, startTransition] = useTransition();
   const [openBarcodePreview, setOpenBarcodePreview] = useState(false);
   const [qrCodeUrl, setQrCodeUrl] = useState("");
+
+  // ===== Hapus barang (checkbox + konfirmasi) =====
+  const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [deleting, startDeleteTransition] = useTransition();
 
   const soOptionsRef = useRef<HTMLDivElement>(null);
 
@@ -211,6 +218,66 @@ export function BarangClient({
     );
   }
 
+  // ===== Seleksi & hapus =====
+  const allPageSelected =
+    paginatedItems.length > 0 && paginatedItems.every((it) => selectedIds.has(it.id));
+
+  function toggleSelectAllPage() {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (allPageSelected) paginatedItems.forEach((it) => next.delete(it.id));
+      else paginatedItems.forEach((it) => next.add(it.id));
+      return next;
+    });
+  }
+
+  function toggleSelect(id: number) {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }
+
+  function clearSelection() {
+    setSelectedIds(new Set());
+  }
+
+  function handleConfirmDelete() {
+    const ids = [...selectedIds];
+    if (ids.length === 0) return;
+    startDeleteTransition(async () => {
+      try {
+        const res = await deleteItems(ids);
+        if (res.ok) {
+          const deletedSet = new Set(res.deletedIds ?? []);
+          if (deletedSet.size > 0) {
+            setItems((prev) => prev.filter((i) => !deletedSet.has(i.id)));
+            toast.success(`${deletedSet.size} barang berhasil dihapus`);
+          }
+          if (res.blocked && res.blocked.length > 0) {
+            const preview = res.blocked.slice(0, 3).join(", ");
+            const more = res.blocked.length > 3 ? `, +${res.blocked.length - 3} lainnya` : "";
+            toast.error(
+              `${res.blocked.length} barang tidak bisa dihapus karena punya riwayat transaksi: ${preview}${more}. Gunakan Arsipkan.`,
+              { duration: 7000 }
+            );
+          }
+          if (deletedSet.size === 0 && (!res.blocked || res.blocked.length === 0)) {
+            toast.info("Tidak ada barang yang dihapus.");
+          }
+          clearSelection();
+          setShowDeleteConfirm(false);
+        } else {
+          toast.error(res.error ?? "Gagal menghapus barang");
+        }
+      } catch {
+        toast.error("Terjadi kesalahan saat menghapus barang");
+      }
+    });
+  }
+
   return (
     <div className="space-y-8">
       {/* 1. Statistics Cards Row */}
@@ -323,9 +390,37 @@ export function BarangClient({
         </div>
       </Card>
 
+      {/* Bulk action bar — hapus terpilih */}
+      {canEdit && selectedIds.size > 0 && (
+        <div className="flex flex-col gap-3 rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 sm:flex-row sm:items-center sm:justify-between animate-in fade-in slide-in-from-top-1 duration-150">
+          <p className="text-sm font-bold text-rose-700">
+            {selectedIds.size} barang dipilih untuk dihapus
+          </p>
+          <div className="flex items-center gap-2">
+            <Button size="sm" variant="outline" onClick={clearSelection}>
+              Batal
+            </Button>
+            <Button size="sm" variant="danger" onClick={() => setShowDeleteConfirm(true)}>
+              <Trash2 size={14} /> Hapus ({selectedIds.size})
+            </Button>
+          </div>
+        </div>
+      )}
+
       <Table>
           <thead>
             <tr>
+              {canEdit && (
+                <Th className="w-10 text-center">
+                  <input
+                    type="checkbox"
+                    checked={allPageSelected}
+                    onChange={toggleSelectAllPage}
+                    aria-label="Pilih semua di halaman ini"
+                    className="h-4 w-4 rounded border-slate-300 text-[var(--primary)] focus:ring-[var(--primary)] cursor-pointer align-middle"
+                  />
+                </Th>
+              )}
               <Th>Kode SKU</Th>
               <Th>Nama Barang</Th>
               <Th className="text-right">Harga Beli</Th>
@@ -344,8 +439,22 @@ export function BarangClient({
                 <tr
                   key={it.id}
                   onClick={() => openItemDetails(it)}
-                  className="hover:bg-slate-50/50 cursor-pointer transition-colors duration-150 group"
+                  className={cn(
+                    "cursor-pointer transition-colors duration-150 group",
+                    selectedIds.has(it.id) ? "bg-rose-50/70 hover:bg-rose-50" : "hover:bg-slate-50/50"
+                  )}
                 >
+                  {canEdit && (
+                    <Td className="text-center" onClick={(e) => e.stopPropagation()}>
+                      <input
+                        type="checkbox"
+                        checked={selectedIds.has(it.id)}
+                        onChange={() => toggleSelect(it.id)}
+                        aria-label={`Pilih ${it.nama}`}
+                        className="h-4 w-4 rounded border-slate-300 text-[var(--primary)] focus:ring-[var(--primary)] cursor-pointer align-middle"
+                      />
+                    </Td>
+                  )}
                   <Td className="font-mono text-xs font-bold text-slate-800 group-hover:text-[var(--primary)]">
                     {it.kode}
                   </Td>
@@ -393,7 +502,7 @@ export function BarangClient({
 
             {paginatedItems.length === 0 && (
               <tr>
-                <Td colSpan={8} className="py-16 text-center text-slate-400 select-none">
+                <Td colSpan={canEdit ? 9 : 8} className="py-16 text-center text-slate-400 select-none">
                   <Boxes className="mx-auto text-slate-200 mb-2" size={32} />
                   <p className="font-semibold text-sm">Barang Tidak Ditemukan</p>
                   <p className="text-xs">Katalog kosong atau pencarian tidak cocok.</p>
@@ -404,7 +513,7 @@ export function BarangClient({
           {filteredItems.length > 0 && canEdit && (
             <tfoot>
               <tr className="bg-slate-50/80 font-bold">
-                <Td colSpan={5} className="text-right text-xs uppercase tracking-wider text-slate-500">
+                <Td colSpan={6} className="text-right text-xs uppercase tracking-wider text-slate-500">
                   Total Nilai Aset Persediaan ({filteredItems.length} item)
                 </Td>
                 <Td className={cn(
@@ -821,6 +930,43 @@ export function BarangClient({
                 setOpenBarcodePreview(false);
               }}>
                 <Printer size={13} /> Cetak Label
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 7. Modal Konfirmasi Hapus Barang */}
+      {canEdit && showDeleteConfirm && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 p-4 backdrop-blur-xs animate-fade-in"
+          onClick={() => !deleting && setShowDeleteConfirm(false)}
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            className="w-full max-w-md rounded-2xl border border-border bg-white p-6 shadow-2xl anim-rise"
+          >
+            <div className="flex items-start gap-3.5">
+              <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-rose-100 text-rose-600">
+                <AlertTriangle size={22} />
+              </div>
+              <div className="flex-1">
+                <h3 className="text-base font-bold text-slate-900">Hapus barang ini?</h3>
+                <p className="mt-1 text-sm text-slate-600">
+                  Anda akan menghapus <b className="text-rose-700">{selectedIds.size} barang</b> secara permanen.
+                  Tindakan ini <b>tidak bisa dibatalkan</b>.
+                </p>
+                <p className="mt-2 rounded-lg bg-amber-50 border border-amber-200 px-3 py-2 text-xs text-amber-700">
+                  Barang yang sudah punya riwayat transaksi/stok tidak akan dihapus (gunakan <b>Arsipkan</b> untuk itu).
+                </p>
+              </div>
+            </div>
+            <div className="mt-5 flex justify-end gap-2.5 border-t border-border pt-4">
+              <Button type="button" variant="outline" onClick={() => setShowDeleteConfirm(false)} disabled={deleting}>
+                Batal
+              </Button>
+              <Button type="button" variant="danger" onClick={handleConfirmDelete} disabled={deleting}>
+                <Trash2 size={14} /> {deleting ? "Menghapus…" : `Ya, Hapus (${selectedIds.size})`}
               </Button>
             </div>
           </div>

@@ -158,22 +158,22 @@ export function BarangForm({ canEdit }: { canEdit: boolean }) {
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <Label>Harga Beli (Rp)</Label>
-                  <Input name="hargaBeli" type="number" min={0} defaultValue={editing?.hargaBeli ?? 0} required />
+                  <Input name="hargaBeli" type="number" min={0} defaultValue={editing?.hargaBeli ?? ""} placeholder="0" />
                 </div>
                 <div>
                   <Label>Harga Jual (Rp)</Label>
-                  <Input name="hargaJual" type="number" min={0} defaultValue={editing?.hargaJual ?? 0} required />
+                  <Input name="hargaJual" type="number" min={0} defaultValue={editing?.hargaJual ?? ""} placeholder="0" />
                 </div>
               </div>
 
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <Label>Stok Awal</Label>
-                  <Input name="stokAwal" type="number" min={0} defaultValue={editing?.stokAwal ?? 0} required />
+                  <Input name="stokAwal" type="number" min={0} defaultValue={editing?.stokAwal ?? ""} placeholder="0" />
                 </div>
                 <div>
                   <Label>Minimum Stok (Peringatan)</Label>
-                  <Input name="minStok" type="number" min={0} defaultValue={editing?.minStok ?? 10} required />
+                  <Input name="minStok" type="number" min={0} defaultValue={editing?.minStok ?? ""} placeholder="10" />
                 </div>
               </div>
 
