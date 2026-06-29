@@ -63,10 +63,10 @@ export function DashboardCharts({ revenueTrend, topItems, projectSales, showMarg
                 tick={{ fontSize: 10, fill: "#94a3b8" }}
                 tickFormatter={(v) => (v >= 1_000_000 ? `${(v / 1_000_000).toFixed(1)}jt` : `${v / 1000}rb`)}
               />
-              <Tooltip 
+              <Tooltip
                 contentStyle={{ backgroundColor: "#fff", border: "1px solid #e2e8f0", borderRadius: "12px", boxShadow: "0 4px 12px rgba(0,0,0,0.05)" }}
                 labelStyle={{ fontWeight: "bold", color: "#0f172a" }}
-                formatter={(v: unknown) => [formatRupiah(v as number), undefined]} 
+                formatter={(v: unknown) => [formatRupiah(v as number), undefined]}
               />
               <Legend verticalAlign="top" height={36} iconType="circle" />
               <Area name="Omset" type="monotone" dataKey="omset" stroke="#059669" strokeWidth={2} fillOpacity={1} fill="url(#colorOmset)" />
@@ -90,9 +90,9 @@ export function DashboardCharts({ revenueTrend, topItems, projectSales, showMarg
                 <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" horizontal={false} />
                 <XAxis type="number" tick={{ fontSize: 10, fill: "#94a3b8" }} tickFormatter={(v) => `${v / 1_000_000}jt`} />
                 <YAxis type="category" dataKey="nama" width={80} tick={{ fontSize: 10, fill: "#94a3b8" }} />
-                <Tooltip 
+                <Tooltip
                   contentStyle={{ backgroundColor: "#fff", border: "1px solid #e2e8f0", borderRadius: "12px" }}
-                  formatter={(v: unknown) => [formatRupiah(v as number), undefined]} 
+                  formatter={(v: unknown) => [formatRupiah(v as number), undefined]}
                 />
                 <Bar name="Omset" dataKey="total" fill="#059669" radius={[0, 6, 6, 0]} />
               </BarChart>
@@ -104,7 +104,7 @@ export function DashboardCharts({ revenueTrend, topItems, projectSales, showMarg
       {/* Top Selling Items */}
       <div className="rounded-[18px] border border-border bg-white p-6 shadow-[var(--shadow-card)]">
         <h3 className="mb-4 text-xs font-bold text-slate-800 uppercase tracking-wider">10 Barang Terlaris (Qty)</h3>
-        <div className="h-72">
+        <div className="h-72 ">
           {topItems.length === 0 ? (
             <div className="h-full flex items-center justify-center text-xs text-slate-400">Belum ada data penjualan.</div>
           ) : (
@@ -131,9 +131,9 @@ export function DashboardCharts({ revenueTrend, topItems, projectSales, showMarg
                 <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
                 <XAxis dataKey="tanggal" tick={{ fontSize: 10, fill: "#94a3b8" }} />
                 <YAxis tick={{ fontSize: 10, fill: "#94a3b8" }} tickFormatter={(v) => `${v}%`} />
-                <Tooltip 
+                <Tooltip
                   contentStyle={{ backgroundColor: "#fff", border: "1px solid #e2e8f0", borderRadius: "12px" }}
-                  formatter={(v: unknown) => [`${v as number}%`, "Margin (%)"]} 
+                  formatter={(v: unknown) => [`${v as number}%`, "Margin (%)"]}
                 />
                 <Line name="Margin %" type="monotone" dataKey="marginPct" stroke="#ef4444" strokeWidth={2.5} activeDot={{ r: 6 }} />
               </LineChart>
