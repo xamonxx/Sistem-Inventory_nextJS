@@ -181,7 +181,7 @@ function SidebarContent({
       <aside
         className={cn(
           "no-print bg-[#0a0e17] text-slate-300",
-          "lg:fixed lg:left-0 lg:top-0 lg:bottom-0 lg:flex lg:h-screen lg:shrink-0 lg:flex-col lg:border-r lg:border-slate-800/60 lg:transition-[width] lg:duration-200 lg:ease-in-out lg:z-10",
+          "lg:fixed lg:left-0 lg:top-0 lg:bottom-0 lg:flex lg:h-screen lg:shrink-0 lg:flex-col lg:border-r lg:border-slate-800/60 lg:transition-[width] lg:duration-200 lg:ease-in-out lg:z-30",
           isCollapsed ? "lg:w-[80px]" : "lg:w-[280px]",
           "max-lg:fixed max-lg:inset-y-0 max-lg:left-0 max-lg:z-50 max-lg:w-[280px] flex flex-col max-lg:transition-transform max-lg:duration-200 max-lg:ease-in-out",
           isOpen ? "max-lg:translate-x-0" : "max-lg:-translate-x-full"
