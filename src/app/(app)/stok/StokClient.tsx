@@ -253,17 +253,17 @@ export function StokClient({
         <Table>
           <thead>
               <tr>
-                <Th className="w-40">Tanggal</Th>
+                <Th className="w-28">Tanggal</Th>
                 <Th>Barang</Th>
-                <Th className="w-32">Mutasi</Th>
-                <Th className="text-right w-28">Stok Masuk</Th>
-                <Th className="text-right w-28">Stok Keluar</Th>
-                <Th className="text-right w-32">
+                <Th className="w-24">Mutasi</Th>
+                <Th className="text-right w-24">Stok Masuk</Th>
+                <Th className="text-right w-24">Stok Keluar</Th>
+                <Th className="text-right w-28">
                   {selectedItemId !== "" ? "Saldo Berjalan" : "Posisi Mutasi"}
                 </Th>
                 <Th>Keterangan / Ref</Th>
-                <Th className="w-36">Operator</Th>
-                {canEdit && <Th className="text-center w-36">Aksi</Th>}
+                <Th className="w-28">Operator</Th>
+                {canEdit && <Th className="text-center w-24">Aksi</Th>}
               </tr>
             </thead>
             <tbody>
@@ -277,7 +277,7 @@ export function StokClient({
                       {formatTanggal(l.tanggal)}
                     </Td>
                     <Td>
-                      <div className="font-semibold text-slate-800">{l.itemName}</div>
+                      <div className="font-semibold text-slate-800 max-w-[130px] leading-tight">{l.itemName}</div>
                       <div className="font-mono text-[10px] text-slate-400">{l.itemKode}</div>
                     </Td>
                     <Td>
@@ -306,7 +306,7 @@ export function StokClient({
                         <span className="text-slate-400 text-xs">—</span>
                       )}
                     </Td>
-                    <Td className="text-slate-600 text-xs max-w-[200px] truncate" title={l.keterangan ?? ""}>
+                    <Td className="text-slate-600 text-xs max-w-[150px] truncate" title={l.keterangan ?? ""}>
                       {l.keterangan ?? "Penyesuaian Manual"}
                     </Td>
                     <Td className="text-slate-600 text-xs font-medium">
@@ -320,7 +320,7 @@ export function StokClient({
                           onClick={() => handleOpenQuickUpdate(l.itemId, l.itemName)}
                           className="h-8 px-2.5 rounded-[10px] text-xs font-semibold hover:border-[var(--primary)] hover:text-[var(--primary)] transition duration-150 inline-flex items-center gap-1.5 cursor-pointer mx-auto"
                         >
-                          <RefreshCcw size={11} /> Update Stok
+                          <RefreshCcw size={11} /> Update
                         </Button>
                       </Td>
                     )}
