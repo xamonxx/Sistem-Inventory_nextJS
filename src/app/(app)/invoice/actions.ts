@@ -80,6 +80,10 @@ const updateInvoiceSchema = z.object({
   namaClient: z.string().min(1, "Nama klien wajib diisi.").max(FIELD_LIMITS.namaClient, "Nama klien terlalu panjang."),
   alamat: z.string().max(FIELD_LIMITS.alamat, "Alamat terlalu panjang.").nullable().optional(),
   namaWs: z.string().max(FIELD_LIMITS.namaWs, "Nama workshop terlalu panjang.").nullable().optional(),
+  // Info pembayaran (opsional) — tampil di bagian PEMBAYARAN pada invoice/nota.
+  namaBank: z.string().max(FIELD_LIMITS.namaBank, "Nama bank terlalu panjang.").nullable().optional(),
+  noRekening: z.string().max(FIELD_LIMITS.noRekening, "No. rekening terlalu panjang.").nullable().optional(),
+  atasNama: z.string().max(FIELD_LIMITS.atasNama, "Atas nama terlalu panjang.").nullable().optional(),
 });
 
 export async function updateInvoice(
@@ -369,6 +373,9 @@ export async function updateInvoiceAndItems(
     namaClient: string;
     alamat?: string | null;
     namaWs?: string | null;
+    namaBank?: string | null;
+    noRekening?: string | null;
+    atasNama?: string | null;
   },
   itemsPayload: { itemId: number; qty: number }[]
 ) {
@@ -394,6 +401,35 @@ export async function updateInvoiceAndItems(
   });
   if (!inv) return { error: "Invoice tidak ditemukan." };
 
+  // Guard: barang yang sudah punya riwayat retur/tukar direferensikan oleh
+  // ReturnItem (FK transactionItemId). Menghapusnya saat edit invoice akan
+  // melanggar foreign key dan menggagalkan seluruh proses. Blokir lebih awal
+  // dengan pesan yang jelas alih-alih error generik.
+  if (inv.transactionId) {
+    const existingTxItems = await prisma.transactionItem.findMany({
+      where: { transactionId: inv.transactionId },
+      select: { id: true, itemId: true, namaSnapshot: true },
+    });
+    const returnedRefs = await prisma.returnItem.findMany({
+      where: { transactionItemId: { in: existingTxItems.map((x) => x.id) } },
+      select: { transactionItemId: true },
+    });
+    if (returnedRefs.length > 0) {
+      const returnedTxItemIds = new Set(returnedRefs.map((r) => r.transactionItemId));
+      const keptItemIds = new Set(itemsPayload.filter((p) => p.qty > 0).map((p) => p.itemId));
+      const blocked = existingTxItems
+        .filter((x) => returnedTxItemIds.has(x.id) && !keptItemIds.has(x.itemId))
+        .map((x) => x.namaSnapshot);
+      if (blocked.length > 0) {
+        return {
+          error:
+            `Barang berikut tidak bisa dihapus dari invoice karena sudah memiliki riwayat retur/tukar: ` +
+            `${blocked.join(", ")}. Batalkan/sesuaikan retur terkait terlebih dahulu.`,
+        };
+      }
+    }
+  }
+
   try {
     await prisma.$transaction(async (tx) => {
       await tx.invoice.update({
@@ -406,6 +442,21 @@ export async function updateInvoiceAndItems(
           namaWs: val.namaWs,
         },
       });
+
+      // Update info pembayaran (opsional) pada transaksi yang tertaut — bagian
+      // PEMBAYARAN di invoice/nota mengambil data ini dari Transaction.
+      const bankTxId = inv.transactionId ?? inv.return?.transactionId ?? null;
+      if (bankTxId) {
+        const norm = (v?: string | null) => (v && v.trim() ? v.trim() : null);
+        await tx.transaction.update({
+          where: { id: bankTxId },
+          data: {
+            namaBank: norm(val.namaBank),
+            noRekening: norm(val.noRekening),
+            atasNama: norm(val.atasNama),
+          },
+        });
+      }
 
       if (inv.transactionId) {
         const txId = inv.transactionId;

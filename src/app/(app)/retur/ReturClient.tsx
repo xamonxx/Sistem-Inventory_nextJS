@@ -4,6 +4,7 @@ import { Fragment, useState, useTransition, useMemo, useRef, useEffect } from "r
 import { useRouter } from "next/navigation";
 import { createReturn, findTransactionByCode } from "./actions";
 import { Button, Card, Input, Label, Select, Table, Th, Td, CharCounter } from "@/components/ui";
+import { Pagination, usePagination } from "@/components/Pagination";
 import { FIELD_LIMITS } from "@/lib/fieldLimits";
 import { formatRupiah } from "@/lib/utils";
 import {
@@ -88,6 +89,7 @@ export function ReturClient({
 
   // Step 2: Return select
   const [retItems, setRetItems] = useState<SelectedReturn[]>([]);
+  const [retItemQuery, setRetItemQuery] = useState("");
   const [alasan, setAlasan] = useState("");
 
   // Step 3: Replacement select
@@ -126,6 +128,7 @@ export function ReturClient({
           items: res.items!,
         });
         setRetItems([]);
+        setRetItemQuery("");
         setStep(2);
       }
     } catch {
@@ -208,6 +211,21 @@ export function ReturClient({
   const totalRetur = retItems.reduce((acc, x) => acc + x.harga * x.qty, 0);
   const totalGanti = repItems.reduce((acc, x) => acc + x.harga * x.qty, 0);
   const selisih = totalGanti - totalRetur; // positive: customer pays; negative: refund customer
+
+  const returnItems = origTrx?.items ?? [];
+  const showReturnItemTools = returnItems.length > 5;
+  const filteredReturnItems = useMemo(() => {
+    const query = retItemQuery.trim().toLowerCase();
+    if (!query) return returnItems;
+    return returnItems.filter((it) => it.nama.toLowerCase().includes(query) || it.kode.toLowerCase().includes(query));
+  }, [returnItems, retItemQuery]);
+  const {
+    page: returnPage,
+    setPage: setReturnPage,
+    pageData: pagedReturnItems,
+    perPage: returnPerPage,
+    total: totalFilteredReturnItems,
+  } = usePagination(filteredReturnItems, 5);
 
   // Submit action
   function submitReturnExchange() {
@@ -458,6 +476,30 @@ export function ReturClient({
           </div>
 
           <div className="space-y-5 px-6 pb-6">
+            {showReturnItemTools && (
+              <div className="flex flex-col gap-3 rounded-xl border border-border bg-white/80 p-3 sm:flex-row sm:items-center sm:justify-between">
+                <div className="min-w-0">
+                  <p className="text-xs font-bold uppercase tracking-wider text-slate-600">Pencarian Barang Retur</p>
+                  <p className="mt-0.5 text-[11px] font-semibold text-slate-500">
+                    {totalFilteredReturnItems} dari {returnItems.length} barang nota ditampilkan.
+                  </p>
+                </div>
+                <div className="relative w-full sm:max-w-sm">
+                  <Search size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
+                  <Input
+                    value={retItemQuery}
+                    onChange={(e) => {
+                      setRetItemQuery(e.target.value);
+                      setReturnPage(1);
+                    }}
+                    maxLength={FIELD_LIMITS.search}
+                    placeholder="Cari nama atau kode barang..."
+                    className="h-10 pl-10 text-xs"
+                  />
+                </div>
+              </div>
+            )}
+
             <Table>
               <thead>
                 <tr>
@@ -470,7 +512,7 @@ export function ReturClient({
                 </tr>
               </thead>
               <tbody>
-                {origTrx.items.map((it) => {
+                {pagedReturnItems.map((it) => {
                   const isSelected = retItems.some((x) => x.transactionItemId === it.transactionItemId);
                   const selected = retItems.find((x) => x.transactionItemId === it.transactionItemId);
                   return (
@@ -512,8 +554,26 @@ export function ReturClient({
                     </tr>
                   );
                 })}
+                {pagedReturnItems.length === 0 && (
+                  <tr>
+                    <Td colSpan={6} className="py-12 text-center text-slate-400 select-none">
+                      Barang tidak ditemukan. Coba kata kunci lain.
+                    </Td>
+                  </tr>
+                )}
               </tbody>
             </Table>
+
+            {showReturnItemTools && (
+              <Pagination
+                page={returnPage}
+                perPage={returnPerPage}
+                total={totalFilteredReturnItems}
+                onPage={setReturnPage}
+                perPageOptions={[5]}
+                className="rounded-xl border border-border bg-white/80 px-3 pb-3"
+              />
+            )}
 
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <div>

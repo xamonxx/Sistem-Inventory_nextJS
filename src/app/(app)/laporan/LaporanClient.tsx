@@ -1,6 +1,7 @@
 ﻿"use client";
 
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo, useEffect, useTransition, type ReactNode } from "react";
+import { useRouter, usePathname } from "next/navigation";
 import {
   ResponsiveContainer,
   BarChart,
@@ -34,9 +35,16 @@ import {
   Boxes,
 } from "lucide-react";
 import { toast } from "sonner";
+import { exportAnalyticExcel } from "@/lib/export/exportAnalyticExcel";
+import { printArea } from "@/lib/print";
+import { PeriodFilter, type ResolvedPeriodRange } from "@/components/PeriodFilter";
 
 type LaporanClientProps = {
   role: string;
+  userName?: string;
+  periodeLabel?: string;
+  initialFrom?: string;
+  initialTo?: string;
   marginData: { nama: string; qtyTerjual: number; omset: number; margin: number }[];
   terlaris: { nama: string; qtyTerjual: number; omset: number }[];
   stokData: {
@@ -80,8 +88,6 @@ const fmtAxis = (v: unknown) => {
   const n = v as number;
   return n >= 1_000_000 ? `${(n / 1_000_000).toFixed(1)}jt` : n >= 1000 ? `${Math.round(n / 1000)}rb` : `${n}`;
 };
-const shortName = (v: string) => (v.length > 16 ? v.slice(0, 15) + "…" : v);
-
 // ===== Reusable surface (shadcn "Card") =====
 function Panel({
   title,
@@ -150,12 +156,649 @@ function StatCard({
   );
 }
 
-export function LaporanClient({ role, marginData, terlaris, stokData, piutangData }: LaporanClientProps) {
+function PrintMetric({
+  label,
+  value,
+  hint,
+}: {
+  label: string;
+  value: string;
+  hint: string;
+}) {
+  return (
+    <div className="laporan-pdf-metric">
+      <p>{label}</p>
+      <strong>{value}</strong>
+      <span>{hint}</span>
+    </div>
+  );
+}
+
+function PrintPage({
+  title,
+  subtitle,
+  badge,
+  children,
+}: {
+  title?: string;
+  subtitle?: string;
+  badge?: string;
+  children: ReactNode;
+}) {
+  return (
+    <section className="laporan-pdf-page">
+      {title ? (
+        <div className="laporan-pdf-page-title">
+          <div>
+            <p>Analisis ERP</p>
+            <h2>{title}</h2>
+            {subtitle ? <span>{subtitle}</span> : null}
+          </div>
+          {badge ? <strong>{badge}</strong> : null}
+        </div>
+      ) : null}
+      {children}
+    </section>
+  );
+}
+
+function PrintInsight({ label, value, note }: { label: string; value: string; note: string }) {
+  return (
+    <div className="laporan-pdf-insight">
+      <p>{label}</p>
+      <strong>{value}</strong>
+      <span>{note}</span>
+    </div>
+  );
+}
+
+function PrintBarValue({ value, percent }: { value: string; percent: string }) {
+  return (
+    <strong>
+      <b>{value}</b>
+      <em>{percent}</em>
+    </strong>
+  );
+}
+
+const printPercent = (value: number, total: number) => (total > 0 ? `${Math.round((value / total) * 100)}%` : "0%");
+
+function LaporanPrintDocument({
+  role,
+  userName,
+  totalOmset,
+  totalMargin,
+  totalPiutang,
+  totalAsetValue,
+  terlaris,
+  warningStok,
+  agingAnalysis,
+  assetTop,
+  marginData,
+  stokData,
+  piutangData,
+  inventoryHealth,
+}: {
+  role: string;
+  userName?: string;
+  totalOmset: number;
+  totalMargin: number;
+  totalPiutang: number;
+  totalAsetValue: number;
+  terlaris: { nama: string; qtyTerjual: number; omset: number }[];
+  warningStok: {
+    kode: string;
+    nama: string;
+    stokAkhir: number;
+    minStok: number;
+  }[];
+  agingAnalysis: {
+    items: Array<{
+      noInvoice: string;
+      client: string;
+      total: number;
+      sisa: number;
+      status: string;
+      ageDays: number;
+      ageGroup: string;
+    }>;
+    summary: {
+      currentBucket: number;
+      midBucket: number;
+      lateBucket: number;
+      criticalBucket: number;
+    };
+  };
+  assetTop: { name: string; nilai: number }[];
+  marginData: { nama: string; qtyTerjual: number; omset: number; margin: number }[];
+  stokData: {
+    kode: string;
+    nama: string;
+    stokAkhir: number;
+    minStok: number;
+    hargaBeli: number;
+    hargaJual: number;
+    nilaiAset: number;
+    status: string;
+  }[];
+  piutangData: {
+    noInvoice: string;
+    tanggal: string;
+    client: string;
+    total: number;
+    dibayar: number;
+    sisa: number;
+    status: string;
+  }[];
+  inventoryHealth: {
+    all: Array<LaporanClientProps["stokData"][number] & { soldQty: number; velocity: "FAST" | "NORMAL" | "SLOW" | "DEAD" }>;
+    fastMoving: Array<LaporanClientProps["stokData"][number] & { soldQty: number; velocity: "FAST" | "NORMAL" | "SLOW" | "DEAD" }>;
+    slowMoving: Array<LaporanClientProps["stokData"][number] & { soldQty: number; velocity: "FAST" | "NORMAL" | "SLOW" | "DEAD" }>;
+  };
+}) {
+  const isGudang = role === "ADMIN_GUDANG";
+  const generatedAt = new Intl.DateTimeFormat("id-ID", {
+    day: "2-digit",
+    month: "long",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  }).format(new Date());
+  const topOmset = [...marginData].sort((a, b) => b.omset - a.omset).slice(0, 8);
+  const topVolume = [...terlaris].sort((a, b) => b.qtyTerjual - a.qtyTerjual).slice(0, 8);
+  const topMargin = [...marginData].sort((a, b) => b.margin - a.margin).slice(0, 8);
+  const lowMargin = [...marginData]
+    .filter((item) => item.omset > 0)
+    .sort((a, b) => a.margin / a.omset - b.margin / b.omset)
+    .slice(0, 6);
+  const assetRows = assetTop.slice(0, 8);
+  const maxOmset = Math.max(1, ...topOmset.map((x) => x.omset));
+  const maxQty = Math.max(1, ...topVolume.map((x) => x.qtyTerjual));
+  const maxMargin = Math.max(1, ...topMargin.map((x) => x.margin));
+  const maxAsset = Math.max(1, ...assetRows.map((x) => x.nilai));
+  const topWarnings = warningStok.slice(0, 8);
+  const outstanding = agingAnalysis.items
+    .filter((p) => p.status !== "LUNAS")
+    .sort((a, b) => b.sisa - a.sisa)
+    .slice(0, 8);
+  const paidCount = piutangData.filter((p) => p.status === "LUNAS").length;
+  const unpaidCount = Math.max(0, piutangData.length - paidCount);
+  const totalUnits = marginData.reduce((acc, item) => acc + item.qtyTerjual, 0);
+  const marginRate = totalOmset > 0 ? Math.round((totalMargin / totalOmset) * 100) : 0;
+  const averageInvoice = piutangData.length > 0 ? piutangData.reduce((acc, item) => acc + item.total, 0) / piutangData.length : 0;
+  const totalAging = agingAnalysis.summary.currentBucket + agingAnalysis.summary.midBucket + agingAnalysis.summary.lateBucket + agingAnalysis.summary.criticalBucket;
+  const fastRows = inventoryHealth.fastMoving.slice(0, 6);
+  const slowRows = inventoryHealth.slowMoving.slice(0, 6);
+  const stockMinus = stokData.filter((s) => s.stokAkhir < 0).length;
+  const healthyStock = stokData.filter((s) => s.status !== "MENIPIS" && s.stokAkhir >= 0).length;
+  const soldProductCount = marginData.filter((item) => item.qtyTerjual > 0).length;
+  const stockRiskRate = printPercent(warningStok.length, Math.max(1, stokData.length));
+  const healthyStockRate = printPercent(healthyStock, Math.max(1, stokData.length));
+  const slowMovingRate = printPercent(inventoryHealth.slowMoving.length, Math.max(1, stokData.length));
+  const marginPercent = (margin: number, omset: number) => (omset > 0 ? `${Math.round((margin / omset) * 100)}%` : "0%");
+
+  return (
+    <div className="print-area laporan-print-source" aria-hidden="true">
+      <article className="laporan-pdf">
+        <PrintPage>
+          <header className="laporan-pdf-hero">
+            <div>
+              <p className="laporan-pdf-eyebrow">PUTRA CORPORATION</p>
+              <h1>Analitik & Laporan ERP</h1>
+              <p>Dokumen lengkap seluruh modul analisis: ringkasan, penjualan, margin, piutang-aging, stok, dan aset persediaan.</p>
+            </div>
+            <div className="laporan-pdf-meta">
+              <span>Dicetak oleh</span>
+              <strong>{userName ?? "Admin Gudang"}</strong>
+              <span>{generatedAt}</span>
+            </div>
+          </header>
+
+          <section className="laporan-pdf-grid">
+            <PrintMetric label="Total Pendapatan" value={formatRupiah(totalOmset)} hint="Akumulasi omset penjualan" />
+            <PrintMetric label="Margin Keuntungan" value={isGudang ? formatRupiah(totalMargin) : "Dibatasi"} hint="Laba kotor setelah modal" />
+            <PrintMetric label="Outstanding Piutang" value={formatRupiah(totalPiutang)} hint="Tagihan belum tertagih" />
+            <PrintMetric label="Nilai Aset Persediaan" value={isGudang ? formatRupiah(totalAsetValue) : "Dibatasi"} hint="Valuasi stok gudang" />
+          </section>
+
+          <section className="laporan-pdf-mini-grid">
+            <PrintInsight label="Unit Terjual" value={`${totalUnits} unit`} note="Akumulasi volume barang terjual" />
+            <PrintInsight label="Rasio Margin" value={isGudang ? `${marginRate}%` : "Dibatasi"} note="Margin dibanding total pendapatan" />
+            <PrintInsight label="Risiko Stok" value={`${warningStok.length} item`} note={`${stockRiskRate} dari seluruh stok perlu ditinjau`} />
+          </section>
+
+          <section className="laporan-pdf-note">
+            <h2>Prioritas Analisis</h2>
+            <ul>
+              <li>Penjualan teratas menyumbang {topOmset[0] ? printPercent(topOmset[0].omset, totalOmset) : "0%"} dari total omset; cek ketersediaan barang utamanya.</li>
+              <li>{unpaidCount} invoice belum lunas dengan outstanding {formatRupiah(totalPiutang)}; dahulukan nominal terbesar pada halaman Piutang.</li>
+              <li>{warningStok.length} item masuk risiko stok ({stockRiskRate}); cocokkan fisik gudang sebelum pembelian ulang.</li>
+            </ul>
+          </section>
+
+          <section className="laporan-pdf-section">
+            <div className="laporan-pdf-section-head">
+              <div>
+                <h2>Omset Barang Terlaris</h2>
+                <p>Produk dengan kontribusi pendapatan tertinggi.</p>
+              </div>
+              <span>Top {topOmset.length}</span>
+            </div>
+            <div className="laporan-pdf-bars">
+              {topOmset.map((it) => (
+                <div className="laporan-pdf-bar-row" key={it.nama}>
+                  <span>{it.nama}</span>
+                  <div>
+                    <i style={{ width: `${Math.max(8, (it.omset / maxOmset) * 100)}%` }} />
+                  </div>
+                  <PrintBarValue value={formatRupiah(it.omset)} percent={`${printPercent(it.omset, totalOmset)} omset`} />
+                </div>
+              ))}
+            </div>
+          </section>
+          <footer className="laporan-pdf-footer">
+            <span>Halaman 1 - Ringkasan Eksekutif</span>
+            <span>PUTRA CORPORATION</span>
+          </footer>
+        </PrintPage>
+
+        <PrintPage title="Penjualan" subtitle="Analisis performa barang berdasarkan volume unit dan total omset." badge="Sales">
+          <section className="laporan-pdf-mini-grid">
+            <PrintInsight label="Produk Terjual" value={`${soldProductCount} item`} note={`${printPercent(soldProductCount, Math.max(1, marginData.length))} dari katalog penjualan`} />
+            <PrintInsight label="Volume Tertinggi" value={topVolume[0] ? `${topVolume[0].qtyTerjual} unit` : "0 unit"} note={topVolume[0]?.nama ?? "Belum ada transaksi"} />
+            <PrintInsight label="Rata-rata Invoice" value={formatRupiah(averageInvoice)} note="Nilai rata-rata transaksi piutang/invoice" />
+          </section>
+
+          <section className="laporan-pdf-section">
+            <div className="laporan-pdf-section-head">
+              <div>
+                <h2>Volume Barang Terlaris</h2>
+                <p>Ranking barang berdasarkan jumlah unit terjual.</p>
+              </div>
+              <span>Top {topVolume.length}</span>
+            </div>
+            <div className="laporan-pdf-bars laporan-pdf-bars-emerald">
+              {topVolume.map((it) => (
+                <div className="laporan-pdf-bar-row" key={it.nama}>
+                  <span>{it.nama}</span>
+                  <div>
+                    <i style={{ width: `${Math.max(8, (it.qtyTerjual / maxQty) * 100)}%` }} />
+                  </div>
+                  <PrintBarValue value={`${it.qtyTerjual} unit`} percent={`${printPercent(it.qtyTerjual, totalUnits)} volume`} />
+                </div>
+              ))}
+            </div>
+          </section>
+
+          <section className="laporan-pdf-section">
+            <div className="laporan-pdf-section-head">
+              <div>
+                <h2>Daftar Omset Produk Terjual</h2>
+                <p>Detail qty dan pendapatan kotor setiap barang prioritas.</p>
+              </div>
+            </div>
+            <table className="laporan-pdf-table">
+              <thead>
+                <tr>
+                  <th>#</th>
+                  <th>Barang</th>
+                  <th>Qty</th>
+                  <th>Omset</th>
+                  <th>Kontribusi</th>
+                </tr>
+              </thead>
+              <tbody>
+                {topOmset.map((it, index) => (
+                  <tr key={it.nama}>
+                    <td>{index + 1}</td>
+                    <td>{it.nama}</td>
+                    <td>{it.qtyTerjual} unit</td>
+                    <td>{formatRupiah(it.omset)}</td>
+                    <td>{printPercent(it.omset, totalOmset)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </section>
+          <footer className="laporan-pdf-footer">
+            <span>Halaman 2 - Analisis Penjualan</span>
+            <span>{formatRupiah(totalOmset)} total omset</span>
+          </footer>
+        </PrintPage>
+
+        {isGudang ? (
+          <PrintPage title="Margin Keuntungan" subtitle="Evaluasi profitabilitas produk agar keputusan stok tidak hanya berbasis omset." badge="Margin">
+            <section className="laporan-pdf-mini-grid">
+              <PrintInsight label="Total Margin" value={formatRupiah(totalMargin)} note="Laba kotor dari barang terjual" />
+              <PrintInsight label="Rasio Margin" value={`${marginRate}%`} note="Persentase margin terhadap omset" />
+              <PrintInsight label="Margin Terbesar" value={topMargin[0] ? formatRupiah(topMargin[0].margin) : formatRupiah(0)} note={topMargin[0]?.nama ?? "Belum ada margin"} />
+            </section>
+
+            <section className="laporan-pdf-section">
+              <div className="laporan-pdf-section-head">
+                <div>
+                  <h2>Produk Paling Menguntungkan</h2>
+                  <p>Ranking berdasarkan nilai margin bersih.</p>
+                </div>
+                <span>Top {topMargin.length}</span>
+              </div>
+              <div className="laporan-pdf-bars laporan-pdf-bars-blue">
+                {topMargin.map((it) => (
+                  <div className="laporan-pdf-bar-row" key={it.nama}>
+                    <span>{it.nama}</span>
+                    <div>
+                      <i style={{ width: `${Math.max(8, (it.margin / maxMargin) * 100)}%` }} />
+                    </div>
+                    <PrintBarValue value={formatRupiah(it.margin)} percent={`${printPercent(it.margin, totalMargin)} margin`} />
+                  </div>
+                ))}
+              </div>
+            </section>
+
+            <section className="laporan-pdf-section">
+              <div className="laporan-pdf-section-head">
+                <div>
+                  <h2>Detail Margin Produk</h2>
+                  <p>Omset, margin, dan persentase keuntungan per barang.</p>
+                </div>
+              </div>
+              <table className="laporan-pdf-table">
+                <thead>
+                  <tr>
+                    <th>Barang</th>
+                    <th>Qty</th>
+                    <th>Omset</th>
+                    <th>Margin</th>
+                    <th>Rasio</th>
+                    <th>Kontribusi</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {topMargin.map((it) => (
+                    <tr key={it.nama}>
+                      <td>{it.nama}</td>
+                      <td>{it.qtyTerjual} unit</td>
+                      <td>{formatRupiah(it.omset)}</td>
+                      <td className="laporan-pdf-positive">{formatRupiah(it.margin)}</td>
+                      <td>{marginPercent(it.margin, it.omset)}</td>
+                      <td>{printPercent(it.margin, totalMargin)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </section>
+
+            <section className="laporan-pdf-section laporan-pdf-compact">
+              <div className="laporan-pdf-section-head">
+                <div>
+                  <h2>Produk Dengan Rasio Margin Rendah</h2>
+                  <p>Daftar ini membantu menentukan penyesuaian harga atau prioritas pembelian.</p>
+                </div>
+              </div>
+              <table className="laporan-pdf-table">
+                <tbody>
+                  {lowMargin.map((it) => (
+                    <tr key={it.nama}>
+                      <td>{it.nama}</td>
+                      <td>{formatRupiah(it.margin)}</td>
+                      <td>{marginPercent(it.margin, it.omset)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </section>
+            <footer className="laporan-pdf-footer">
+              <span>Halaman 3 - Analisis Margin</span>
+              <span>{marginRate}% rasio margin total</span>
+            </footer>
+          </PrintPage>
+        ) : null}
+
+        <PrintPage title="Piutang & Aging" subtitle="Kontrol risiko tagihan berdasarkan umur piutang dan status pembayaran." badge="Receivable">
+          <section className="laporan-pdf-grid">
+            <PrintMetric label="0-30 Hari" value={formatRupiah(agingAnalysis.summary.currentBucket)} hint={`${printPercent(agingAnalysis.summary.currentBucket, totalAging)} dari outstanding`} />
+            <PrintMetric label="31-60 Hari" value={formatRupiah(agingAnalysis.summary.midBucket)} hint={`${printPercent(agingAnalysis.summary.midBucket, totalAging)} dari outstanding`} />
+            <PrintMetric label="61-90 Hari" value={formatRupiah(agingAnalysis.summary.lateBucket)} hint={`${printPercent(agingAnalysis.summary.lateBucket, totalAging)} dari outstanding`} />
+            <PrintMetric label=">90 Hari" value={formatRupiah(agingAnalysis.summary.criticalBucket)} hint={`${printPercent(agingAnalysis.summary.criticalBucket, totalAging)} dari outstanding`} />
+          </section>
+
+          <div className="laporan-pdf-columns">
+            <section className="laporan-pdf-section">
+              <div className="laporan-pdf-section-head">
+                <div>
+                  <h2>Komposisi Umur Piutang</h2>
+                  <p>Outstanding per kelompok umur.</p>
+                </div>
+              </div>
+              <div className="laporan-pdf-aging">
+                <div><span>0-30 Hari</span><strong>{formatRupiah(agingAnalysis.summary.currentBucket)} ({printPercent(agingAnalysis.summary.currentBucket, totalAging)})</strong></div>
+                <div><span>31-60 Hari</span><strong>{formatRupiah(agingAnalysis.summary.midBucket)} ({printPercent(agingAnalysis.summary.midBucket, totalAging)})</strong></div>
+                <div><span>61-90 Hari</span><strong>{formatRupiah(agingAnalysis.summary.lateBucket)} ({printPercent(agingAnalysis.summary.lateBucket, totalAging)})</strong></div>
+                <div><span>&gt;90 Hari</span><strong>{formatRupiah(agingAnalysis.summary.criticalBucket)} ({printPercent(agingAnalysis.summary.criticalBucket, totalAging)})</strong></div>
+              </div>
+            </section>
+
+            <section className="laporan-pdf-section">
+              <div className="laporan-pdf-section-head">
+                <div>
+                  <h2>Status Pembayaran</h2>
+                  <p>Rasio invoice lunas dan belum lunas.</p>
+                </div>
+              </div>
+              <div className="laporan-pdf-aging">
+                <div><span>Invoice Lunas</span><strong>{paidCount} invoice ({printPercent(paidCount, piutangData.length)})</strong></div>
+                <div><span>Belum Lunas</span><strong>{unpaidCount} invoice ({printPercent(unpaidCount, piutangData.length)})</strong></div>
+                <div><span>Total Outstanding</span><strong>{formatRupiah(totalPiutang)}</strong></div>
+                <div><span>Rata-rata Invoice</span><strong>{formatRupiah(averageInvoice)}</strong></div>
+              </div>
+            </section>
+          </div>
+
+          <section className="laporan-pdf-section">
+            <div className="laporan-pdf-section-head">
+              <div>
+                <h2>Daftar Prioritas Penagihan</h2>
+                <p>Invoice belum lunas diurutkan dari nominal outstanding terbesar.</p>
+              </div>
+            </div>
+            <table className="laporan-pdf-table">
+              <thead>
+                <tr>
+                  <th>Invoice</th>
+                  <th>Client</th>
+                  <th>Umur</th>
+                  <th>Sisa</th>
+                  <th>%</th>
+                </tr>
+              </thead>
+              <tbody>
+                {outstanding.map((p) => (
+                  <tr key={p.noInvoice}>
+                    <td>{p.noInvoice}</td>
+                    <td>{p.client}</td>
+                    <td>{p.ageDays} hari</td>
+                    <td>{formatRupiah(p.sisa)}</td>
+                    <td>{printPercent(p.sisa, totalPiutang)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </section>
+          <footer className="laporan-pdf-footer">
+            <span>Halaman {isGudang ? 4 : 3} - Analisis Piutang & Aging</span>
+            <span>{formatRupiah(totalPiutang)} outstanding</span>
+          </footer>
+        </PrintPage>
+
+        <PrintPage title="Stok & Aset" subtitle="Valuasi persediaan, peringatan stok, dan indikator pergerakan barang." badge="Inventory">
+          <section className="laporan-pdf-mini-grid">
+            <PrintInsight label="Item Sehat" value={`${healthyStock} item`} note={`${healthyStockRate} dari seluruh item`} />
+            <PrintInsight label="Stok Minus" value={`${stockMinus} item`} note="Butuh koreksi fisik atau retur" />
+            <PrintInsight label="Slow Moving" value={`${inventoryHealth.slowMoving.length} item`} note={`${slowMovingRate} dari seluruh item`} />
+          </section>
+
+          <section className="laporan-pdf-section">
+            <div className="laporan-pdf-section-head">
+              <div>
+                <h2>Aset Persediaan Terbesar</h2>
+                <p>Nilai aset berdasarkan stok akhir.</p>
+              </div>
+              <span>Top {assetTop.length}</span>
+            </div>
+            <div className="laporan-pdf-bars laporan-pdf-bars-blue">
+              {assetRows.map((it) => (
+                <div className="laporan-pdf-bar-row" key={it.name}>
+                  <span>{it.name}</span>
+                  <div>
+                    <i style={{ width: `${Math.max(8, (it.nilai / maxAsset) * 100)}%` }} />
+                  </div>
+                  <PrintBarValue value={isGudang ? formatRupiah(it.nilai) : "Dibatasi"} percent={`${printPercent(it.nilai, totalAsetValue)} aset`} />
+                </div>
+              ))}
+            </div>
+          </section>
+
+          <div className="laporan-pdf-columns">
+            <section className="laporan-pdf-section">
+              <div className="laporan-pdf-section-head">
+                <div>
+                  <h2>Peringatan Stok</h2>
+                  <p>Barang minus atau di bawah safety stock.</p>
+                </div>
+                <span>{warningStok.length} item</span>
+              </div>
+              <table className="laporan-pdf-table">
+                <thead>
+                  <tr>
+                    <th>SKU</th>
+                    <th>Nama Barang</th>
+                    <th>Stok</th>
+                    <th>Min</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {topWarnings.map((it) => (
+                    <tr key={it.kode}>
+                      <td>{it.kode}</td>
+                      <td>{it.nama}</td>
+                      <td className={it.stokAkhir < 0 ? "laporan-pdf-danger" : ""}>{it.stokAkhir} unit</td>
+                      <td>{it.minStok}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </section>
+
+            <section className="laporan-pdf-section">
+              <div className="laporan-pdf-section-head">
+                <div>
+                  <h2>Barang Lambat Bergerak</h2>
+                  <p>Stok tersedia dengan penjualan rendah atau nihil.</p>
+                </div>
+              </div>
+              <table className="laporan-pdf-table">
+                <thead>
+                  <tr>
+                    <th>Barang</th>
+                    <th>Stok</th>
+                    <th>Terjual</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {slowRows.map((it) => (
+                    <tr key={it.kode}>
+                      <td>{it.nama}</td>
+                      <td>{it.stokAkhir} unit</td>
+                      <td>{it.soldQty} unit</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </section>
+          </div>
+
+          <section className="laporan-pdf-section laporan-pdf-compact">
+            <div className="laporan-pdf-section-head">
+              <div>
+                <h2>Fast Moving</h2>
+                <p>Barang dengan pergerakan terbaik untuk prioritas ketersediaan.</p>
+              </div>
+            </div>
+            <table className="laporan-pdf-table">
+              <thead>
+                <tr>
+                  <th>Barang</th>
+                  <th>Stok</th>
+                  <th>Terjual</th>
+                  <th>Nilai Aset</th>
+                </tr>
+              </thead>
+              <tbody>
+                {(fastRows.length > 0 ? fastRows : inventoryHealth.all.slice(0, 6)).map((it) => (
+                  <tr key={it.kode}>
+                    <td>{it.nama}</td>
+                    <td>{it.stokAkhir} unit</td>
+                    <td>{it.soldQty} unit</td>
+                    <td>{isGudang ? formatRupiah(it.nilaiAset) : "Dibatasi"}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </section>
+          <footer className="laporan-pdf-footer">
+            <span>Halaman {isGudang ? 5 : 4} - Analisis Stok & Aset</span>
+            <span>{isGudang ? formatRupiah(totalAsetValue) : "Aset dibatasi"} valuasi stok</span>
+          </footer>
+        </PrintPage>
+      </article>
+    </div>
+  );
+}
+
+export function LaporanClient({ role, userName, periodeLabel, initialFrom, initialTo, marginData, terlaris, stokData, piutangData }: LaporanClientProps) {
   const [activeTab, setActiveTab] = useState<TabKey>("ringkasan");
   const [mounted, setMounted] = useState(false);
+  const [exporting, setExporting] = useState(false);
   const isGudang = role === "ADMIN_GUDANG";
 
+  const router = useRouter();
+  const pathname = usePathname();
+  const [isFilterPending, startFilterTransition] = useTransition();
+
   useEffect(() => setMounted(true), []);
+
+  // ===== Filter periode (server-side via query URL) =====
+  // Data analitik diagregasi di server, jadi perubahan periode mendorong
+  // parameter ?from&to ke URL lalu server memuat ulang data sesuai rentang.
+  const handlePeriodChange = (range: ResolvedPeriodRange) => {
+    const params = new URLSearchParams();
+    if (range.from) params.set("from", range.from);
+    if (range.to) params.set("to", range.to);
+    if (range.label) params.set("label", range.label);
+    const qs = params.toString();
+    startFilterTransition(() => {
+      router.replace(qs ? `${pathname}?${qs}` : pathname, { scroll: false });
+    });
+  };
+
+  // ===== Export Excel (mengikuti data asli halaman + periode aktif) =====
+  const handleExportExcel = async () => {
+    if (exporting) return;
+    setExporting(true);
+    try {
+      await exportAnalyticExcel({ role, userName, period: periodeLabel, marginData, terlaris, stokData, piutangData });
+      toast.success("Export Excel berhasil");
+    } catch (err) {
+      console.error("Export Excel gagal:", err);
+      toast.error("Export Excel gagal, silakan coba lagi");
+    } finally {
+      setExporting(false);
+    }
+  };
+
+  const handlePrintPdf = () => {
+    printArea({ className: "print-laporan-a4" });
+  };
 
   // ===== Summary totals =====
   const totalOmset = useMemo(() => marginData.reduce((acc, r) => acc + r.omset, 0), [marginData]);
@@ -217,16 +860,16 @@ export function LaporanClient({ role, marginData, terlaris, stokData, piutangDat
 
   // ===== Chart datasets =====
   const omsetTop = useMemo(
-    () => [...marginData].sort((a, b) => b.omset - a.omset).slice(0, 10).map((r) => ({ nama: shortName(r.nama), omset: r.omset, margin: r.margin, qty: r.qtyTerjual })),
+    () => [...marginData].sort((a, b) => b.omset - a.omset).slice(0, 10).map((r) => ({ nama: r.nama, omset: r.omset, margin: r.margin, qty: r.qtyTerjual })),
     [marginData]
   );
-  const terlarisChart = useMemo(() => terlaris.slice(0, 10).map((t) => ({ nama: shortName(t.nama), omset: t.omset, qty: t.qtyTerjual })), [terlaris]);
+  const terlarisChart = useMemo(() => terlaris.slice(0, 10).map((t) => ({ nama: t.nama, omset: t.omset, qty: t.qtyTerjual })), [terlaris]);
   const qtyTop = useMemo(
-    () => [...marginData].sort((a, b) => b.qtyTerjual - a.qtyTerjual).slice(0, 10).map((r) => ({ nama: shortName(r.nama), qty: r.qtyTerjual })),
+    () => [...marginData].sort((a, b) => b.qtyTerjual - a.qtyTerjual).slice(0, 10).map((r) => ({ nama: r.nama, qty: r.qtyTerjual })),
     [marginData]
   );
   const assetTop = useMemo(
-    () => [...stokData].filter((s) => s.nilaiAset > 0).sort((a, b) => b.nilaiAset - a.nilaiAset).slice(0, 10).map((s) => ({ name: shortName(s.nama), nilai: s.nilaiAset })),
+    () => [...stokData].filter((s) => s.nilaiAset > 0).sort((a, b) => b.nilaiAset - a.nilaiAset).slice(0, 10).map((s) => ({ name: s.nama, nilai: s.nilaiAset })),
     [stokData]
   );
   const agingPie = useMemo(() => {
@@ -297,13 +940,55 @@ export function LaporanClient({ role, marginData, terlaris, stokData, piutangDat
 
         <div className="flex gap-2">
           <button
-            onClick={() => window.print()}
+            onClick={handleExportExcel}
+            disabled={exporting}
+            className="inline-flex items-center gap-1.5 rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-1.5 text-xs font-semibold text-emerald-700 shadow-xs transition hover:bg-emerald-100 cursor-pointer disabled:cursor-not-allowed disabled:opacity-60"
+          >
+            <Download size={14} /> {exporting ? "Mengekspor..." : "Export Excel"}
+          </button>
+          <button
+            onClick={handlePrintPdf}
             className="inline-flex items-center gap-1.5 rounded-lg border border-border bg-white px-3 py-1.5 text-xs font-semibold text-slate-600 shadow-xs transition hover:bg-slate-50 cursor-pointer"
           >
-            <Printer size={14} /> Cetak PDF
+            <Printer size={14} /> Export PDF A4
           </button>
         </div>
       </div>
+
+      {/* ===== Filter periode (server-side) ===== */}
+      <div className="flex flex-col gap-2 rounded-xl border border-border bg-card p-3 shadow-[var(--shadow-card)] sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex items-center gap-2">
+          <span className="text-xs font-bold uppercase tracking-wider text-muted">Periode</span>
+          <PeriodFilter
+            onChange={handlePeriodChange}
+            defaultPreset={initialFrom || initialTo ? "custom" : "all"}
+            defaultFrom={initialFrom}
+            defaultTo={initialTo}
+            align="left"
+          />
+          {isFilterPending && <span className="text-[11px] font-medium text-muted animate-pulse">Memuat…</span>}
+        </div>
+        <p className="text-[11px] text-muted">
+          Stok &amp; Aset menampilkan posisi terkini (tidak mengikuti periode).
+        </p>
+      </div>
+
+      <LaporanPrintDocument
+        role={role}
+        userName={userName}
+        totalOmset={totalOmset}
+        totalMargin={totalMargin}
+        totalPiutang={totalPiutang}
+        totalAsetValue={totalAsetValue}
+        terlaris={terlaris}
+        warningStok={warningStok}
+        agingAnalysis={agingAnalysis}
+        assetTop={assetTop}
+        marginData={marginData}
+        stokData={stokData}
+        piutangData={piutangData}
+        inventoryHealth={inventoryHealth}
+      />
 
       {/* ===== KPI cards ===== */}
       <section className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
@@ -327,7 +1012,7 @@ export function LaporanClient({ role, marginData, terlaris, stokData, piutangDat
             ) : terlarisChart.length === 0 ? (
               <EmptyChart text="Belum ada data penjualan." />
             ) : (
-              <ResponsiveContainer width="100%" height={320}>
+              <ResponsiveContainer width="100%" height={360}>
                 <BarChart data={terlarisChart} layout="vertical" margin={{ left: 8, right: 48 }}>
                   <defs>
                     <linearGradient id="omsetBar" x1="0" y1="0" x2="1" y2="0">
@@ -337,7 +1022,7 @@ export function LaporanClient({ role, marginData, terlaris, stokData, piutangDat
                   </defs>
                   <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" horizontal={false} />
                   <XAxis type="number" tick={{ fontSize: 10, fill: "#94a3b8" }} tickFormatter={fmtAxis} />
-                  <YAxis type="category" dataKey="nama" width={130} tick={{ fontSize: 10, fill: "#64748b" }} />
+                  <YAxis type="category" dataKey="nama" width={250} tick={{ fontSize: 10, fill: "#64748b" }} />
                   <Tooltip {...TOOLTIP_STYLE} cursor={{ fill: "rgba(5,150,105,0.05)" }} formatter={(v: unknown) => [formatRupiah(v as number), "Omset"]} />
                   <Bar dataKey="omset" fill="url(#omsetBar)" radius={[0, 6, 6, 0]} barSize={18}>
                     <LabelList dataKey="omset" position="right" formatter={fmtAxis} fontSize={10} fill="#64748b" />
@@ -440,7 +1125,7 @@ export function LaporanClient({ role, marginData, terlaris, stokData, piutangDat
                   </defs>
                   <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" horizontal={false} />
                   <XAxis type="number" allowDecimals={false} tick={{ fontSize: 10, fill: "#94a3b8" }} />
-                  <YAxis type="category" dataKey="nama" width={130} tick={{ fontSize: 10, fill: "#64748b" }} />
+                  <YAxis type="category" dataKey="nama" width={250} tick={{ fontSize: 10, fill: "#64748b" }} />
                   <Tooltip {...TOOLTIP_STYLE} cursor={{ fill: "rgba(16,185,129,0.05)" }} formatter={(v: unknown) => [`${v as number} unit`, "Qty Terjual"]} />
                   <Bar dataKey="qty" fill="url(#qtyBar)" radius={[0, 6, 6, 0]} barSize={18}>
                     <LabelList dataKey="qty" position="right" formatter={(v: unknown) => `${v as number}`} fontSize={10} fill="#64748b" />
@@ -491,7 +1176,7 @@ export function LaporanClient({ role, marginData, terlaris, stokData, piutangDat
                 <BarChart data={omsetTop} layout="vertical" margin={{ left: 8, right: 16 }} barGap={2}>
                   <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" horizontal={false} />
                   <XAxis type="number" tick={{ fontSize: 10, fill: "#94a3b8" }} tickFormatter={fmtAxis} />
-                  <YAxis type="category" dataKey="nama" width={130} tick={{ fontSize: 10, fill: "#64748b" }} />
+                  <YAxis type="category" dataKey="nama" width={250} tick={{ fontSize: 10, fill: "#64748b" }} />
                   <Tooltip {...TOOLTIP_STYLE} cursor={{ fill: "rgba(59,130,246,0.05)" }} formatter={(v: unknown, n: unknown) => [formatRupiah(v as number), n as string]} />
                   <Legend verticalAlign="top" height={30} iconType="circle" wrapperStyle={{ fontSize: 11 }} />
                   <Bar name="Omset" dataKey="omset" fill="#cbd5e1" radius={[0, 5, 5, 0]} barSize={10} />
@@ -661,7 +1346,7 @@ export function LaporanClient({ role, marginData, terlaris, stokData, piutangDat
                     </defs>
                     <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" horizontal={false} />
                     <XAxis type="number" tick={{ fontSize: 10, fill: "#94a3b8" }} tickFormatter={fmtAxis} />
-                    <YAxis type="category" dataKey="name" width={130} tick={{ fontSize: 10, fill: "#64748b" }} />
+                    <YAxis type="category" dataKey="name" width={260} tick={{ fontSize: 10, fill: "#64748b" }} />
                     <Tooltip {...TOOLTIP_STYLE} cursor={{ fill: "rgba(37,99,235,0.05)" }} formatter={(v: unknown) => [formatRupiah(v as number), "Nilai Aset"]} />
                     <Bar dataKey="nilai" fill="url(#asetBar)" radius={[0, 6, 6, 0]} barSize={18}>
                       <LabelList dataKey="nilai" position="right" formatter={fmtAxis} fontSize={10} fill="#64748b" />

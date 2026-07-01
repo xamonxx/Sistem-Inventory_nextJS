@@ -730,53 +730,53 @@ export function BarangClient({
               <div className="so-sheet print-area mx-auto w-[800px] max-w-full origin-top overflow-hidden rounded-xl border border-border bg-white p-8 shadow-[0_4px_24px_-8px_rgba(15,23,42,0.18)]">
                 <div className="space-y-6 text-slate-900 font-sans">
                   {/* Header */}
-                  <div className="border-b-2 border-slate-900 pb-4">
+                  <div className="so-header border-b-2 pb-4">
                     <h1 className="text-center text-xl font-bold uppercase tracking-wide">Lembar Stock Opname Gudang</h1>
-                    <p className="text-center text-xs text-slate-500 mt-1">PUTRA CORPORATION HARDWARE</p>
-                    <div className="mt-4 grid grid-cols-2 text-xs text-slate-600">
+                    <p className="text-center text-xs mt-1">PUTRA CORPORATION HARDWARE</p>
+                    <div className="mt-4 grid grid-cols-2 text-xs">
                       <div>
-                        <p>Tanggal Cetak: <span className="font-semibold text-slate-800">{formatTanggal(new Date().toISOString())}</span></p>
-                        <p>Total Item: <span className="font-semibold text-slate-800">{filteredItems.length} barang</span></p>
+                        <p>Tanggal Cetak: <span className="font-semibold">{formatTanggal(new Date().toISOString())}</span></p>
+                        <p>Total Item: <span className="font-semibold">{filteredItems.length} barang</span></p>
                       </div>
                       <div className="text-right">
-                        <p>Kondisi Stok: <span className="font-semibold text-slate-800">{stockCondition === "LOW" ? "Stok Kritis" : stockCondition === "NEGATIVE" ? "Stok Minus" : "Semua"}</span></p>
-                        <p>Status Barang: <span className="font-semibold text-slate-800">{statusFilter === "ACTIVE" ? "Aktif" : statusFilter === "INACTIVE" ? "Diarsipkan" : "Semua"}</span></p>
+                        <p>Kondisi Stok: <span className="font-semibold">{stockCondition === "LOW" ? "Stok Kritis" : stockCondition === "NEGATIVE" ? "Stok Minus" : "Semua"}</span></p>
+                        <p>Status Barang: <span className="font-semibold">{statusFilter === "ACTIVE" ? "Aktif" : statusFilter === "INACTIVE" ? "Diarsipkan" : "Semua"}</span></p>
                       </div>
                     </div>
                   </div>
 
                   {/* Table */}
-                  <table className="w-full text-[11px] border-collapse border border-slate-400">
+                  <table className="so-table w-full text-[11px] border-collapse">
                     <thead>
-                      <tr className="bg-slate-100">
-                        <th className="border border-slate-400 p-1.5 text-center w-8">No</th>
-                        <th className="border border-slate-400 p-1.5 text-left w-24">Kode SKU</th>
-                        <th className="border border-slate-400 p-1.5 text-left">Nama Barang</th>
-                        {showSystemStock && <th className="border border-slate-400 p-1.5 text-right w-20">Stok Sistem</th>}
-                        <th className="border border-slate-400 p-1.5 text-center w-24">Stok Fisik</th>
-                        <th className="border border-slate-400 p-1.5 text-center w-12">Sesuai</th>
-                        <th className="border border-slate-400 p-1.5 text-center w-12">Selisih</th>
-                        <th className="border border-slate-400 p-1.5 text-left w-32">Catatan</th>
+                      <tr className="so-table-head">
+                        <th className="text-center w-8">No</th>
+                        <th className="text-left w-24">Kode SKU</th>
+                        <th className="text-left">Nama Barang</th>
+                        {showSystemStock && <th className="text-right w-20">Stok Sistem</th>}
+                        <th className="text-center w-24">Stok Fisik</th>
+                        <th className="text-center w-12">Sesuai</th>
+                        <th className="text-center w-12">Selisih</th>
+                        <th className="text-left w-32">Catatan</th>
                       </tr>
                     </thead>
                     <tbody>
                       {filteredItems.map((it, idx) => (
-                        <tr key={it.id} className="hover:bg-slate-50">
-                          <td className="border border-slate-400 p-1.5 text-center font-mono">{idx + 1}</td>
-                          <td className="border border-slate-400 p-1.5 font-mono font-semibold">{it.kode}</td>
-                          <td className="border border-slate-400 p-1.5 font-medium">{it.nama}</td>
-                          {showSystemStock && <td className="border border-slate-400 p-1.5 text-right font-mono font-bold text-slate-700">{it.stok} unit</td>}
-                          <td className="border border-slate-400 p-1.5 text-center">
-                            <span className="inline-block w-16 border-b border-dashed border-slate-500 h-4">&nbsp;</span>
+                        <tr key={it.id}>
+                          <td className="text-center font-mono">{idx + 1}</td>
+                          <td className="font-mono font-semibold">{it.kode}</td>
+                          <td className="font-medium">{it.nama}</td>
+                          {showSystemStock && <td className="text-right font-mono font-bold">{it.stok} unit</td>}
+                          <td className="text-center">
+                            <span className="so-write-line">&nbsp;</span>
                           </td>
-                          <td className="border border-slate-400 p-1.5 text-center">
-                            <span className="inline-flex h-3.5 w-3.5 items-center justify-center rounded border border-slate-400 bg-white"></span>
+                          <td className="text-center">
+                            <span className="so-check"></span>
                           </td>
-                          <td className="border border-slate-400 p-1.5 text-center">
-                            <span className="inline-flex h-3.5 w-3.5 items-center justify-center rounded border border-slate-400 bg-white"></span>
+                          <td className="text-center">
+                            <span className="so-check"></span>
                           </td>
-                          <td className="border border-slate-400 p-1.5">
-                            <span className="inline-block w-full border-b border-dotted border-slate-300 h-4">&nbsp;</span>
+                          <td>
+                            <span className="so-note-line">&nbsp;</span>
                           </td>
                         </tr>
                       ))}

@@ -6,25 +6,27 @@
    ============================================================ */
 
 :root {
-  --background: #f8f9fb;
-  --foreground: #0f172a;
-  --card: #ffffff;
-  --border: #e2e8f0;
-  --line-strong: #cbd5e1;
+  --background: #ffffff;
+  --foreground: #10201e;
+  --card: #fbfdfc;
+  --border: #d7e2df;
+  --line-strong: #b7c9c4;
 
-  --primary: #d97706;        /* warm amber 600 */
-  --primary-strong: #b45309; /* amber 700 */
-  --steel: #64748b;          /* slate gray */
+  --primary: #0f766e;
+  --primary-strong: #0b5f59;
+  --primary-soft: #d8f3ee;
+  --accent: #f59e0b;
+  --steel: #60736f;
 
-  --success: #10b981;
+  --success: #16a34a;
   --warning: #f59e0b;
   --danger: #ef4444;
-  --info: #3b82f6;
-  --muted: #94a3b8;          /* Muted color #94A3B8 */
+  --info: #2563eb;
+  --muted: #7d928e;
 
-  --shadow-card: 0 4px 20px rgba(0, 0, 0, 0.06);
-  --shadow-drawer: 0 10px 40px rgba(0, 0, 0, 0.12);
-  --shadow-modal: 0 20px 60px rgba(0, 0, 0, 0.18);
+  --shadow-card: 0 18px 45px rgba(18, 38, 34, 0.07);
+  --shadow-drawer: 0 22px 60px rgba(5, 20, 17, 0.18);
+  --shadow-modal: 0 28px 70px rgba(5, 20, 17, 0.22);
 }
 
 @theme inline {
@@ -34,6 +36,8 @@
   --color-border: var(--border);
   --color-line-strong: var(--line-strong);
   --color-primary: var(--primary);
+  --color-primary-soft: var(--primary-soft);
+  --color-accent: var(--accent);
   --color-steel: var(--steel);
   --color-success: var(--success);
   --color-warning: var(--warning);
@@ -58,7 +62,13 @@
 
 html,
 body {
-  background-color: var(--background);
+  background-color: #ffffff;
+  background-image:
+    linear-gradient(to right, rgba(71, 85, 105, 0.15) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(71, 85, 105, 0.15) 1px, transparent 1px),
+    radial-gradient(circle at 50% 60%, rgba(236, 72, 153, 0.15) 0%, rgba(168, 85, 247, 0.05) 40%, transparent 70%);
+  background-size: 40px 40px, 40px 40px, 100% 100%;
+  background-attachment: fixed;
   color: var(--foreground);
   font-family: var(--font-sans);
   -webkit-font-smoothing: antialiased;
@@ -99,6 +109,29 @@ h3 {
   color: #0f172a;
 }
 
+h1 {
+  font-size: 30px;
+  letter-spacing: 0;
+  color: var(--foreground);
+}
+
+h2 {
+  font-size: 24px;
+  letter-spacing: 0;
+  color: var(--foreground);
+}
+
+h3,
+.font-display {
+  letter-spacing: 0;
+}
+
+@media (min-width: 768px) {
+  h1 {
+    font-size: 40px;
+  }
+}
+
 /* Figures / codes: monospaced, tabular */
 .tnum,
 .font-mono {
@@ -123,12 +156,12 @@ h3 {
   box-shadow: var(--shadow-card);
   background-color: var(--card);
   border: 1px solid var(--border);
-  border-radius: 18px;
+  border-radius: 8px;
   transition: transform 0.2s ease, box-shadow 0.2s ease;
 }
 .tick-card:hover {
   transform: translateY(-2px);
-  box-shadow: 0 6px 24px rgba(0, 0, 0, 0.08);
+  box-shadow: 0 24px 55px rgba(18, 38, 34, 0.1);
 }
 
 /* Staggered entrance */
@@ -158,7 +191,7 @@ h3 {
 }
 
 ::selection {
-  background: rgba(211, 90, 31, 0.15);
+  background: rgba(15, 118, 110, 0.16);
   color: var(--primary-strong);
 }
 
@@ -193,6 +226,466 @@ h3 {
   print-color-adjust: exact;
 }
 
+.so-sheet {
+  color: #10201e;
+}
+
+.so-header {
+  border-color: #10201e;
+  background: transparent;
+  color: #60736f;
+}
+
+.so-header h1 {
+  color: #10201e;
+}
+
+.so-header > p {
+  color: #0f766e;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+}
+
+.so-header span {
+  color: #10201e;
+}
+
+.so-table {
+  table-layout: fixed;
+  border: 1px solid #7fa09a;
+}
+
+.so-table th,
+.so-table td {
+  border: 1px solid #7fa09a;
+  padding: 6px;
+  vertical-align: middle;
+}
+
+.so-table th {
+  background: #e8f3f0;
+  color: #10201e;
+  font-weight: 800;
+}
+
+.so-table tbody tr:nth-child(even) {
+  background: #fbfdfc;
+}
+
+.so-write-line,
+.so-note-line {
+  display: block;
+  width: 100%;
+  height: 16px;
+  border-bottom: 1px dashed #7fa09a;
+}
+
+.so-check {
+  display: inline-flex;
+  width: 14px;
+  height: 14px;
+  border: 1px solid #7fa09a;
+  border-radius: 4px;
+  background: #ffffff;
+}
+
+.laporan-print-source {
+  position: fixed;
+  left: -10000px;
+  top: 0;
+  width: 210mm;
+  pointer-events: none;
+  opacity: 0;
+}
+
+.laporan-pdf {
+  width: 210mm;
+  background: #ffffff;
+  color: #0f172a;
+  font-family: var(--font-sans);
+  padding: 0;
+  -webkit-print-color-adjust: exact;
+  print-color-adjust: exact;
+}
+
+.laporan-pdf-page {
+  width: 210mm;
+  box-sizing: border-box;
+  padding: 8mm 9mm;
+  break-after: page;
+  page-break-after: always;
+  display: block;
+  overflow: visible;
+}
+
+.laporan-pdf-page:last-child {
+  break-after: auto;
+  page-break-after: auto;
+}
+
+.laporan-pdf-page-title {
+  display: flex;
+  justify-content: space-between;
+  gap: 8mm;
+  align-items: flex-start;
+  border-bottom: 1px solid #d7e2df;
+  padding-bottom: 3mm;
+  margin-bottom: 4mm;
+}
+
+.laporan-pdf-page-title p,
+.laporan-pdf-page-title span {
+  margin: 0;
+  color: #64748b;
+  font-size: 8px;
+}
+
+.laporan-pdf-page-title p {
+  color: #0f766e;
+  font-weight: 900;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.laporan-pdf-page-title h2 {
+  margin: 1mm 0;
+  color: #0f172a;
+  font-size: 22px;
+  line-height: 1.08;
+}
+
+.laporan-pdf-page-title strong {
+  border-radius: 999px;
+  background: #ecfdf5;
+  color: #0f766e;
+  padding: 2mm 4mm;
+  font-size: 8px;
+  text-transform: uppercase;
+}
+
+.laporan-pdf-hero {
+  display: flex;
+  justify-content: space-between;
+  gap: 10mm;
+  border-radius: 5mm;
+  background: linear-gradient(135deg, #06251f 0%, #0f766e 100%);
+  color: #ffffff;
+  padding: 6mm;
+  margin-bottom: 4mm;
+}
+
+.laporan-pdf-eyebrow {
+  margin: 0 0 2mm;
+  font-size: 8px;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+}
+
+.laporan-pdf-hero h1 {
+  margin: 0;
+  color: #ffffff;
+  font-size: 24px;
+  line-height: 1.08;
+}
+
+.laporan-pdf-hero p {
+  max-width: 118mm;
+  margin: 2mm 0 0;
+  color: rgba(255, 255, 255, 0.78);
+  font-size: 10px;
+  line-height: 1.45;
+}
+
+.laporan-pdf-meta {
+  min-width: 42mm;
+  align-self: stretch;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 4mm;
+  padding: 4mm;
+  text-align: right;
+}
+
+.laporan-pdf-meta span,
+.laporan-pdf-meta strong {
+  display: block;
+}
+
+.laporan-pdf-meta span {
+  color: rgba(255, 255, 255, 0.72);
+  font-size: 8px;
+}
+
+.laporan-pdf-meta strong {
+  margin: 1mm 0;
+  color: #ffffff;
+  font-size: 11px;
+}
+
+.laporan-pdf-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 2.5mm;
+  margin-bottom: 3.5mm;
+}
+
+.laporan-pdf-mini-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 2.5mm;
+  margin-bottom: 3.5mm;
+}
+
+.laporan-pdf-metric,
+.laporan-pdf-section,
+.laporan-pdf-insight {
+  border: 1px solid #d7e2df;
+  background: #fbfdfc;
+  box-shadow: 0 8px 22px rgba(18, 38, 34, 0.06);
+}
+
+.laporan-pdf-metric,
+.laporan-pdf-insight {
+  border-radius: 4mm;
+  padding: 3mm;
+}
+
+.laporan-pdf-metric p,
+.laporan-pdf-metric span,
+.laporan-pdf-insight p,
+.laporan-pdf-insight span {
+  margin: 0;
+  color: #64748b;
+  font-size: 8px;
+}
+
+.laporan-pdf-metric p,
+.laporan-pdf-insight p {
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.laporan-pdf-metric strong,
+.laporan-pdf-insight strong {
+  display: block;
+  margin: 2mm 0 1mm;
+  color: #0f172a;
+  font-size: 13px;
+  line-height: 1.1;
+}
+
+.laporan-pdf-section {
+  border-radius: 4mm;
+  padding: 3.5mm;
+  margin-bottom: 3mm;
+  break-inside: avoid;
+}
+
+.laporan-pdf-section.laporan-pdf-compact {
+  margin-bottom: 0;
+}
+
+.laporan-pdf-note {
+  border: 1px solid #bfe6da;
+  border-radius: 4mm;
+  background: #f0fdfa;
+  padding: 3mm 4mm;
+  margin-bottom: 3mm;
+  break-inside: avoid;
+}
+
+.laporan-pdf-note h2 {
+  margin: 0 0 2mm;
+  color: #0f766e;
+  font-size: 11px;
+}
+
+.laporan-pdf-note ul {
+  margin: 0;
+  padding-left: 4mm;
+  color: #334155;
+  font-size: 8px;
+  line-height: 1.45;
+}
+
+.laporan-pdf-note li + li {
+  margin-top: 1mm;
+}
+
+.laporan-pdf-section-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 4mm;
+  align-items: flex-start;
+  margin-bottom: 2.5mm;
+}
+
+.laporan-pdf-section h2 {
+  margin: 0;
+  color: #0f172a;
+  font-size: 13px;
+  line-height: 1.2;
+}
+
+.laporan-pdf-section p {
+  margin: 1mm 0 0;
+  color: #64748b;
+  font-size: 8px;
+}
+
+.laporan-pdf-section-head > span {
+  border-radius: 999px;
+  background: #d8f3ee;
+  color: #0f766e;
+  padding: 1.5mm 3mm;
+  font-size: 8px;
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+.laporan-pdf-bars {
+  display: grid;
+  gap: 1.7mm;
+}
+
+.laporan-pdf-bar-row {
+  display: grid;
+  grid-template-columns: 48mm 1fr 28mm;
+  gap: 3mm;
+  align-items: center;
+  font-size: 8px;
+}
+
+.laporan-pdf-bar-row > span {
+  color: #334155;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.laporan-pdf-bar-row > div {
+  height: 4.2mm;
+  overflow: hidden;
+  border-radius: 999px;
+  background: #e8f3f0;
+}
+
+.laporan-pdf-bar-row i {
+  display: block;
+  height: 100%;
+  border-radius: 999px;
+  background: linear-gradient(90deg, #34d399, #0f766e);
+}
+
+.laporan-pdf-bars-blue .laporan-pdf-bar-row i {
+  background: linear-gradient(90deg, #60a5fa, #2563eb);
+}
+
+.laporan-pdf-bars-emerald .laporan-pdf-bar-row i {
+  background: linear-gradient(90deg, #34d399, #059669);
+}
+
+.laporan-pdf-bar-row strong {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 0.3mm;
+  font-size: 8px;
+  line-height: 1.05;
+  text-align: right;
+}
+
+.laporan-pdf-bar-row strong b {
+  color: #0f172a;
+  font-size: 8px;
+}
+
+.laporan-pdf-bar-row strong em {
+  color: #0f766e;
+  font-size: 7px;
+  font-style: normal;
+  font-weight: 800;
+}
+
+.laporan-pdf-columns {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 4mm;
+}
+
+.laporan-pdf-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 7.5px;
+}
+
+.laporan-pdf-table th {
+  background: #f4f8f6;
+  color: #60736f;
+  font-size: 7px;
+  font-weight: 800;
+  text-align: left;
+  text-transform: uppercase;
+}
+
+.laporan-pdf-table th,
+.laporan-pdf-table td {
+  border-bottom: 1px solid #e5eeeb;
+  padding: 1.55mm 1.35mm;
+  vertical-align: middle;
+}
+
+.laporan-pdf-table td:last-child,
+.laporan-pdf-table th:last-child {
+  text-align: right;
+}
+
+.laporan-pdf-positive {
+  color: #059669;
+  font-weight: 900;
+}
+
+.laporan-pdf-danger {
+  color: #dc2626;
+  font-weight: 900;
+}
+
+.laporan-pdf-aging {
+  display: grid;
+  gap: 2mm;
+}
+
+.laporan-pdf-aging div {
+  display: flex;
+  justify-content: space-between;
+  border-radius: 3mm;
+  background: #f7faf9;
+  padding: 2mm 2.5mm;
+  font-size: 8px;
+}
+
+.laporan-pdf-aging span {
+  color: #64748b;
+  font-weight: 700;
+}
+
+.laporan-pdf-aging strong {
+  color: #0f172a;
+}
+
+.laporan-pdf-page-break {
+  break-before: page;
+}
+
+.laporan-pdf-footer {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 3mm;
+  border-top: 1px solid #d7e2df;
+  padding-top: 2mm;
+  color: #64748b;
+  font-size: 8px;
+}
+
 @page {
   size: A4 portrait;
   /* margin: 0 -> hilangkan area tempat browser mencetak header/footer otomatis
@@ -211,6 +704,55 @@ h3 {
     overflow: visible !important;
     width: 100% !important;
     min-height: auto !important;
+  }
+
+  body.print-laporan-a4 > :not(.print-clone) {
+    display: none !important;
+  }
+
+  body.print-laporan-a4 .print-clone {
+    display: block !important;
+    position: static !important;
+    inset: auto !important;
+    left: auto !important;
+    top: auto !important;
+    width: 100% !important;
+    max-width: none !important;
+    min-height: auto !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    opacity: 1 !important;
+    pointer-events: auto !important;
+    background: white !important;
+    box-shadow: none !important;
+  }
+
+  body.print-laporan-a4 .laporan-pdf {
+    width: 210mm !important;
+    padding: 0 !important;
+    margin: 0 auto !important;
+    box-shadow: none !important;
+  }
+
+  body.print-laporan-a4 .laporan-pdf-section,
+  body.print-laporan-a4 .laporan-pdf-metric,
+  body.print-laporan-a4 .laporan-pdf-insight,
+  body.print-laporan-a4 .laporan-pdf-note,
+  body.print-laporan-a4 .laporan-pdf-hero {
+    break-inside: avoid;
+  }
+
+  body.print-laporan-a4 .laporan-pdf-page {
+    width: 210mm !important;
+    min-height: auto !important;
+    height: auto !important;
+    padding: 8mm 9mm !important;
+    overflow: visible !important;
+  }
+
+  body.print-laporan-a4 .laporan-pdf-table tr {
+    break-inside: avoid;
+    page-break-inside: avoid;
   }
 
   /* A4 format: hide everything except .print-clone (cloned as body direct child) */
@@ -256,7 +798,31 @@ h3 {
   /* Lembar Stock Opname: padding tepi kertas 12mm (samakan dengan invoice
      yang sudah diatur lewat .inv-body) karena @page margin kini 0. */
   body.print-format-a4 .so-sheet {
+    width: 210mm !important;
+    max-width: none !important;
     padding: 12mm !important;
+    color: #10201e !important;
+  }
+
+  body.print-format-a4 .so-table {
+    width: 100% !important;
+    table-layout: fixed !important;
+    font-size: 8.5px !important;
+  }
+
+  body.print-format-a4 .so-table th,
+  body.print-format-a4 .so-table td {
+    padding: 1.35mm 1.5mm !important;
+  }
+
+  body.print-format-a4 .so-write-line,
+  body.print-format-a4 .so-note-line {
+    height: 4mm !important;
+  }
+
+  body.print-format-a4 .so-check {
+    width: 3.6mm !important;
+    height: 3.6mm !important;
   }
 
   /* Pagination aman untuk tabel panjang (mis. Stock Opname multi-halaman):
@@ -415,7 +981,7 @@ body:has(#search-item) .no-print.fixed.bottom-6.right-6 {
   left: 50%;
   transform: translate(-50%, -8px) scale(0.95);
   padding: 6px 10px;
-  background-color: #0f172a; /* Slate 900 */
+  background-color: #10201e;
   color: #ffffff;
   font-size: 11px;
   font-weight: 600;

@@ -97,7 +97,7 @@ function SidebarContent({
     return (
       <div className="space-y-1">
         <p className={cn(
-          "px-4 pt-4 pb-1 text-[9px] font-bold uppercase tracking-[0.18em] text-slate-500/90 transition-[opacity,max-height,padding] duration-200 truncate origin-left select-none",
+          "px-4 pt-4 pb-1 text-[9px] font-bold uppercase tracking-[0.18em] text-emerald-50/35 transition-[opacity,max-height,padding] duration-200 truncate origin-left select-none",
           isCollapsed ? "lg:opacity-0 lg:max-h-0 lg:pt-0 lg:pb-0 lg:overflow-hidden" : ""
         )}>
           {title}
@@ -113,8 +113,8 @@ function SidebarContent({
               className={cn(
                 "group relative flex items-center rounded-xl px-3 py-2.5 text-xs font-medium transition-[background-color,color] duration-200 select-none w-full overflow-visible",
                 active
-                  ? "bg-[var(--primary)]/10 text-white font-semibold"
-                  : "text-slate-400 hover:bg-white/[0.03] hover:text-slate-200"
+                  ? "bg-white/[0.08] text-white font-semibold"
+                  : "text-emerald-50/55 hover:bg-white/[0.06] hover:text-white"
               )}
             >
               {active && (
@@ -127,8 +127,8 @@ function SidebarContent({
                   className={cn(
                     "transition-colors duration-200",
                     active
-                      ? "text-[var(--primary)]"
-                      : "text-slate-400 group-hover:text-slate-200"
+                      ? "text-[#5eead4]"
+                      : "text-emerald-50/55 group-hover:text-white"
                   )}
                 />
               </div>
@@ -154,7 +154,7 @@ function SidebarContent({
   return (
     <>
       {/* Mobile Top Navbar Header */}
-      <header className="no-print sticky top-0 z-40 flex h-16 w-full items-center justify-between border-b border-border bg-[#0d131f] px-4 text-white lg:hidden">
+      <header className="no-print sticky top-0 z-40 flex h-16 w-full items-center justify-between border-b border-emerald-900/50 bg-[#071713] px-4 text-white lg:hidden">
         <button
           onClick={() => setIsOpen(true)}
           className="flex h-10 w-10 items-center justify-center rounded-xl text-slate-400 hover:bg-slate-800 hover:text-white transition cursor-pointer"
@@ -164,7 +164,7 @@ function SidebarContent({
         <span className="text-[15px] font-black uppercase tracking-tight text-white whitespace-nowrap">
           PUTRA CORPORATION
         </span>
-        <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-[#1c2434] text-xs font-bold text-white uppercase border border-slate-700/60">
+        <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-white/10 text-xs font-bold text-white uppercase border border-white/10">
           {initials}
         </div>
       </header>
@@ -180,8 +180,8 @@ function SidebarContent({
       {/* Sidebar Navigation Panel Drawer */}
       <aside
         className={cn(
-          "no-print bg-[#0a0e17] text-slate-300",
-          "lg:fixed lg:left-0 lg:top-0 lg:bottom-0 lg:flex lg:h-screen lg:shrink-0 lg:flex-col lg:border-r lg:border-slate-800/60 lg:transition-[width] lg:duration-200 lg:ease-in-out lg:z-30",
+          "no-print bg-[#071713] text-emerald-50/80",
+          "lg:fixed lg:left-0 lg:top-0 lg:bottom-0 lg:flex lg:h-screen lg:shrink-0 lg:flex-col lg:border-r lg:border-emerald-950/70 lg:transition-[width] lg:duration-200 lg:ease-in-out lg:z-30",
           isCollapsed ? "lg:w-[80px]" : "lg:w-[280px]",
           "max-lg:fixed max-lg:inset-y-0 max-lg:left-0 max-lg:z-50 max-lg:w-[280px] flex flex-col max-lg:transition-transform max-lg:duration-200 max-lg:ease-in-out",
           isOpen ? "max-lg:translate-x-0" : "max-lg:-translate-x-full"
@@ -190,11 +190,11 @@ function SidebarContent({
       >
         {/* Brand logo & Close button */}
         <div className={cn(
-          "flex items-center h-16 w-full border-b border-slate-800/50 overflow-hidden transition-[padding] duration-200",
+          "flex items-center h-16 w-full border-b border-white/10 overflow-hidden transition-[padding] duration-200",
           isCollapsed ? "lg:px-4 lg:justify-center" : "px-5"
         )}>
           <div className="flex items-center w-full">
-            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-gradient-to-tr from-[var(--primary)] to-amber-500 text-white shadow-[0_0_12px_rgba(211,90,31,0.25)]">
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-gradient-to-tr from-[var(--primary)] to-[#25b7a7] text-white shadow-[0_0_18px_rgba(15,118,110,0.35)]">
               <Boxes size={20} strokeWidth={2.2} />
             </div>
             <div className={cn(
@@ -202,7 +202,7 @@ function SidebarContent({
               isCollapsed ? "lg:opacity-0 lg:max-w-0 lg:ml-0 lg:overflow-hidden lg:invisible" : "opacity-100 max-w-[180px] ml-3"
             )}>
               <p className="font-display text-sm font-black tracking-tight text-white uppercase">PUTRA CORP</p>
-              <div className="text-[8px] font-black uppercase tracking-[0.18em] text-[var(--primary)] bg-[var(--primary)]/10 px-1.5 py-0.5 rounded-[4px] w-max mt-0.5 select-none">
+              <div className="text-[8px] font-black uppercase tracking-[0.18em] text-emerald-100 bg-white/10 px-1.5 py-0.5 rounded-[4px] w-max mt-0.5 select-none">
                 HARDWARE ERP
               </div>
             </div>
@@ -228,14 +228,14 @@ function SidebarContent({
         </nav>
 
         {/* Desktop Collapse Toggle Row */}
-        <div className="hidden lg:block border-t border-slate-800/40 px-4 py-2 overflow-visible">
+        <div className="hidden lg:block border-t border-white/10 px-4 py-2 overflow-visible">
           <button
             onClick={() => {
               const next = !isCollapsed;
               setIsCollapsed(next);
               document.cookie = `si_sidebar_collapsed=${next}; path=/; max-age=${60 * 60 * 24 * 365}; SameSite=Lax`;
             }}
-            className="group relative flex items-center rounded-xl px-3 py-2.5 text-xs font-semibold text-slate-400 transition-[background-color,color] duration-200 hover:bg-white/[0.03] hover:text-slate-200 cursor-pointer w-full overflow-visible"
+            className="group relative flex items-center rounded-xl px-3 py-2.5 text-xs font-semibold text-emerald-50/55 transition-[background-color,color] duration-200 hover:bg-white/[0.06] hover:text-white cursor-pointer w-full overflow-visible"
           >
             <div className="flex items-center justify-center shrink-0 w-5 h-5">
               {isCollapsed ? <ChevronRight size={16} /> : <ChevronLeft size={16} />}
@@ -257,14 +257,14 @@ function SidebarContent({
 
         {/* User profile & Logout Card Container */}
         <div className={cn(
-          "border-t border-slate-800/45 transition-all duration-200",
+          "border-t border-white/10 transition-all duration-200",
           isCollapsed ? "lg:overflow-visible p-2" : "overflow-hidden p-3"
         )}>
           <div className={cn(
             "flex items-center transition-all duration-200 w-full border rounded-xl",
-            isCollapsed ? "justify-center bg-transparent border-transparent p-0" : "bg-[#131a26]/40 border-slate-800/50 p-2.5 gap-3"
+            isCollapsed ? "justify-center bg-transparent border-transparent p-0" : "bg-white/[0.06] border-white/10 p-2.5 gap-3"
           )}>
-            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-[#1c2434] text-xs font-bold text-white uppercase border border-slate-700/60">
+            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-white/10 text-xs font-bold text-white uppercase border border-white/10">
               {initials}
             </div>
             <div className={cn(
@@ -272,7 +272,7 @@ function SidebarContent({
               isCollapsed ? "lg:opacity-0 lg:max-w-0 lg:ml-0 lg:overflow-hidden lg:invisible" : "opacity-100 max-w-[180px] ml-3"
             )}>
               <p className="truncate text-xs font-bold text-white">{nama}</p>
-              <p className="text-[9px] font-bold uppercase tracking-wider text-[var(--primary)] mt-0.5 select-none">
+              <p className="text-[9px] font-bold uppercase tracking-wider text-emerald-100/80 mt-0.5 select-none">
                 {role === "ADMIN_KASIR" ? "KASIR POS" : "GUDANG LOGISTIK"}
               </p>
             </div>
@@ -286,7 +286,7 @@ function SidebarContent({
               "group relative flex items-center rounded-xl text-slate-400 transition-all duration-200 hover:text-rose-400 cursor-pointer w-full overflow-visible border",
               isCollapsed
                 ? "lg:justify-center lg:py-2.5 border-transparent bg-transparent"
-                : "px-3 py-2 bg-[#131a26]/20 border-slate-800/40 hover:bg-rose-500/10 hover:border-rose-500/20 hover:text-rose-450 mt-2 text-xs font-semibold"
+                : "px-3 py-2 bg-white/[0.03] border-white/10 hover:bg-rose-500/10 hover:border-rose-500/20 hover:text-rose-400 mt-2 text-xs font-semibold"
             )}
           >
             <div className="flex items-center justify-center shrink-0 w-5 h-5">

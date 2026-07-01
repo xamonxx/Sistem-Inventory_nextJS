@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
+import { createPortal } from "react-dom";
 import { Button } from "@/components/ui";
 import { AlertTriangle, CheckCircle, Info, X } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -26,6 +27,9 @@ export function ModernDialog({
   cancelText = "Batal",
   variant = "primary",
 }: ModernDialogProps) {
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => setMounted(true), []);
+
   useEffect(() => {
     function handleKeyDown(e: KeyboardEvent) {
       if (e.key === "Escape" && isOpen) {
@@ -36,7 +40,7 @@ export function ModernDialog({
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [isOpen, onClose]);
 
-  if (!isOpen) return null;
+  if (!isOpen || !mounted || typeof document === "undefined") return null;
 
   const icons = {
     primary: <Info size={24} className="text-blue-500" />,
@@ -52,8 +56,10 @@ export function ModernDialog({
     warning: "warning",
   } as const;
 
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+  return createPortal(
+    // zIndex sedikit di atas Drawer (2147483000) supaya dialog konfirmasi yang
+    // dibuka dari dalam drawer tidak tertutup panel drawer.
+    <div className="fixed inset-0 flex items-center justify-center p-4" style={{ zIndex: 2147483002 }}>
       {/* Backdrop overlay */}
       <div
         className="absolute inset-0 bg-slate-900/40 backdrop-blur-xs transition-opacity duration-300 opacity-100"
@@ -97,6 +103,7 @@ export function ModernDialog({
           </Button>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }

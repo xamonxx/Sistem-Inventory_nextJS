@@ -21,7 +21,7 @@ export type NotaData = {
   catatan?: string;
 };
 
-const COMPANY = process.env.NEXT_PUBLIC_COMPANY_NAME ?? "PUTRA CORPORATION HARDWARE";
+const COMPANY = "PUTRA CORPORATION";
 const ADDRESS = process.env.NEXT_PUBLIC_COMPANY_ADDRESS ?? "Jl. Nasional III, Cipatat, Bandung Barat, Jawa Barat (40554)";
 const PHONE = "0822-1234-5678";
 const EMAIL = "info@putracorp.co.id";
@@ -158,16 +158,16 @@ export function Nota({ data }: { data: NotaData }) {
         <div className="inv-body px-9 py-7">
           {/* ============ HEADER ============ */}
           <div className="flex items-start justify-between gap-6">
-            <div className="flex items-start gap-3.5">
-              <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-md bg-[#1E293B] text-base font-extrabold text-white">
+            <div className="flex items-start gap-3">
+              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-md bg-[#1E293B] text-sm font-extrabold text-white">
                 PC
               </div>
               <div className="leading-tight">
-                <h1 className="max-w-[280px] text-[22px] font-bold leading-[1.1] tracking-tight text-[#111827]">
+                <h1 className="max-w-[250px] text-[18px] font-extrabold uppercase leading-[1.05] tracking-[0.025em] text-[#111827]">
                   {COMPANY}
                 </h1>
                 <p className="mt-0.5 text-[9px] font-bold uppercase tracking-[0.08em] text-[#EA580C]">
-                  HARDWARE &amp; BUILDING MATERIALS SUPPLIER
+                  BUILDING MATERIALS SUPPLIER
                 </p>
                 <div className="mt-1.5 space-y-px text-[10px] leading-snug text-[#64748B]">
                   <p>{ADDRESS}</p>

@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { X } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -20,6 +21,11 @@ export function Drawer({
   children,
 }: DrawerProps) {
   const panelRef = useRef<HTMLDivElement>(null);
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   // Close on Escape key press
   useEffect(() => {
@@ -53,17 +59,20 @@ export function Drawer({
     large: "max-w-[900px]",
   };
 
-  return (
+  const drawer = (
     <div
       className={cn(
-        "fixed inset-0 z-50 flex justify-end overflow-hidden transition-opacity duration-300",
+        "fixed inset-0 flex justify-end overflow-hidden transition-opacity duration-300",
         isOpen ? "pointer-events-auto" : "pointer-events-none"
       )}
+      // Sedikit di bawah nilai maksimum agar overlay yang dibuka DARI dalam
+      // drawer (mis. pratinjau cetak, dialog konfirmasi) bisa tampil di atasnya.
+      style={{ zIndex: 2147483000 }}
     >
       {/* Backdrop overlay */}
       <div
         className={cn(
-          "absolute inset-0 bg-slate-900/40 backdrop-blur-xs transition-opacity duration-300",
+          "absolute inset-0 z-0 bg-slate-900/40 backdrop-blur-xs transition-opacity duration-300",
           isOpen ? "opacity-100" : "opacity-0"
         )}
         onClick={onClose}
@@ -73,7 +82,7 @@ export function Drawer({
       <div
         ref={panelRef}
         className={cn(
-          "relative flex h-full w-full flex-col bg-white shadow-[var(--shadow-drawer)] transition-transform duration-300 ease-out border-l border-border",
+          "relative z-10 flex h-full w-full flex-col bg-white shadow-[var(--shadow-drawer)] transition-transform duration-300 ease-out border-l border-border",
           widths[size],
           isOpen ? "translate-x-0" : "translate-x-full"
         )}
@@ -96,4 +105,8 @@ export function Drawer({
       </div>
     </div>
   );
+
+  if (!mounted || typeof document === "undefined") return null;
+
+  return createPortal(drawer, document.body);
 }

@@ -212,7 +212,7 @@ export default async function VerifyInvoicePage({
             </div>
 
             <p className="text-[10px] text-slate-400">
-              PUTRA CORPORATION HARDWARE &mdash; Sistem Verifikasi Invoice Otomatis
+              PUTRA CORPORATION &mdash; Sistem Verifikasi Invoice Otomatis
             </p>
           </div>
         </div>

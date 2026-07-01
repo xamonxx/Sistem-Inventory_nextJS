@@ -2,8 +2,8 @@ import { formatRupiah, formatTanggal } from "@/lib/utils";
 import type { InvoiceRow } from "@/app/(app)/invoice/InvoiceActions";
 
 const COMPANY = {
-  nama: process.env.NEXT_PUBLIC_COMPANY_NAME ?? "PUTRA CORPORATION HARDWARE",
-  tagline: "Hardware & Building Materials Supplier",
+  nama: "PUTRA CORPORATION",
+  tagline: "Building Materials Supplier",
   alamat:
     process.env.NEXT_PUBLIC_COMPANY_ADDRESS ??
     "Jl. Nasional III, Cipatat, Bandung Barat, Jawa Barat (40554)",
@@ -11,6 +11,16 @@ const COMPANY = {
   email: "info@putracorp.co.id",
   website: "www.putracorp.co.id",
 };
+
+// Gambar tanda tangan untuk kolom "Disetujui".
+// Simpan file di: public/ttd/disetujui.png (disarankan PNG latar transparan).
+// Bisa dioverride lewat env NEXT_PUBLIC_SIGNATURE_DISETUJUI.
+const SIGNATURE_DISETUJUI =
+  process.env.NEXT_PUBLIC_SIGNATURE_DISETUJUI ?? "/ttd/disetujui.png";
+
+// Nama penanda tangan pada kolom "Disetujui" (di bawah garis tanda tangan).
+const SIGNATURE_DISETUJUI_NAMA =
+  process.env.NEXT_PUBLIC_SIGNATURE_DISETUJUI_NAMA ?? "Putri Nur Fitriani";
 
 const STATUS: Record<string, { label: string; fg: string; bg: string }> = {
   PAID: { label: "LUNAS", fg: "#166534", bg: "#DCFCE7" },
@@ -74,12 +84,12 @@ export function InvoiceDocument({
       <div className="inv-body px-9 py-7">
         {/* ============ HEADER ============ */}
         <div className="flex items-start justify-between gap-6">
-          <div className="flex items-start gap-3.5">
-            <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-md bg-[#1E293B] text-base font-extrabold text-white">
+          <div className="flex items-start gap-3">
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-md bg-[#1E293B] text-sm font-extrabold text-white">
               PC
             </div>
             <div className="leading-tight">
-              <h1 className="max-w-[280px] text-[22px] font-bold leading-[1.1] tracking-tight text-[#111827]">
+              <h1 className="whitespace-nowrap text-[14px] font-extrabold uppercase leading-[1.1] tracking-[0.02em] text-[#111827]">
                 {COMPANY.nama}
               </h1>
               <p className="mt-0.5 text-[9px] font-bold uppercase tracking-[0.08em] text-[#EA580C]">
@@ -238,12 +248,29 @@ export function InvoiceDocument({
         </div>
 
         {/* ============ SIGNATURES ============ */}
-        <div className="mt-7 grid grid-cols-3 gap-8 text-center text-[10px]">
+        <div className="mt-14 mb-10 grid grid-cols-3 gap-8 text-center text-[10px]">
           {["Dibuat Oleh", "Disetujui", "Penerima"].map((role) => (
             <div key={role}>
               <p className="font-semibold text-[#475569]">{role}</p>
-              <div className="mt-10 border-t border-[#94A3B8]" />
-              <p className="mt-1 text-[8.5px] text-[#94A3B8]">( ........................... )</p>
+              {/* Area tanda tangan: garis + gambar TTD absolut (tidak menggeser
+                  layout, jadi ketiga kolom tetap presisi sejajar). */}
+              <div className="relative mt-16 border-t border-[#94A3B8]">
+                {role === "Disetujui" && (
+                  <img
+                    src={SIGNATURE_DISETUJUI}
+                    alt="Tanda tangan disetujui"
+                    className="pointer-events-none absolute bottom-[4px] left-1/2 h-[56px] w-auto max-w-[90%] -translate-x-1/2 object-contain"
+                    onError={(e) => {
+                      e.currentTarget.style.visibility = "hidden";
+                    }}
+                  />
+                )}
+              </div>
+              {role === "Disetujui" ? (
+                <p className="mt-1 text-[9px] font-semibold text-[#475569]">( {SIGNATURE_DISETUJUI_NAMA} )</p>
+              ) : (
+                <p className="mt-1 text-[8.5px] text-[#94A3B8]">( ........................... )</p>
+              )}
             </div>
           ))}
         </div>

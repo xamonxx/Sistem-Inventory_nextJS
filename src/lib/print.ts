@@ -3,6 +3,30 @@ type PrintOptions = {
   thermal?: boolean;
 };
 
+/**
+ * Mengubah document.title sementara agar nama file PDF saat Save = [noInvoice-namaClient].
+ * Restore otomatis setelah dialog print ditutup via afterprint + focus event.
+ * Menggunakan { once: true } untuk mencegah memory leak event listener menumpuk.
+ */
+export function setPdfTitle(noInvoice: string, namaClient: string, thermal = false): void {
+  const originalTitle = document.title;
+  const safeName = namaClient.replace(/[\\/:*?"<>|]/g, "").trim() || "Konsumen";
+  const suffix = thermal ? "-(THERMAL)" : "";
+  document.title = `${noInvoice}-${safeName}${suffix}`;
+
+  const restore = () => {
+    document.title = originalTitle;
+    // Hapus kedua listener agar tidak double-restore
+    window.removeEventListener("afterprint", restore);
+    window.removeEventListener("focus", restore);
+  };
+
+  // afterprint: terpicu saat dialog print ditutup (semua browser modern)
+  window.addEventListener("afterprint", restore, { once: true });
+  // focus fallback: untuk kasus di mana afterprint tidak terpicu (browser lama)
+  window.addEventListener("focus", restore, { once: true });
+}
+
 export function printArea(options: PrintOptions = {}) {
   const src = document.querySelector<HTMLElement>(".print-area");
   if (!src) return;
@@ -48,9 +72,12 @@ export function printArea(options: PrintOptions = {}) {
   if (bodyClass) document.body.classList.add(bodyClass);
 
   setTimeout(() => {
-    window.print();
-    if (bodyClass) document.body.classList.remove(bodyClass);
-    clone.remove();
-    pageStyle?.remove();
+    try {
+      window.print();
+    } finally {
+      if (bodyClass) document.body.classList.remove(bodyClass);
+      clone.remove();
+      pageStyle?.remove();
+    }
   }, 50);
 }

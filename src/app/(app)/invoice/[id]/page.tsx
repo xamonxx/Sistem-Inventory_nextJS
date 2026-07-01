@@ -55,7 +55,7 @@ export default async function InvoiceDetailPage({ params }: { params: Promise<{ 
 
   return (
     <div className="mx-auto max-w-md space-y-4">
-      <PrintBar backHref="/invoice" />
+      <PrintBar backHref="/invoice" noInvoice={inv.noInvoice} namaClient={inv.namaClient} />
       <div className="print-area rounded-xl border border-border bg-white shadow-sm">
         <Nota
           data={{

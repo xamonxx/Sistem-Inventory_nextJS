@@ -20,6 +20,9 @@ import {
   User,
   MapPin,
   Building2,
+  Landmark,
+  CreditCard,
+  UserCheck,
   ShoppingBag,
   ShoppingCart,
   DollarSign,
@@ -52,6 +55,9 @@ export function EditInvoiceClient({ invoice, catalogItems }: EditInvoiceClientPr
     namaClient: invoice.namaClient,
     alamat: invoice.alamat || "",
     namaWs: invoice.namaWs || "",
+    namaBank: invoice.namaBank || "",
+    noRekening: invoice.noRekening || "",
+    atasNama: invoice.atasNama || "",
   });
 
   // Items Editor States
@@ -240,6 +246,66 @@ export function EditInvoiceClient({ invoice, catalogItems }: EditInvoiceClientPr
                   placeholder="Nama bengkel..."
                   className="pl-10 font-bold text-xs"
                 />
+              </div>
+            </div>
+
+            {/* Info Pembayaran (opsional) — tampil di bagian PEMBAYARAN invoice/nota */}
+            <div className="md:col-span-2 mt-1 border-t border-dashed border-slate-150 pt-4">
+              <div className="flex items-center gap-2">
+                <Landmark size={14} className="text-slate-400" />
+                <p className="text-xs font-bold text-slate-650">Info Pembayaran <span className="font-semibold text-slate-400">(Opsional)</span></p>
+              </div>
+              <p className="mt-0.5 text-[10px] font-semibold text-slate-450">Ditampilkan pada bagian PEMBAYARAN di faktur & nota. Kosongkan bila tunai.</p>
+
+              <div className="mt-3 grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div>
+                  <LabelWithCounter value={metadata.namaBank} max={FIELD_LIMITS.namaBank} className="text-xs font-bold text-slate-650">
+                    Nama Bank
+                  </LabelWithCounter>
+                  <div className="relative mt-1">
+                    <Landmark size={14} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
+                    <Input
+                      id="namaBank"
+                      maxLength={FIELD_LIMITS.namaBank}
+                      value={metadata.namaBank}
+                      onChange={(e) => setMetadata({ ...metadata, namaBank: e.target.value })}
+                      placeholder="mis. BCA"
+                      className="pl-10 font-bold text-xs"
+                    />
+                  </div>
+                </div>
+                <div>
+                  <LabelWithCounter value={metadata.noRekening} max={FIELD_LIMITS.noRekening} className="text-xs font-bold text-slate-650">
+                    No. Rekening
+                  </LabelWithCounter>
+                  <div className="relative mt-1">
+                    <CreditCard size={14} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
+                    <Input
+                      id="noRekening"
+                      maxLength={FIELD_LIMITS.noRekening}
+                      value={metadata.noRekening}
+                      onChange={(e) => setMetadata({ ...metadata, noRekening: e.target.value })}
+                      placeholder="mis. 1234567890"
+                      className="pl-10 font-bold text-xs"
+                    />
+                  </div>
+                </div>
+                <div>
+                  <LabelWithCounter value={metadata.atasNama} max={FIELD_LIMITS.atasNama} className="text-xs font-bold text-slate-650">
+                    Atas Nama
+                  </LabelWithCounter>
+                  <div className="relative mt-1">
+                    <UserCheck size={14} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
+                    <Input
+                      id="atasNama"
+                      maxLength={FIELD_LIMITS.atasNama}
+                      value={metadata.atasNama}
+                      onChange={(e) => setMetadata({ ...metadata, atasNama: e.target.value })}
+                      placeholder="Nama pemilik rekening"
+                      className="pl-10 font-bold text-xs"
+                    />
+                  </div>
+                </div>
               </div>
             </div>
           </form>

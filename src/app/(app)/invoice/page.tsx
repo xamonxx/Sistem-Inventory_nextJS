@@ -203,7 +203,7 @@ export default async function InvoicePage() {
         </p>
       </div>
 
-      <InvoiceClient initialInvoices={formattedInvoices} canBayar={canBayar} />
+      <InvoiceClient initialInvoices={formattedInvoices} canBayar={canBayar} userName={user.nama} />
     </div>
   );
 }

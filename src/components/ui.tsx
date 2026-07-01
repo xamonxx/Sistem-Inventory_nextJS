@@ -362,7 +362,7 @@ export function Card({ className, ...props }: React.HTMLAttributes<HTMLDivElemen
   return (
     <div
       className={cn(
-        "rounded-[18px] border border-border bg-white p-6 shadow-[var(--shadow-card)]",
+        "rounded-lg border border-border bg-[var(--card)] p-6 shadow-[var(--shadow-card)]",
         className
       )}
       {...props}
@@ -400,7 +400,7 @@ export function Badge({
 
 export function Table({ children, className }: { children: React.ReactNode; className?: string }) {
   return (
-    <div className={cn("overflow-hidden rounded-[18px] border border-border bg-white shadow-[var(--shadow-card)]", className)}>
+    <div className={cn("overflow-hidden rounded-lg border border-border bg-[var(--card)] shadow-[var(--shadow-card)]", className)}>
       <div className="overflow-x-auto">
         <table className="w-full border-collapse text-sm [&_thead_th]:sticky [&_thead_th]:top-0 [&_thead_th]:z-10">
           {children}
@@ -414,7 +414,7 @@ export function Th({ className, ...props }: React.ThHTMLAttributes<HTMLTableCell
   return (
     <th
       className={cn(
-        "h-[52px] border-b border-border bg-[#F8FAFC] px-5 text-left text-xs font-semibold uppercase tracking-[0.05em] text-[#64748B] font-sans",
+        "h-[52px] border-b border-border bg-[#f4f8f6] px-5 text-left text-xs font-semibold uppercase tracking-[0.05em] text-[#60736f] font-sans",
         className
       )}
       {...props}
@@ -433,4 +433,3 @@ export function Td({ className, ...props }: React.TdHTMLAttributes<HTMLTableCell
     />
   );
 }
-

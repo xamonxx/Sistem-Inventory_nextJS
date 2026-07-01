@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useTransition, useMemo, useRef, useEffect } from "react";
+import { createPortal } from "react-dom";
 import { useRouter } from "next/navigation";
 import { bayarInvoice, updateInvoice, deleteInvoice, deleteInvoices, updateInvoiceAndItems } from "./actions";
 import { Button, Card, Input, Label, Select, Table, Th, Td, Badge } from "@/components/ui";
@@ -13,8 +14,11 @@ import { ModernDialog } from "@/components/ModernDialog";
 import { printArea } from "@/lib/print";
 import { formatRupiah, formatTanggal, cn } from "@/lib/utils";
 import { toPng } from "html-to-image";
+import { exportInvoiceExcel } from "@/lib/export/exportInvoiceExcel";
+import { PeriodFilter, type ResolvedPeriodRange } from "@/components/PeriodFilter";
 import {
   Search,
+  Download,
   Wallet,
   Printer,
   MessageCircle,
@@ -82,13 +86,15 @@ export type InvoiceRow = {
 interface InvoiceClientProps {
   initialInvoices: InvoiceRow[];
   canBayar: boolean;
+  userName?: string;
 }
 
-export function InvoiceClient({ initialInvoices, canBayar }: InvoiceClientProps) {
+export function InvoiceClient({ initialInvoices, canBayar, userName }: InvoiceClientProps) {
   const router = useRouter();
   const [selectedInvoice, setSelectedInvoice] = useState<InvoiceRow | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState("ALL");
+  const [dateRange, setDateRange] = useState<ResolvedPeriodRange>({ preset: "all", from: "", to: "", label: "Semua Waktu" });
   
   // Payment states inside detail drawer
   const [paymentAmount, setPaymentAmount] = useState(0);
@@ -143,6 +149,10 @@ export function InvoiceClient({ initialInvoices, canBayar }: InvoiceClientProps)
 
   // Filter invoices dataset
   const filteredInvoices = useMemo(() => {
+    // Rentang tanggal (inklusif). from/to = "YYYY-MM-DD"; kosong = terbuka.
+    const fromMs = dateRange.from ? new Date(`${dateRange.from}T00:00:00`).getTime() : null;
+    const toMs = dateRange.to ? new Date(`${dateRange.to}T23:59:59.999`).getTime() : null;
+
     return initialInvoices.filter((inv) => {
       const matchesSearch =
         inv.noInvoice.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -154,11 +164,54 @@ export function InvoiceClient({ initialInvoices, canBayar }: InvoiceClientProps)
         inv.status === statusFilter ||
         (statusFilter === "PENDING" && (inv.status === "PENDING" || inv.status === "PARTIAL"));
 
-      return matchesSearch && matchesStatus;
+      let matchesDate = true;
+      if (fromMs !== null || toMs !== null) {
+        const t = new Date(inv.tanggal).getTime();
+        if (Number.isNaN(t)) matchesDate = false;
+        else {
+          if (fromMs !== null && t < fromMs) matchesDate = false;
+          if (toMs !== null && t > toMs) matchesDate = false;
+        }
+      }
+
+      return matchesSearch && matchesStatus && matchesDate;
     });
-  }, [initialInvoices, searchQuery, statusFilter]);
+  }, [initialInvoices, searchQuery, statusFilter, dateRange]);
 
   const invoicePg = usePagination(filteredInvoices, 10);
+
+  // ===== Export Excel (mengikuti filter aktif: pencarian + status) =====
+  const [exporting, setExporting] = useState(false);
+  const statusLabelMap: Record<string, string> = {
+    ALL: "Semua Tagihan",
+    PENDING: "Belum Lunas (Pending)",
+    PAID: "Lunas (Paid)",
+    DRAFT: "Draft",
+  };
+
+  async function handleExportExcel() {
+    if (exporting) return;
+    if (filteredInvoices.length === 0) {
+      toast.warning("Tidak ada invoice untuk diekspor pada filter ini.");
+      return;
+    }
+    setExporting(true);
+    try {
+      const filterParts = [`Status: ${statusLabelMap[statusFilter] ?? statusFilter}`, `Periode: ${dateRange.label}`];
+      if (searchQuery.trim()) filterParts.push(`Cari: "${searchQuery.trim()}"`);
+      await exportInvoiceExcel({
+        userName,
+        filterLabel: filterParts.join(" • "),
+        invoices: filteredInvoices,
+      });
+      toast.success("Export Excel berhasil");
+    } catch (err) {
+      console.error("Export Excel gagal:", err);
+      toast.error("Export Excel gagal, silakan coba lagi");
+    } finally {
+      setExporting(false);
+    }
+  }
 
   // Handle instalment payment
   function handlePayInstalment(invoice: InvoiceRow) {
@@ -266,7 +319,7 @@ export function InvoiceClient({ initialInvoices, canBayar }: InvoiceClientProps)
 
     const pesan =
       `Halo Bapak/Ibu ${inv.namaClient},\n` +
-      `Kami menginfokan tagihan invoice yang berjalan di PUTRA CORPORATION HARDWARE.\n\n` +
+      `Kami menginfokan tagihan invoice yang berjalan di PUTRA CORPORATION.\n\n` +
       `*Detail Tagihan:*\n` +
       `Nomor Invoice : *${inv.noInvoice}*\n` +
       `Tanggal Invoice: ${formatTanggal(inv.tanggal)}\n` +
@@ -312,7 +365,9 @@ export function InvoiceClient({ initialInvoices, canBayar }: InvoiceClientProps)
         style: { margin: "0", borderRadius: "0" },
       });
       const link = document.createElement("a");
-      link.download = `Invoice-${selectedInvoice?.noInvoice ?? "document"}.png`;
+      const safeName = (selectedInvoice?.namaClient ?? "").replace(/[\\/:*?"<>|]/g, "").trim();
+      const thermalSuffix = printFormat === "thermal" ? "-(THERMAL)" : "";
+      link.download = `${selectedInvoice?.noInvoice ?? "Invoice"}-${safeName}${thermalSuffix}.png`;
       link.href = imgDataUrl;
       link.click();
       toast.success("Gambar berhasil disimpan!");
@@ -379,6 +434,8 @@ export function InvoiceClient({ initialInvoices, canBayar }: InvoiceClientProps)
               <option value="DRAFT">Draft</option>
             </Select>
 
+            <PeriodFilter onChange={setDateRange} align="right" />
+
             <Button
               variant="outline"
               size="sm"
@@ -386,6 +443,16 @@ export function InvoiceClient({ initialInvoices, canBayar }: InvoiceClientProps)
               className="h-10 rounded-xl px-3"
             >
               <SlidersHorizontal size={14} /> Kolom
+            </Button>
+
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleExportExcel}
+              disabled={exporting}
+              className="h-10 rounded-xl px-3 gap-1.5 border-emerald-200 bg-emerald-50 text-emerald-700 hover:bg-emerald-100 disabled:opacity-60 disabled:cursor-not-allowed"
+            >
+              <Download size={14} /> {exporting ? "Mengekspor..." : "Export Excel"}
             </Button>
 
             {canBayar && selectedInvoiceIds.length > 0 && (
@@ -881,9 +948,9 @@ export function InvoiceClient({ initialInvoices, canBayar }: InvoiceClientProps)
         )}
       </Drawer>
 
-      {/* Print Document Modal view */}
-      {printFormat && selectedInvoice && (
-        <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto overscroll-contain bg-black/55 p-4 backdrop-blur-xs no-print" onClick={() => setPrintFormat(null)}>
+      {/* Print Document Modal view (portal ke body agar tampil di atas Drawer) */}
+      {printFormat && selectedInvoice && typeof document !== "undefined" && createPortal(
+        <div className="fixed inset-0 flex items-start justify-center overflow-y-auto overscroll-contain bg-black/55 p-4 backdrop-blur-xs no-print" style={{ zIndex: 2147483001 }} onClick={() => setPrintFormat(null)}>
           <div onClick={(e) => e.stopPropagation()} className={cn("my-4 w-full overflow-hidden rounded-2xl bg-white shadow-2xl border border-border", printFormat === "a4" ? "max-w-3xl" : "max-w-md")}>
             <div className="flex items-center justify-between gap-2 border-b border-border px-4 py-3">
               <p className="text-sm font-semibold text-foreground">
@@ -940,13 +1007,32 @@ export function InvoiceClient({ initialInvoices, canBayar }: InvoiceClientProps)
               </Button>
               <Button variant="outline" size="sm" onClick={() => setPrintFormat(null)}>Tutup</Button>
               {printFormat === "a4" ? (
-                <Button size="sm" onClick={() => printArea({ className: "print-format-a4" })}>Cetak A4 PDF</Button>
+                <Button size="sm" onClick={() => {
+                  if (selectedInvoice) {
+                    const orig = document.title;
+                    const safe = selectedInvoice.namaClient.replace(/[\\/:*?"<>|]/g, "").trim();
+                    document.title = `${selectedInvoice.noInvoice}-${safe}`;
+                    const restore = () => { document.title = orig; window.removeEventListener("focus", restore); };
+                    window.addEventListener("focus", restore);
+                  }
+                  printArea({ className: "print-format-a4" });
+                }}>Cetak A4 PDF</Button>
               ) : (
-                <Button size="sm" onClick={() => printArea({ thermal: true })}>Cetak Thermal (80mm)</Button>
+                <Button size="sm" onClick={() => {
+                  if (selectedInvoice) {
+                    const orig = document.title;
+                    const safe = selectedInvoice.namaClient.replace(/[\\/:*?"<>|]/g, "").trim();
+                    document.title = `${selectedInvoice.noInvoice}-${safe}-(THERMAL)`;
+                    const restore = () => { document.title = orig; window.removeEventListener("focus", restore); };
+                    window.addEventListener("focus", restore);
+                  }
+                  printArea({ thermal: true });
+                }}>Cetak Thermal (80mm)</Button>
               )}
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
 

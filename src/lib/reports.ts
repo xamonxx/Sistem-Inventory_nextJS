@@ -1,18 +1,41 @@
 import { prisma } from "@/lib/prisma";
 import { getStokAkhirMap } from "@/lib/stock";
 
+/** Rentang tanggal filter laporan (inklusif). */
+export type ReportRange = { from?: Date; to?: Date };
+
+/** Where-clause TransactionItem berdasar tanggal transaksi induk. */
+function txItemDateWhere(range?: ReportRange) {
+  if (!range || (!range.from && !range.to)) return undefined;
+  const tanggal: { gte?: Date; lte?: Date } = {};
+  if (range.from) tanggal.gte = range.from;
+  if (range.to) tanggal.lte = range.to;
+  return { transaction: { is: { tanggal } } };
+}
+
+/** Where-clause berbasis kolom tanggal langsung (Invoice, dll). */
+function dateWhere(range?: ReportRange) {
+  if (!range || (!range.from && !range.to)) return undefined;
+  const tanggal: { gte?: Date; lte?: Date } = {};
+  if (range.from) tanggal.gte = range.from;
+  if (range.to) tanggal.lte = range.to;
+  return tanggal;
+}
+
 /** Omset & margin per item (basis: TransactionItem). */
-export async function laporanMargin() {
+export async function laporanMargin(range?: ReportRange) {
+  const dateFilter = txItemDateWhere(range);
   const grouped = await prisma.transactionItem.groupBy({
     by: ["itemId", "namaSnapshot"],
     _sum: { qty: true, subtotal: true },
+    where: dateFilter,
   });
 
   const rows = await Promise.all(
     grouped.map(async (g) => {
-      // margin = Σ (hargaJual - hargaBeli) * qty pada baris terkait
+      // margin = Σ (hargaJual - hargaBeli) * qty pada baris terkait (periode sama)
       const lines = await prisma.transactionItem.findMany({
-        where: { itemId: g.itemId },
+        where: { itemId: g.itemId, ...(dateFilter ?? {}) },
         select: { qty: true, hargaSnapshot: true, hargaBeliSnapshot: true },
       });
       const margin = lines.reduce(
@@ -31,8 +54,8 @@ export async function laporanMargin() {
 }
 
 /** Barang terlaris (top by qty terjual). */
-export async function barangTerlaris(limit = 10) {
-  const rows = await laporanMargin();
+export async function barangTerlaris(limit = 10, range?: ReportRange) {
+  const rows = await laporanMargin(range);
   return [...rows].sort((a, b) => b.qtyTerjual - a.qtyTerjual).slice(0, limit);
 }
 
@@ -50,8 +73,12 @@ export async function laporanOmset() {
   }));
 }
 
-export async function laporanPiutang() {
-  const inv = await prisma.invoice.findMany({ orderBy: { tanggal: "desc" } });
+export async function laporanPiutang(range?: ReportRange) {
+  const tanggal = dateWhere(range);
+  const inv = await prisma.invoice.findMany({
+    where: tanggal ? { tanggal } : undefined,
+    orderBy: { tanggal: "desc" },
+  });
   return inv.map((i) => ({
     noInvoice: i.noInvoice,
     tanggal: i.tanggal.toISOString().slice(0, 10),

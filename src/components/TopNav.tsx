@@ -29,16 +29,16 @@ export function TopNav({ nama, role }: TopNavProps) {
   }
 
   return (
-    <nav className="no-print hidden lg:flex h-20 w-full items-center justify-between border-b border-border bg-white px-8 shrink-0">
+    <nav className="no-print hidden lg:flex h-[76px] w-full items-center justify-between border-b border-border bg-[rgba(251,253,252,0.86)] px-8 shrink-0 backdrop-blur-xl">
       {/* Search trigger button */}
       <button
         onClick={triggerSearch}
-        className="flex w-72 items-center justify-between rounded-xl border border-border bg-slate-50/50 px-3 py-2 text-slate-400 hover:bg-slate-50 transition cursor-pointer"
+        className="flex w-80 items-center justify-between rounded-lg border border-border bg-white/80 px-3 py-2 text-slate-500 shadow-sm transition hover:border-[var(--primary)]/35 hover:bg-white cursor-pointer"
       >
         <span className="flex items-center gap-2.5 text-xs font-semibold">
           <Search size={15} /> Cari barang, invoice, klien...
         </span>
-        <span className="flex items-center gap-0.5 rounded border border-slate-200 bg-white px-1.5 py-0.5 font-mono text-[9px] font-bold text-slate-400">
+        <span className="flex items-center gap-0.5 rounded border border-emerald-100 bg-[var(--primary-soft)] px-1.5 py-0.5 font-mono text-[9px] font-bold text-[var(--primary)]">
           <Keyboard size={10} /> ⌘K
         </span>
       </button>
@@ -53,7 +53,7 @@ export function TopNav({ nama, role }: TopNavProps) {
 
         {/* User profile capsule */}
         <div className="flex items-center gap-3">
-          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-orange-100 text-xs font-bold text-[var(--primary)] uppercase border border-orange-200/50 select-none">
+          <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-[var(--primary-soft)] text-xs font-bold text-[var(--primary-strong)] uppercase border border-emerald-200/70 select-none">
             {initials}
           </div>
           <div className="leading-tight select-none">

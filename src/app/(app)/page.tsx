@@ -253,41 +253,42 @@ export default async function DashboardPage({
       ];
 
   const toneColors: Record<string, string> = {
-    success: "#10b981",
-    blue: "#3b82f6",
+    success: "#16a34a",
+    blue: "#2563eb",
     amber: "#f59e0b",
     red: "#ef4444",
-    primary: "#d97706",
-    slate: "#64748b",
+    primary: "#0f766e",
+    slate: "#60736f",
   };
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-7">
       {/* Dashboard Top Header */}
-      <header className="relative z-20 anim-rise flex flex-col gap-5 sm:flex-row sm:items-center sm:justify-between border-b border-border pb-6">
+      <header className="relative z-20 anim-rise overflow-visible rounded-lg border border-border bg-[var(--card)] p-5 shadow-[var(--shadow-card)] md:p-6">
+        <div className="flex flex-col gap-5 xl:flex-row xl:items-center xl:justify-between">
         <div>
           <p className="u-label flex items-center gap-2 text-[var(--primary)] font-bold">
             <span className="inline-block h-[2px] w-6 bg-[var(--primary)]" />
             Sistem ERP Putra Corp
           </p>
-          <h1 className="mt-1 text-2xl font-extrabold tracking-tight text-slate-900 md:text-3xl">
+          <h1 className="mt-2 font-extrabold text-slate-950">
             {isOwnerMode ? "Owner Business Dashboard" : "Operational Workspace"}
           </h1>
-          <p className="mt-1.5 text-xs font-semibold text-slate-500">
+          <p className="mt-2 text-sm font-semibold text-slate-500">
             Selamat datang kembali, <span className="text-slate-800 font-bold">{user.nama}</span>.
           </p>
         </div>
 
         {/* Toggle Mode & Filters */}
-        <div className="flex flex-wrap items-center gap-3 w-full sm:w-auto">
+        <div className="flex w-full flex-col gap-3 xl:w-auto xl:items-end">
           {/* Mode Switcher capsule */}
           {user.role !== "ADMIN_KASIR" && (
-            <div className="flex rounded-xl bg-slate-100 p-1 border border-border w-full sm:w-auto">
+            <div className="flex w-full rounded-lg border border-border bg-[#e7efec] p-1 sm:w-auto">
               <Link
                 href={`/?mode=operational${params.from ? `&from=${params.from}` : ""}${params.to ? `&to=${params.to}` : ""}`}
-                className={`flex-1 sm:flex-none rounded-lg px-4 py-2 text-xs font-bold text-center transition-all duration-150 ${
+                className={`flex-1 rounded-md px-4 py-2 text-center text-xs font-bold transition-all duration-150 sm:flex-none ${
                   !isOwnerMode
-                    ? "bg-white text-slate-900 shadow-xs"
+                    ? "bg-white text-[var(--primary-strong)] shadow-sm"
                     : "text-slate-500 hover:text-slate-950"
                 }`}
               >
@@ -295,9 +296,9 @@ export default async function DashboardPage({
               </Link>
               <Link
                 href={`/?mode=owner${params.from ? `&from=${params.from}` : ""}${params.to ? `&to=${params.to}` : ""}`}
-                className={`flex-1 sm:flex-none rounded-lg px-4 py-2 text-xs font-bold text-center transition-all duration-150 ${
+                className={`flex-1 rounded-md px-4 py-2 text-center text-xs font-bold transition-all duration-150 sm:flex-none ${
                   isOwnerMode
-                    ? "bg-white text-slate-900 shadow-xs"
+                    ? "bg-white text-[var(--primary-strong)] shadow-sm"
                     : "text-slate-500 hover:text-slate-950"
                 }`}
               >
@@ -306,54 +307,60 @@ export default async function DashboardPage({
             </div>
           )}
 
-          <form className="flex flex-wrap items-center gap-2 w-full sm:w-auto">
+          <form className="flex w-full flex-wrap items-center gap-2 xl:w-auto">
             <DatePicker
               name="from"
               defaultValue={params.from ?? ""}
-              className="flex-1 sm:flex-none h-10 min-w-[130px] sm:w-36 text-xs font-semibold"
+              className="h-11 min-w-[145px] flex-1 text-xs font-semibold sm:flex-none sm:w-40"
             />
             <span className="text-xs text-slate-400 font-bold">s/d</span>
             <DatePicker
               name="to"
               defaultValue={params.to ?? ""}
               align="right"
-              className="flex-1 sm:flex-none h-10 min-w-[130px] sm:w-36 text-xs font-semibold"
+              className="h-11 min-w-[145px] flex-1 text-xs font-semibold sm:flex-none sm:w-40"
             />
             {params.mode && <input type="hidden" name="mode" value={params.mode} />}
-            <button className="flex-1 sm:flex-none h-10 rounded-xl bg-[var(--primary)] px-4 text-xs font-bold text-white shadow-md hover:bg-[var(--primary-strong)] cursor-pointer transition">
+            <button className="h-11 flex-1 rounded-lg bg-[var(--primary)] px-5 text-xs font-bold text-white shadow-md shadow-emerald-900/10 transition hover:bg-[var(--primary-strong)] cursor-pointer sm:flex-none">
               Saring
             </button>
             {params.from || params.to ? (
-              <Link href={isOwnerMode ? "/?mode=owner" : "/"} className="flex-1 sm:flex-none flex h-10 items-center justify-center rounded-xl border border-border bg-white px-3 text-xs font-bold text-slate-650 hover:bg-slate-50 shadow-xs">
+              <Link href={isOwnerMode ? "/?mode=owner" : "/"} className="flex h-11 flex-1 items-center justify-center rounded-lg border border-border bg-white px-3 text-xs font-bold text-slate-600 shadow-xs hover:bg-slate-50 sm:flex-none">
                 Reset
               </Link>
             ) : null}
           </form>
         </div>
+        </div>
       </header>
 
       {/* Alert Center (Moved to the top) */}
       {(negativeStockItems.length > 0 || lowStockItems.length > 0) && (
-        <Card className="anim-rise space-y-4 border-amber-100 bg-amber-50/10">
-          <div>
+        <Card className="anim-rise space-y-5 border-amber-200/70 bg-[#fffdf7]">
+          <div className="flex flex-wrap items-start justify-between gap-3">
+            <div>
             <h3 className="font-display text-sm font-bold text-slate-900 flex items-center gap-2">
               <AlertTriangle size={16} className="text-amber-500" /> Alert Center
             </h3>
-            <p className="text-xs text-slate-400 mt-1">Peringatan stok gudang kritis.</p>
+            <p className="text-xs text-slate-500 mt-1">Peringatan stok gudang kritis.</p>
+            </div>
+            <span className="rounded-full border border-amber-200 bg-amber-50 px-3 py-1 text-[10px] font-bold uppercase tracking-wider text-amber-700">
+              Butuh tindakan
+            </span>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
             {/* Stok Minus alert card */}
             {negativeStockItems.length > 0 && (
-              <div className="rounded-xl border border-red-100 bg-red-50/50 p-3.5 text-xs text-red-800">
+              <div className="rounded-lg border border-red-100 bg-red-50/70 p-4 text-xs text-red-800">
                 <p className="font-bold flex items-center gap-1.5 mb-1.5">
                   <CircleAlert size={14} className="text-red-500" /> Stok Minus Gudang ({negativeStockItems.length})
                 </p>
                 <ul className="space-y-1">
                   {negativeStockItems.slice(0, 3).map((it) => (
-                    <li key={it.id} className="flex justify-between items-center text-[10px] font-semibold text-red-750">
+                    <li key={it.id} className="flex items-center justify-between text-[11px] font-semibold text-red-700">
                       <span className="truncate pr-2">{it.nama}</span>
-                      <span className="font-mono bg-red-100 px-1.5 py-0.5 rounded text-red-700">{it.stok} unit</span>
+                      <span className="rounded bg-red-100 px-1.5 py-0.5 font-mono text-red-700">{it.stok} unit</span>
                     </li>
                   ))}
                 </ul>
@@ -362,13 +369,13 @@ export default async function DashboardPage({
 
             {/* Stok Menipis alert card */}
             {lowStockItems.length > 0 && (
-              <div className="rounded-xl border border-amber-100 bg-amber-50/50 p-3.5 text-xs text-amber-800">
+              <div className="rounded-lg border border-amber-100 bg-amber-50/70 p-4 text-xs text-amber-800">
                 <p className="font-bold flex items-center gap-1.5 mb-1.5">
                   <AlertTriangle size={14} className="text-amber-500" /> Stok Kritis ({lowStockItems.length})
                 </p>
                 <ul className="space-y-1">
                   {lowStockItems.slice(0, 3).map((it) => (
-                    <li key={it.id} className="flex justify-between items-center text-[10px] font-semibold text-amber-755">
+                    <li key={it.id} className="flex items-center justify-between text-[11px] font-semibold text-amber-800">
                       <span className="truncate pr-2">{it.nama}</span>
                       <span>tersisa {it.stok} (min {it.minStok})</span>
                     </li>
@@ -381,29 +388,29 @@ export default async function DashboardPage({
       )}
 
       {/* KPI Card grid */}
-      <section className={`grid grid-cols-2 gap-3 sm:grid-cols-3 ${kpiCards.length === 4 ? "lg:grid-cols-4" : "lg:grid-cols-6"}`}>
+      <section className={`grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3 ${kpiCards.length === 4 ? "2xl:grid-cols-4" : "2xl:grid-cols-6"}`}>
         {kpiCards.map((kpi, i) => {
           const Icon = kpi.icon;
           return (
             <div
               key={kpi.label}
-              className="tick-card anim-rise relative flex flex-col justify-between overflow-hidden rounded-[18px] border border-border bg-white p-4 sm:p-5 shadow-[var(--shadow-card)]"
+              className="tick-card anim-rise relative flex min-h-[126px] flex-col justify-between overflow-hidden rounded-lg border border-border bg-[var(--card)] p-4 shadow-[var(--shadow-card)]"
               style={{ animationDelay: `${i * 40}ms` }}
             >
-              <span className="absolute inset-x-0 top-0 h-[4px]" style={{ background: toneColors[kpi.tone] }} />
+              <span className="absolute inset-y-4 left-0 w-[4px] rounded-r-full" style={{ background: toneColors[kpi.tone] }} />
               <div className="flex items-start justify-between gap-3">
-                <p className="text-[9px] sm:text-[10px] font-bold uppercase tracking-wider text-slate-450 leading-tight">{kpi.label}</p>
-                <div className="flex h-7 w-7 sm:h-8 sm:w-8 shrink-0 items-center justify-center rounded-lg border border-slate-100 bg-slate-50/50">
+                <p className="pl-2 text-[10px] font-bold uppercase tracking-wider text-slate-500 leading-tight">{kpi.label}</p>
+                <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-slate-100 bg-white">
                   <Icon size={13} style={{ color: toneColors[kpi.tone] }} strokeWidth={2.5} />
                 </div>
               </div>
-              <div className="mt-3 min-w-0">
+              <div className="mt-3 min-w-0 pl-2">
                 <div data-tooltip={kpi.value}>
-                  <h3 className="font-display font-extrabold text-slate-900 leading-none tracking-tight tnum text-xs sm:text-sm lg:text-[11px] xl:text-xs 2xl:text-sm whitespace-nowrap overflow-hidden text-ellipsis">
+                  <h3 className="tnum overflow-hidden text-ellipsis whitespace-nowrap font-display text-[17px] font-extrabold leading-none text-slate-950">
                     {kpi.value}
                   </h3>
                 </div>
-                <p className="mt-1 text-[9px] sm:text-[10px] font-semibold text-slate-450 leading-tight truncate" title={kpi.desc}>{kpi.desc}</p>
+                <p className="mt-1 text-[11px] font-semibold text-slate-500 leading-tight truncate" title={kpi.desc}>{kpi.desc}</p>
               </div>
             </div>
           );
@@ -442,7 +449,7 @@ export default async function DashboardPage({
                       <p className="font-semibold text-slate-800">
                         {log.user?.nama ?? "System"} melakukan <span className="font-bold text-slate-950">{log.aksi}</span>
                       </p>
-                      <p className="text-[10px] text-slate-450 mt-0.5">Target: {log.entitas} (ID: {log.entitasId ?? "—"})</p>
+                      <p className="text-[10px] text-slate-500 mt-0.5">Target: {log.entitas} (ID: {log.entitasId ?? "—"})</p>
                     </div>
                     <span className="text-[10px] font-bold text-slate-400 font-mono">
                       {new Date(log.createdAt).toLocaleTimeString("id-ID", { hour: "2-digit", minute: "2-digit" })}
@@ -452,7 +459,7 @@ export default async function DashboardPage({
               ))}
 
               {recentLogs.length === 0 && (
-                <p className="text-xs text-slate-450 text-center py-4">Belum ada catatan aktivitas.</p>
+                <p className="text-xs text-slate-500 text-center py-4">Belum ada catatan aktivitas.</p>
               )}
             </div>
           </Card>

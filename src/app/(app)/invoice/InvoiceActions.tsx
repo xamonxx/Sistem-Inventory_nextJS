@@ -84,7 +84,7 @@ export function InvoiceActions({ inv, canBayar }: { inv: InvoiceRow; canBayar: b
 
     const pesan =
       `Halo Bapak/Ibu ${inv.namaClient},\n` +
-      `Kami menginfokan tagihan invoice yang berjalan di PUTRA CORPORATION HARDWARE.\n\n` +
+      `Kami menginfokan tagihan invoice yang berjalan di PUTRA CORPORATION.\n\n` +
       `*Detail Tagihan:*\n` +
       `Nomor Invoice : *${inv.noInvoice}*\n` +
       `Tanggal Invoice: ${formatTanggal(inv.tanggal)}\n` +
@@ -119,11 +119,21 @@ export function InvoiceActions({ inv, canBayar }: { inv: InvoiceRow; canBayar: b
   }
 
   function cetak() {
+    // Set document title agar nama file PDF = [noInvoice-namaClient]
+    const originalTitle = document.title;
+    const safeName = inv.namaClient.replace(/[\\/:*?"<>|]/g, "").trim();
+    document.title = `${inv.noInvoice}-${safeName}`;
+    // Restore title setelah dialog print ditutup
+    const restoreTitle = () => {
+      document.title = originalTitle;
+      window.removeEventListener("focus", restoreTitle);
+    };
+    window.addEventListener("focus", restoreTitle);
     printArea({ className: "print-format-a4" });
   }
 
   function kirimEmail() {
-    const subject = `Invoice ${inv.noInvoice} — PUTRA CORPORATION HARDWARE`;
+    const subject = `Invoice ${inv.noInvoice} — PUTRA CORPORATION`;
     const body =
       `Halo ${inv.namaClient},\n\n` +
       `Berikut detail invoice Anda:\n` +

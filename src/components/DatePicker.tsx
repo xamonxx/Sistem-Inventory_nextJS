@@ -246,14 +246,14 @@ export function DatePicker({
         disabled={disabled}
         onClick={() => setIsOpen(!isOpen)}
         className={cn(
-          "flex h-full w-full items-center justify-between px-4 text-xs font-semibold text-left outline-none transition-all cursor-pointer shadow-3xs select-none",
-          "border border-slate-200 rounded-[12px] bg-white hover:bg-slate-50",
+          "flex h-full w-full items-center justify-between px-4 text-xs font-semibold text-left outline-none transition-all cursor-pointer shadow-sm select-none",
+          "border border-border rounded-lg bg-white hover:bg-[#f6faf8]",
           isOpen && "border-[var(--primary)] ring-4 ring-[var(--primary)]/10",
           disabled && "opacity-50 pointer-events-none bg-slate-50 text-slate-400"
         )}
       >
         <div className="flex items-center gap-2.5 min-w-0">
-          <CalendarIcon size={14} className="text-slate-450 shrink-0" />
+          <CalendarIcon size={14} className="text-slate-500 shrink-0" />
           <span className={cn("truncate font-bold", !internalValue ? "text-slate-400" : "text-slate-800")}>
             {formattedDisplay || placeholder}
           </span>
@@ -264,7 +264,7 @@ export function DatePicker({
       {isOpen && (
         <div 
           className={cn(
-            "absolute mt-2 z-[9999] w-[290px] rounded-2xl border border-slate-200 bg-white p-4 shadow-xl",
+            "absolute mt-2 z-[9999] w-[290px] rounded-lg border border-border bg-white p-4 shadow-xl",
             align === "right" ? "right-0" : "left-0"
           )}
           style={{ backgroundColor: "#ffffff" }}
@@ -274,7 +274,7 @@ export function DatePicker({
             <button
               type="button"
               onClick={prevMonth}
-              className="p-1 rounded-lg border border-slate-150 bg-white hover:bg-slate-50 text-slate-600 transition cursor-pointer"
+              className="p-1 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 text-slate-600 transition cursor-pointer"
             >
               <ChevronLeft size={14} />
             </button>
@@ -304,7 +304,7 @@ export function DatePicker({
             <button
               type="button"
               onClick={nextMonth}
-              className="p-1 rounded-lg border border-slate-150 bg-white hover:bg-slate-50 text-slate-600 transition cursor-pointer"
+              className="p-1 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 text-slate-600 transition cursor-pointer"
             >
               <ChevronRight size={14} />
             </button>
@@ -326,9 +326,9 @@ export function DatePicker({
                 onClick={() => handleSelectDay(cell.day, cell.isCurrentMonth, cell.offsetMonth)}
                 className={cn(
                   "h-7 w-7 rounded-lg text-[10px] font-bold flex items-center justify-center transition-all cursor-pointer select-none",
-                  cell.isCurrentMonth ? "text-slate-800" : "text-slate-350",
+                  cell.isCurrentMonth ? "text-slate-800" : "text-slate-300",
                   cell.isToday && !cell.isSelected && "border border-[var(--primary)] text-[var(--primary)] bg-[var(--primary)]/5",
-                  cell.isSelected && "bg-[var(--primary)] text-white font-extrabold shadow-3xs",
+                  cell.isSelected && "bg-[var(--primary)] text-white font-extrabold shadow-sm",
                   !cell.isSelected && "hover:bg-slate-100"
                 )}
               >
