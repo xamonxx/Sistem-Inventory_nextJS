@@ -20,6 +20,11 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: "PUTRA CORPORATION — Sistem Inventory & Kasir",
   description: "Inventory, kasir, retur/tukar, invoice & laporan bahan bangunan",
+  manifest: "/manifest.webmanifest",
+  icons: {
+    icon: [{ url: "/icons/pwa-icon-512.png", sizes: "512x512", type: "image/png" }],
+    apple: [{ url: "/icons/apple-touch-icon.png", sizes: "180x180", type: "image/png" }],
+  },
 };
 
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
