@@ -3,6 +3,7 @@ import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { SignJWT, jwtVerify } from "jose";
 import type { Role } from "@prisma/client";
+import { prisma } from "@/lib/prisma";
 
 const COOKIE = "si_session";
 
@@ -75,11 +76,17 @@ export async function getSession(): Promise<SessionUser | null> {
     ) {
       return null;
     }
+    const user = await prisma.user.findUnique({
+      where: { id: payload.id },
+      select: { id: true, username: true, nama: true, role: true, aktif: true },
+    });
+    if (!user?.aktif) return null;
+
     return {
-      id: payload.id,
-      username: payload.username,
-      nama: payload.nama,
-      role: payload.role as Role,
+      id: user.id,
+      username: user.username,
+      nama: user.nama,
+      role: user.role,
     };
   } catch {
     // Token invalid/kedaluwarsa — jangan bocorkan detail.

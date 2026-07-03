@@ -117,7 +117,7 @@ export function CommandPalette({ role }: { role: Role }) {
       />
 
       {/* Palette Body */}
-      <div className="relative w-full max-w-2xl transform rounded-[20px] bg-white shadow-[var(--shadow-modal)] border border-border overflow-hidden anim-rise">
+      <div className="relative w-full max-w-2xl transform rounded-[20px] bg-card dark:bg-card shadow-[var(--shadow-modal)] border border-border overflow-hidden anim-rise">
         {/* Search Input bar */}
         <div className="flex items-center gap-3 border-b border-border px-4 py-4">
           <Search size={20} className="text-slate-400 shrink-0" />
@@ -129,9 +129,9 @@ export function CommandPalette({ role }: { role: Role }) {
             onKeyDown={handleKeyDown}
             maxLength={80}
             placeholder="Cari barang, invoice, klien, proyek, atau aksi..."
-            className="w-full bg-transparent text-slate-800 outline-none placeholder:text-slate-450 text-base"
+            className="w-full bg-transparent text-foreground dark:text-slate-100 outline-none placeholder:text-slate-450 dark:placeholder:text-slate-500 text-base"
           />
-          <kbd className="hidden sm:inline-flex h-5 items-center gap-1 rounded border border-slate-200 bg-slate-50 px-1.5 font-mono text-[10px] font-medium text-slate-400">
+          <kbd className="hidden sm:inline-flex h-5 items-center gap-1 rounded border border-border dark:border-slate-800 bg-slate-50 dark:bg-slate-900 px-1.5 font-mono text-[10px] font-medium text-slate-400 dark:text-slate-500">
             ESC
           </kbd>
         </div>
@@ -153,23 +153,23 @@ export function CommandPalette({ role }: { role: Role }) {
                       onClick={() => handleQuickAction(action)}
                       className={cn(
                         "flex w-full items-center justify-between rounded-xl px-3 py-2.5 text-left transition-all cursor-pointer",
-                        isSelected ? "bg-slate-50 text-slate-900" : "text-slate-650 hover:bg-slate-50/50"
+                        isSelected ? "bg-slate-50 dark:bg-slate-900 text-foreground dark:text-slate-150" : "text-slate-650 dark:text-slate-400 hover:bg-slate-50/50 dark:hover:bg-slate-900/50"
                       )}
                     >
                       <span className="flex items-center gap-3">
                         <span className={cn(
                           "flex h-9 w-9 items-center justify-center rounded-lg border",
-                          isSelected ? "bg-white border-slate-250 text-[var(--primary)]" : "bg-slate-50 border-border text-slate-500"
+                          isSelected ? "bg-card dark:bg-card border-slate-250 dark:border-slate-700 text-[var(--primary)]" : "bg-slate-50 dark:bg-slate-900 border-border text-slate-500 dark:text-slate-400"
                         )}>
                           <Icon size={16} />
                         </span>
                         <span>
                           <span className="block text-sm font-semibold">{action.title}</span>
-                          <span className="block text-xs text-slate-450 mt-0.5">{action.subtitle}</span>
+                          <span className="block text-xs text-slate-450 dark:text-slate-500 mt-0.5">{action.subtitle}</span>
                         </span>
                       </span>
                       {isSelected && (
-                        <span className="flex items-center gap-1 text-[10px] text-slate-400 font-medium">
+                        <span className="flex items-center gap-1 text-[10px] text-slate-400 dark:text-slate-500 font-medium">
                           Buka <CornerDownLeft size={10} />
                         </span>
                       )}
@@ -194,15 +194,15 @@ export function CommandPalette({ role }: { role: Role }) {
                         onClick={() => handleSelect(result)}
                         className={cn(
                           "flex w-full items-center justify-between rounded-xl px-3 py-2.5 text-left transition-all cursor-pointer",
-                          isSelected ? "bg-slate-50 text-slate-900" : "text-slate-650 hover:bg-slate-50/50"
+                          isSelected ? "bg-slate-50 dark:bg-slate-900 text-foreground dark:text-slate-150" : "text-slate-650 dark:text-slate-400 hover:bg-slate-50/50 dark:hover:bg-slate-900/50"
                         )}
                       >
                         <span>
-                          <span className="block text-sm font-semibold text-slate-800">{result.title}</span>
-                          <span className="block text-xs text-slate-450 mt-0.5">{result.subtitle}</span>
+                          <span className="block text-sm font-semibold text-foreground dark:text-slate-200">{result.title}</span>
+                          <span className="block text-xs text-slate-450 dark:text-slate-500 mt-0.5">{result.subtitle}</span>
                         </span>
                         {isSelected && (
-                          <span className="flex items-center gap-1 text-[10px] text-slate-400 font-medium">
+                          <span className="flex items-center gap-1 text-[10px] text-slate-400 dark:text-slate-500 font-medium">
                             Lihat Detail <CornerDownLeft size={10} />
                           </span>
                         )}
@@ -213,7 +213,7 @@ export function CommandPalette({ role }: { role: Role }) {
               ) : (
                 !isPending && (
                   <p className="px-4 py-8 text-center text-sm text-slate-400">
-                    Tidak ada hasil pencarian untuk "{query}"
+                    {`Tidak ada hasil pencarian untuk "${query}"`}
                   </p>
                 )
               )}
@@ -222,12 +222,12 @@ export function CommandPalette({ role }: { role: Role }) {
         </div>
         
         {/* Footer info bar */}
-        <div className="bg-slate-50/70 border-t border-border px-4 py-2.5 flex justify-between items-center text-[10px] text-slate-400 font-medium select-none">
+        <div className="bg-slate-50/70 dark:bg-slate-950/70 border-t border-border px-4 py-2.5 flex justify-between items-center text-[10px] text-slate-400 dark:text-slate-500 font-medium select-none">
           <span className="flex items-center gap-1.5">
-            <kbd className="bg-white border border-slate-200 px-1 rounded">↑↓</kbd> Navigasi
-            <kbd className="bg-white border border-slate-200 px-1 rounded ml-1.5">Enter</kbd> Pilih
+            <kbd className="bg-card dark:bg-slate-900 border border-border dark:border-slate-800 px-1 rounded">↑↓</kbd> Navigasi
+            <kbd className="bg-card dark:bg-slate-900 border border-border dark:border-slate-800 px-1 rounded ml-1.5">Enter</kbd> Pilih
           </span>
-          <span>Tekan <kbd className="bg-white border border-slate-200 px-1 rounded font-mono">Ctrl + K</kbd> untuk menutup</span>
+          <span>Tekan <kbd className="bg-card dark:bg-slate-900 border border-border dark:border-slate-800 px-1 rounded font-mono">Ctrl + K</kbd> untuk menutup</span>
         </div>
       </div>
     </div>

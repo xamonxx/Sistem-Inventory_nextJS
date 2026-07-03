@@ -45,8 +45,8 @@ type LaporanClientProps = {
   periodeLabel?: string;
   initialFrom?: string;
   initialTo?: string;
-  marginData: { nama: string; qtyTerjual: number; omset: number; margin: number }[];
-  terlaris: { nama: string; qtyTerjual: number; omset: number }[];
+  marginData: { kode: string; nama: string; qtyTerjual: number; omset: number; margin: number }[];
+  terlaris: { kode: string; nama: string; qtyTerjual: number; omset: number }[];
   stokData: {
     kode: string;
     nama: string;
@@ -73,21 +73,24 @@ type TabKey = "ringkasan" | "omset" | "margin" | "piutang" | "stok";
 // ===== Shared chart helpers (shadcn-style neutral surfaces) =====
 const TOOLTIP_STYLE = {
   contentStyle: {
-    backgroundColor: "#fff",
-    border: "1px solid #e2e8f0",
+    backgroundColor: "var(--card)",
+    border: "1px solid var(--border)",
     borderRadius: "12px",
-    boxShadow: "0 8px 24px rgba(0,0,0,0.08)",
+    boxShadow: "var(--shadow-card)",
     fontSize: 12,
     padding: "8px 12px",
   },
-  labelStyle: { fontWeight: 700, color: "#0f172a", marginBottom: 2 },
-  itemStyle: { color: "#334155" },
+  labelStyle: { fontWeight: 700, color: "var(--foreground)", marginBottom: 2 },
+  itemStyle: { color: "var(--foreground)" },
 };
 
 const fmtAxis = (v: unknown) => {
   const n = v as number;
   return n >= 1_000_000 ? `${(n / 1_000_000).toFixed(1)}jt` : n >= 1000 ? `${Math.round(n / 1000)}rb` : `${n}`;
 };
+
+const AXIS_TICK_COLOR = "#cbd5e1";
+const AXIS_LABEL_COLOR = "#e2e8f0";
 // ===== Reusable surface (shadcn "Card") =====
 function Panel({
   title,
@@ -106,11 +109,11 @@ function Panel({
 }) {
   return (
     <div className={cn("rounded-2xl border border-border bg-card shadow-[var(--shadow-card)]", className)}>
-      <header className="flex items-center justify-between gap-3 border-b border-slate-100 px-5 py-4">
+      <header className="flex items-center justify-between gap-3 border-b border-border px-5 py-4">
         <div className="flex items-center gap-2.5">
           {icon}
           <div>
-            <h3 className="text-sm font-bold leading-tight text-slate-900">{title}</h3>
+            <h3 className="text-sm font-bold leading-tight text-foreground">{title}</h3>
             {desc && <p className="mt-0.5 text-[11px] text-muted">{desc}</p>}
           </div>
         </div>
@@ -135,10 +138,10 @@ function StatCard({
   tone: "emerald" | "blue" | "amber" | "slate";
 }) {
   const tones = {
-    emerald: "bg-emerald-50 text-emerald-600 border-emerald-100",
+    emerald: "bg-primary-50 text-primary-600 border-primary-100",
     blue: "bg-blue-50 text-blue-600 border-blue-100",
     amber: "bg-amber-50 text-amber-600 border-amber-100",
-    slate: "bg-slate-100 text-slate-600 border-slate-200",
+    slate: "bg-slate-50 text-slate-600 border-slate-200",
   };
   return (
     <div className="group rounded-2xl border border-border bg-card p-5 shadow-[var(--shadow-card)] transition-all hover:-translate-y-0.5 hover:shadow-[0_8px_28px_rgba(0,0,0,0.08)]">
@@ -149,7 +152,7 @@ function StatCard({
         </div>
       </div>
       <div data-tooltip={value} className="mt-3">
-        <p className="font-display font-extrabold tracking-tight text-slate-900 text-sm sm:text-lg whitespace-nowrap overflow-hidden text-ellipsis">{value}</p>
+        <p className="font-display font-extrabold tracking-tight text-foreground text-sm sm:text-lg whitespace-nowrap overflow-hidden text-ellipsis">{value}</p>
       </div>
       <p className="mt-1 text-[11px] text-muted truncate" title={hint}>{hint}</p>
     </div>
@@ -245,7 +248,7 @@ function LaporanPrintDocument({
   totalMargin: number;
   totalPiutang: number;
   totalAsetValue: number;
-  terlaris: { nama: string; qtyTerjual: number; omset: number }[];
+  terlaris: { kode: string; nama: string; qtyTerjual: number; omset: number }[];
   warningStok: {
     kode: string;
     nama: string;
@@ -270,7 +273,7 @@ function LaporanPrintDocument({
     };
   };
   assetTop: { name: string; nilai: number }[];
-  marginData: { nama: string; qtyTerjual: number; omset: number; margin: number }[];
+  marginData: { kode: string; nama: string; qtyTerjual: number; omset: number; margin: number }[];
   stokData: {
     kode: string;
     nama: string;
@@ -441,6 +444,7 @@ function LaporanPrintDocument({
               <thead>
                 <tr>
                   <th>#</th>
+                  <th>Kode</th>
                   <th>Barang</th>
                   <th>Qty</th>
                   <th>Omset</th>
@@ -451,6 +455,7 @@ function LaporanPrintDocument({
                 {topOmset.map((it, index) => (
                   <tr key={it.nama}>
                     <td>{index + 1}</td>
+                    <td>{it.kode}</td>
                     <td>{it.nama}</td>
                     <td>{it.qtyTerjual} unit</td>
                     <td>{formatRupiah(it.omset)}</td>
@@ -505,6 +510,7 @@ function LaporanPrintDocument({
               <table className="laporan-pdf-table">
                 <thead>
                   <tr>
+                    <th>Kode</th>
                     <th>Barang</th>
                     <th>Qty</th>
                     <th>Omset</th>
@@ -516,6 +522,7 @@ function LaporanPrintDocument({
                 <tbody>
                   {topMargin.map((it) => (
                     <tr key={it.nama}>
+                      <td>{it.kode}</td>
                       <td>{it.nama}</td>
                       <td>{it.qtyTerjual} unit</td>
                       <td>{formatRupiah(it.omset)}</td>
@@ -837,6 +844,11 @@ export function LaporanClient({ role, userName, periodeLabel, initialFrom, initi
     return { items: formattedPiutang, summary: { currentBucket, midBucket, lateBucket, criticalBucket } };
   }, [piutangData]);
 
+  const agingTotal = useMemo(() => {
+    const s = agingAnalysis.summary;
+    return s.currentBucket + s.midBucket + s.lateBucket + s.criticalBucket;
+  }, [agingAnalysis]);
+
   // ===== Inventory health (fast/slow) =====
   const inventoryHealth = useMemo(() => {
     const salesMap = new Map<string, number>();
@@ -875,7 +887,7 @@ export function LaporanClient({ role, userName, periodeLabel, initialFrom, initi
   const agingPie = useMemo(() => {
     const s = agingAnalysis.summary;
     return [
-      { name: "0-30 Hari", value: s.currentBucket, color: "#10b981" },
+      { name: "0-30 Hari", value: s.currentBucket, color: "#0284c7" },
       { name: "31-60 Hari", value: s.midBucket, color: "#f59e0b" },
       { name: "61-90 Hari", value: s.lateBucket, color: "#fb7185" },
       { name: ">90 Hari", value: s.criticalBucket, color: "#ef4444" },
@@ -918,7 +930,7 @@ export function LaporanClient({ role, userName, periodeLabel, initialFrom, initi
     <div className="space-y-6">
       {/* ===== Tabs (shadcn segmented) + actions ===== */}
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <div className="inline-flex flex-wrap items-center gap-1 rounded-xl border border-border bg-slate-100/70 p-1">
+        <div className="inline-flex flex-wrap items-center gap-1 rounded-xl border border-border bg-[var(--surface-2)] p-1 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)]">
           {tabs.map((t) => {
             const Icon = t.icon;
             const active = activeTab === t.key;
@@ -928,10 +940,12 @@ export function LaporanClient({ role, userName, periodeLabel, initialFrom, initi
                 onClick={() => setActiveTab(t.key)}
                 className={cn(
                   "inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold transition-all duration-150 cursor-pointer",
-                  active ? "bg-white text-slate-900 shadow-sm" : "text-slate-500 hover:text-slate-800"
+                  active
+                    ? "bg-[#0f2236] text-white shadow-[0_1px_0_rgba(255,255,255,0.05),0_8px_20px_rgba(2,132,199,0.14)]"
+                    : "text-[var(--text-muted-2)] hover:bg-[var(--surface-hover)] hover:text-foreground"
                 )}
               >
-                <Icon size={14} className={active ? "text-[var(--primary)]" : ""} />
+                <Icon size={14} className={active ? "text-[var(--primary-300)]" : ""} />
                 {t.label}
               </button>
             );
@@ -942,13 +956,13 @@ export function LaporanClient({ role, userName, periodeLabel, initialFrom, initi
           <button
             onClick={handleExportExcel}
             disabled={exporting}
-            className="inline-flex items-center gap-1.5 rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-1.5 text-xs font-semibold text-emerald-700 shadow-xs transition hover:bg-emerald-100 cursor-pointer disabled:cursor-not-allowed disabled:opacity-60"
+            className="inline-flex items-center gap-1.5 rounded-lg border border-primary-200 bg-primary-50 px-3 py-1.5 text-xs font-semibold text-primary-700 shadow-xs transition hover:bg-primary-100 cursor-pointer disabled:cursor-not-allowed disabled:opacity-60"
           >
             <Download size={14} /> {exporting ? "Mengekspor..." : "Export Excel"}
           </button>
           <button
             onClick={handlePrintPdf}
-            className="inline-flex items-center gap-1.5 rounded-lg border border-border bg-white px-3 py-1.5 text-xs font-semibold text-slate-600 shadow-xs transition hover:bg-slate-50 cursor-pointer"
+            className="inline-flex items-center gap-1.5 rounded-lg border border-border bg-card px-3 py-1.5 text-xs font-semibold text-[var(--text-soft)] shadow-xs transition hover:bg-[var(--surface-hover)] hover:text-foreground cursor-pointer"
           >
             <Printer size={14} /> Export PDF A4
           </button>
@@ -1004,7 +1018,7 @@ export function LaporanClient({ role, userName, periodeLabel, initialFrom, initi
           <Panel
             title="Omset 10 Barang Terlaris"
             desc="Kontribusi pendapatan tiap produk unggulan"
-            icon={<div className="flex h-9 w-9 items-center justify-center rounded-xl border border-emerald-100 bg-emerald-50 text-emerald-600"><TrendingUp size={17} /></div>}
+            icon={<div className="flex h-9 w-9 items-center justify-center rounded-xl border border-primary-100 bg-primary-50 text-primary-600"><TrendingUp size={17} /></div>}
             action={<Badge tone="green">Sales Leader</Badge>}
           >
             {!mounted ? (
@@ -1016,16 +1030,16 @@ export function LaporanClient({ role, userName, periodeLabel, initialFrom, initi
                 <BarChart data={terlarisChart} layout="vertical" margin={{ left: 8, right: 48 }}>
                   <defs>
                     <linearGradient id="omsetBar" x1="0" y1="0" x2="1" y2="0">
-                      <stop offset="0%" stopColor="#34d399" />
-                      <stop offset="100%" stopColor="#059669" />
+                      <stop offset="0%" stopColor="#38bdf8" />
+                      <stop offset="100%" stopColor="#0369a1" />
                     </linearGradient>
                   </defs>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" horizontal={false} />
-                  <XAxis type="number" tick={{ fontSize: 10, fill: "#94a3b8" }} tickFormatter={fmtAxis} />
-                  <YAxis type="category" dataKey="nama" width={250} tick={{ fontSize: 10, fill: "#64748b" }} />
+                  <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" horizontal={false} />
+                  <XAxis type="number" tick={{ fontSize: 10, fill: AXIS_TICK_COLOR }} tickFormatter={fmtAxis} />
+                  <YAxis type="category" dataKey="nama" width={250} tick={{ fontSize: 10, fill: AXIS_LABEL_COLOR }} />
                   <Tooltip {...TOOLTIP_STYLE} cursor={{ fill: "rgba(5,150,105,0.05)" }} formatter={(v: unknown) => [formatRupiah(v as number), "Omset"]} />
                   <Bar dataKey="omset" fill="url(#omsetBar)" radius={[0, 6, 6, 0]} barSize={18}>
-                    <LabelList dataKey="omset" position="right" formatter={fmtAxis} fontSize={10} fill="#64748b" />
+                    <LabelList dataKey="omset" position="right" formatter={fmtAxis} fontSize={10} fill={AXIS_LABEL_COLOR} />
                   </Bar>
                 </BarChart>
               </ResponsiveContainer>
@@ -1036,12 +1050,13 @@ export function LaporanClient({ role, userName, periodeLabel, initialFrom, initi
             <Panel
               title="10 Barang Terlaris (Volume)"
               desc="Berdasarkan kuantitas unit terjual"
-              icon={<div className="flex h-9 w-9 items-center justify-center rounded-xl border border-emerald-100 bg-emerald-50 text-emerald-600"><Boxes size={17} /></div>}
+              icon={<div className="flex h-9 w-9 items-center justify-center rounded-xl border border-primary-100 bg-primary-50 text-primary-600"><Boxes size={17} /></div>}
             >
               <Table className="border-none shadow-none bg-transparent rounded-none">
                 <thead>
                   <tr>
                     <Th className="w-10 text-center">#</Th>
+                    <Th className="w-28">Kode</Th>
                     <Th>Nama Barang</Th>
                     <Th className="w-24 text-center">Volume</Th>
                     <Th className="w-32 text-right">Omset</Th>
@@ -1051,9 +1066,10 @@ export function LaporanClient({ role, userName, periodeLabel, initialFrom, initi
                   {terlarisPg.pageData.map((it, i) => (
                     <tr key={(terlarisPg.page - 1) * terlarisPg.perPage + i}>
                       <Td className="text-center text-xs font-bold text-slate-400">{(terlarisPg.page - 1) * terlarisPg.perPage + i + 1}</Td>
+                      <Td className="font-mono text-[10px] text-slate-400">{it.kode}</Td>
                       <Td className="font-semibold text-slate-700">{it.nama}</Td>
                       <Td className="text-center font-mono text-xs font-bold text-slate-600">{it.qtyTerjual} unit</Td>
-                      <Td className="text-right font-mono font-semibold text-slate-800">{formatRupiah(it.omset)}</Td>
+                      <Td className="text-right font-mono font-semibold text-foreground">{formatRupiah(it.omset)}</Td>
                     </tr>
                   ))}
                 </tbody>
@@ -1108,7 +1124,7 @@ export function LaporanClient({ role, userName, periodeLabel, initialFrom, initi
           <Panel
             title="Volume Penjualan per Produk"
             desc="10 produk dengan kuantitas unit terjual terbanyak"
-            icon={<div className="flex h-9 w-9 items-center justify-center rounded-xl border border-emerald-100 bg-emerald-50 text-emerald-600"><TrendingUp size={17} /></div>}
+            icon={<div className="flex h-9 w-9 items-center justify-center rounded-xl border border-primary-100 bg-primary-50 text-primary-600"><TrendingUp size={17} /></div>}
           >
             {!mounted ? (
               <ChartSkeleton h={340} />
@@ -1119,16 +1135,16 @@ export function LaporanClient({ role, userName, periodeLabel, initialFrom, initi
                 <BarChart data={qtyTop} layout="vertical" margin={{ left: 8, right: 48 }}>
                   <defs>
                     <linearGradient id="qtyBar" x1="0" y1="0" x2="1" y2="0">
-                      <stop offset="0%" stopColor="#34d399" />
-                      <stop offset="100%" stopColor="#059669" />
+                      <stop offset="0%" stopColor="#38bdf8" />
+                      <stop offset="100%" stopColor="#0369a1" />
                     </linearGradient>
                   </defs>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" horizontal={false} />
-                  <XAxis type="number" allowDecimals={false} tick={{ fontSize: 10, fill: "#94a3b8" }} />
-                  <YAxis type="category" dataKey="nama" width={250} tick={{ fontSize: 10, fill: "#64748b" }} />
+                  <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" horizontal={false} />
+                  <XAxis type="number" allowDecimals={false} tick={{ fontSize: 10, fill: AXIS_TICK_COLOR }} />
+                  <YAxis type="category" dataKey="nama" width={250} tick={{ fontSize: 10, fill: AXIS_LABEL_COLOR }} />
                   <Tooltip {...TOOLTIP_STYLE} cursor={{ fill: "rgba(16,185,129,0.05)" }} formatter={(v: unknown) => [`${v as number} unit`, "Qty Terjual"]} />
                   <Bar dataKey="qty" fill="url(#qtyBar)" radius={[0, 6, 6, 0]} barSize={18}>
-                    <LabelList dataKey="qty" position="right" formatter={(v: unknown) => `${v as number}`} fontSize={10} fill="#64748b" />
+                    <LabelList dataKey="qty" position="right" formatter={(v: unknown) => `${v as number}`} fontSize={10} fill={AXIS_LABEL_COLOR} />
                   </Bar>
                 </BarChart>
               </ResponsiveContainer>
@@ -1139,6 +1155,7 @@ export function LaporanClient({ role, userName, periodeLabel, initialFrom, initi
             <Table className="border-none shadow-none bg-transparent rounded-none">
               <thead>
                 <tr>
+                  <Th className="w-28">Kode Barang</Th>
                   <Th>Nama Barang</Th>
                   <Th className="w-40 text-center">Kuantitas Terjual</Th>
                   <Th className="w-56 text-right">Total Omset Kotor</Th>
@@ -1146,10 +1163,11 @@ export function LaporanClient({ role, userName, periodeLabel, initialFrom, initi
               </thead>
               <tbody>
                 {omsetPg.pageData.map((r) => (
-                  <tr key={r.nama}>
+                  <tr key={`${r.kode}-${r.nama}`}>
+                    <Td className="font-mono text-[10px] text-slate-400">{r.kode}</Td>
                     <Td className="font-semibold text-slate-700">{r.nama}</Td>
                     <Td className="text-center font-mono font-bold text-slate-600">{r.qtyTerjual} unit</Td>
-                    <Td className="text-right font-mono font-bold text-slate-800">{formatRupiah(r.omset)}</Td>
+                    <Td className="text-right font-mono font-bold text-foreground">{formatRupiah(r.omset)}</Td>
                   </tr>
                 ))}
               </tbody>
@@ -1174,13 +1192,13 @@ export function LaporanClient({ role, userName, periodeLabel, initialFrom, initi
             ) : (
               <ResponsiveContainer width="100%" height={340}>
                 <BarChart data={omsetTop} layout="vertical" margin={{ left: 8, right: 16 }} barGap={2}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" horizontal={false} />
-                  <XAxis type="number" tick={{ fontSize: 10, fill: "#94a3b8" }} tickFormatter={fmtAxis} />
-                  <YAxis type="category" dataKey="nama" width={250} tick={{ fontSize: 10, fill: "#64748b" }} />
+                  <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" horizontal={false} />
+                  <XAxis type="number" tick={{ fontSize: 10, fill: AXIS_TICK_COLOR }} tickFormatter={fmtAxis} />
+                  <YAxis type="category" dataKey="nama" width={250} tick={{ fontSize: 10, fill: AXIS_LABEL_COLOR }} />
                   <Tooltip {...TOOLTIP_STYLE} cursor={{ fill: "rgba(59,130,246,0.05)" }} formatter={(v: unknown, n: unknown) => [formatRupiah(v as number), n as string]} />
                   <Legend verticalAlign="top" height={30} iconType="circle" wrapperStyle={{ fontSize: 11 }} />
                   <Bar name="Omset" dataKey="omset" fill="#cbd5e1" radius={[0, 5, 5, 0]} barSize={10} />
-                  <Bar name="Margin" dataKey="margin" fill="#10b981" radius={[0, 5, 5, 0]} barSize={10} />
+                  <Bar name="Margin" dataKey="margin" fill="#0284c7" radius={[0, 5, 5, 0]} barSize={10} />
                 </BarChart>
               </ResponsiveContainer>
             )}
@@ -1190,6 +1208,7 @@ export function LaporanClient({ role, userName, periodeLabel, initialFrom, initi
             <Table className="border-none shadow-none bg-transparent rounded-none">
               <thead>
                 <tr>
+                  <Th className="w-28">Kode Barang</Th>
                   <Th>Nama Barang</Th>
                   <Th className="w-32 text-center">Qty Terjual</Th>
                   <Th className="w-44 text-right">Omset</Th>
@@ -1201,11 +1220,12 @@ export function LaporanClient({ role, userName, periodeLabel, initialFrom, initi
                 {marginPg.pageData.map((r) => {
                   const marginPct = r.omset > 0 ? Math.round((r.margin / r.omset) * 100) : 0;
                   return (
-                    <tr key={r.nama}>
+                    <tr key={`${r.kode}-${r.nama}`}>
+                      <Td className="font-mono text-[10px] text-slate-400">{r.kode}</Td>
                       <Td className="font-semibold text-slate-700">{r.nama}</Td>
                       <Td className="text-center font-mono text-slate-600">{r.qtyTerjual} unit</Td>
                       <Td className="text-right font-mono text-slate-600">{formatRupiah(r.omset)}</Td>
-                      <Td className="text-right font-mono font-bold text-emerald-600">{formatRupiah(r.margin)}</Td>
+                      <Td className="text-right font-mono font-bold text-primary-600">{formatRupiah(r.margin)}</Td>
                       <Td className="text-center">
                         <Badge tone={marginPct > 20 ? "green" : marginPct > 10 ? "blue" : "amber"}>{marginPct}% Margin</Badge>
                       </Td>
@@ -1222,42 +1242,124 @@ export function LaporanClient({ role, userName, periodeLabel, initialFrom, initi
       {/* ====================== PIUTANG & AGING ====================== */}
       {activeTab === "piutang" && (
         <div className="space-y-6">
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
             {[
-              { label: "0 - 30 Hari", val: agingAnalysis.summary.currentBucket, icon: Clock, tone: "slate", note: "Tagihan lancar" },
-              { label: "31 - 60 Hari", val: agingAnalysis.summary.midBucket, icon: AlertTriangle, tone: "amber", note: "Perlu diingatkan" },
-              { label: "61 - 90 Hari", val: agingAnalysis.summary.lateBucket, icon: ShieldAlert, tone: "rose", note: "Kolektabilitas diragukan" },
-              { label: "> 90 Hari", val: agingAnalysis.summary.criticalBucket, icon: ShieldAlert, tone: "red", note: "Risiko macet tinggi" },
+              {
+                label: "0 - 30 Hari",
+                val: agingAnalysis.summary.currentBucket,
+                icon: Clock,
+                tone: "blue",
+                note: "Lancar",
+                desc: "Masih dalam ritme penagihan normal",
+              },
+              {
+                label: "31 - 60 Hari",
+                val: agingAnalysis.summary.midBucket,
+                icon: AlertTriangle,
+                tone: "amber",
+                note: "Follow-up",
+                desc: "Butuh pengingat pembayaran terjadwal",
+              },
+              {
+                label: "61 - 90 Hari",
+                val: agingAnalysis.summary.lateBucket,
+                icon: ShieldAlert,
+                tone: "rose",
+                note: "Prioritas",
+                desc: "Risiko kolektabilitas mulai tinggi",
+              },
+              {
+                label: "> 90 Hari",
+                val: agingAnalysis.summary.criticalBucket,
+                icon: ShieldAlert,
+                tone: "red",
+                note: "Kritis",
+                desc: "Segera eskalasi penagihan",
+              },
             ].map((b) => {
               const Icon = b.icon;
-              const toneText: Record<string, string> = { slate: "text-slate-700", amber: "text-amber-700", rose: "text-rose-700", red: "text-red-700" };
-              const toneIcon: Record<string, string> = { slate: "text-slate-400", amber: "text-amber-500", rose: "text-rose-500", red: "text-red-600" };
+              const percent = agingTotal > 0 ? Math.round((b.val / agingTotal) * 100) : 0;
+              const tones: Record<string, { card: string; icon: string; value: string; bar: string; chip: string }> = {
+                blue: {
+                  card: "border-primary-200/70 bg-gradient-to-br from-primary-50/90 via-card to-card dark:border-primary-400/20 dark:from-primary-400/10",
+                  icon: "border-primary-200 bg-primary-100 text-primary-700 dark:border-primary-400/20 dark:bg-primary-400/15 dark:text-primary-300",
+                  value: "text-primary-700 dark:text-primary-300",
+                  bar: "bg-primary-500",
+                  chip: "bg-primary-100 text-primary-700 dark:bg-primary-400/15 dark:text-primary-300",
+                },
+                amber: {
+                  card: "border-amber-200/80 bg-gradient-to-br from-amber-50/90 via-card to-card dark:border-amber-400/20 dark:from-amber-400/10",
+                  icon: "border-amber-200 bg-amber-100 text-amber-700 dark:border-amber-400/20 dark:bg-amber-400/15 dark:text-amber-300",
+                  value: "text-amber-700 dark:text-amber-300",
+                  bar: "bg-amber-500",
+                  chip: "bg-amber-100 text-amber-700 dark:bg-amber-400/15 dark:text-amber-300",
+                },
+                rose: {
+                  card: "border-rose-200/80 bg-gradient-to-br from-rose-50/90 via-card to-card dark:border-rose-400/20 dark:from-rose-400/10",
+                  icon: "border-rose-200 bg-rose-100 text-rose-700 dark:border-rose-400/20 dark:bg-rose-400/15 dark:text-rose-300",
+                  value: "text-rose-700 dark:text-rose-300",
+                  bar: "bg-rose-500",
+                  chip: "bg-rose-100 text-rose-700 dark:bg-rose-400/15 dark:text-rose-300",
+                },
+                red: {
+                  card: "border-red-200/80 bg-gradient-to-br from-red-50/90 via-card to-card dark:border-red-400/20 dark:from-red-400/10",
+                  icon: "border-red-200 bg-red-100 text-red-700 dark:border-red-400/20 dark:bg-red-400/15 dark:text-red-300",
+                  value: "text-red-700 dark:text-red-300",
+                  bar: "bg-red-500",
+                  chip: "bg-red-100 text-red-700 dark:bg-red-400/15 dark:text-red-300",
+                },
+              };
+              const tone = tones[b.tone];
               return (
-                <div key={b.label} className="rounded-2xl border border-border bg-card p-4 shadow-[var(--shadow-card)] transition-all hover:-translate-y-0.5">
-                  <div className="flex items-center justify-between">
-                    <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500">{b.label}</span>
-                    <Icon size={14} className={toneIcon[b.tone]} />
+                <div
+                  key={b.label}
+                  className={cn(
+                    "group relative overflow-hidden rounded-2xl border p-4 shadow-[var(--shadow-card)] transition-all hover:-translate-y-0.5 hover:shadow-[0_18px_44px_rgba(15,23,42,0.12)]",
+                    tone.card
+                  )}
+                >
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0">
+                      <p className="text-[10px] font-black uppercase tracking-[0.16em] text-[var(--text-muted-2)]">{b.label}</p>
+                      <span className={cn("mt-2 inline-flex rounded-full px-2.5 py-1 text-[10px] font-extrabold uppercase tracking-wide", tone.chip)}>
+                        {b.note}
+                      </span>
+                    </div>
+                    <div className={cn("flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl border transition-transform group-hover:scale-105", tone.icon)}>
+                      <Icon size={18} />
+                    </div>
                   </div>
-                  <p className={cn("mt-2 font-mono font-extrabold text-sm sm:text-base", toneText[b.tone])}>{formatRupiah(b.val)}</p>
-                  <p className="mt-1 text-[10px] text-muted">{b.note}</p>
+                  <p className={cn("mt-4 font-display text-[22px] font-black leading-none tracking-tight sm:text-2xl", tone.value)}>
+                    {formatRupiah(b.val)}
+                  </p>
+                  <p className="mt-2 min-h-8 text-[11px] leading-snug text-[var(--text-soft)]">{b.desc}</p>
+                  <div className="mt-4">
+                    <div className="mb-1.5 flex items-center justify-between text-[10px] font-bold text-[var(--text-muted-2)]">
+                      <span>Porsi outstanding</span>
+                      <span>{percent}%</span>
+                    </div>
+                    <div className="h-2 overflow-hidden rounded-full bg-black/5 dark:bg-white/10">
+                      <div className={cn("h-full rounded-full transition-[width] duration-500", tone.bar)} style={{ width: `${percent}%` }} />
+                    </div>
+                  </div>
                 </div>
               );
             })}
           </div>
 
-          <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
+          <div className="grid grid-cols-1 items-start gap-6 lg:grid-cols-3">
             <Panel
               title="Komposisi Umur Piutang"
               desc="Proporsi outstanding per kelompok umur"
               icon={<div className="flex h-9 w-9 items-center justify-center rounded-xl border border-amber-100 bg-amber-50 text-amber-600"><Wallet size={17} /></div>}
-              className="lg:col-span-1"
+              className="h-fit overflow-hidden lg:col-span-1 lg:self-start"
             >
               {!mounted ? (
                 <ChartSkeleton h={260} />
               ) : agingPie.length === 0 ? (
                 <EmptyChart h={260} text="Tidak ada piutang outstanding. ðŸ‘" />
               ) : (
-                <ResponsiveContainer width="100%" height={260}>
+                <ResponsiveContainer width="100%" height={240}>
                   <PieChart>
                     <Pie data={agingPie} dataKey="value" nameKey="name" cx="50%" cy="50%" innerRadius={55} outerRadius={90} paddingAngle={2}>
                       {agingPie.map((entry, i) => (
@@ -1268,20 +1370,29 @@ export function LaporanClient({ role, userName, periodeLabel, initialFrom, initi
                   </PieChart>
                 </ResponsiveContainer>
               )}
-              <div className="mt-3 space-y-1.5">
+              <div className="mt-3 space-y-2">
                 {agingPie.map((b) => (
-                  <div key={b.name} className="flex items-center justify-between text-[11px]">
-                    <span className="flex items-center gap-2 text-slate-600">
-                      <span className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: b.color }} />
+                  <div key={b.name} className="flex items-center justify-between gap-3 rounded-xl bg-[var(--surface-2)] px-3 py-2 text-[11px]">
+                    <span className="flex min-w-0 items-center gap-2 text-[var(--text-soft)]">
+                      <span className="h-2.5 w-2.5 shrink-0 rounded-full" style={{ backgroundColor: b.color }} />
                       {b.name}
                     </span>
-                    <span className="font-mono font-semibold text-slate-700">{formatRupiah(b.value)}</span>
+                    <span className="shrink-0 font-mono font-bold text-foreground">{formatRupiah(b.value)}</span>
                   </div>
                 ))}
               </div>
             </Panel>
 
-            <Panel title="Analisis Umur Piutang (Aging List)" desc="Invoice dengan sisa outstanding" className="lg:col-span-2">
+            <Panel
+              title="Analisis Umur Piutang"
+              desc="Invoice dengan outstanding, umur tagihan, dan kategori risiko"
+              className="overflow-hidden lg:col-span-2"
+              action={
+                <div className="hidden rounded-full border border-border bg-[var(--surface-2)] px-3 py-1.5 text-[10px] font-extrabold uppercase tracking-wide text-[var(--text-muted-2)] sm:block">
+                  {agingPg.total} invoice
+                </div>
+              }
+            >
               <Table className="border-none shadow-none bg-transparent rounded-none">
                 <thead>
                   <tr>
@@ -1301,10 +1412,14 @@ export function LaporanClient({ role, userName, periodeLabel, initialFrom, initi
                     else if (p.ageDays > 30) badgeColor = "amber";
                     return (
                       <tr key={p.noInvoice}>
-                        <Td className="font-mono font-semibold text-slate-800">{p.noInvoice}</Td>
-                        <Td className="font-medium text-slate-700">{p.client}</Td>
-                        <Td className="text-center font-mono text-xs font-semibold text-slate-500">{p.ageDays} Hari</Td>
-                        <Td className="text-right font-mono text-slate-600">{formatRupiah(p.total)}</Td>
+                        <Td className="font-mono font-semibold text-foreground">{p.noInvoice}</Td>
+                        <Td className="font-medium text-[var(--text-soft)]">{p.client}</Td>
+                        <Td className="text-center">
+                          <span className="inline-flex min-w-16 justify-center rounded-full bg-[var(--surface-2)] px-2.5 py-1 font-mono text-[11px] font-bold text-[var(--text-soft)]">
+                            {p.ageDays} Hari
+                          </span>
+                        </Td>
+                        <Td className="text-right font-mono text-[var(--text-soft)]">{formatRupiah(p.total)}</Td>
                         <Td className={cn("text-right font-mono font-bold", p.status === "LUNAS" ? "text-slate-400" : "text-rose-600")}>
                           {p.status === "LUNAS" ? "â€”" : formatRupiah(p.sisa)}
                         </Td>
@@ -1344,12 +1459,12 @@ export function LaporanClient({ role, userName, periodeLabel, initialFrom, initi
                         <stop offset="100%" stopColor="#2563eb" />
                       </linearGradient>
                     </defs>
-                    <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" horizontal={false} />
-                    <XAxis type="number" tick={{ fontSize: 10, fill: "#94a3b8" }} tickFormatter={fmtAxis} />
-                    <YAxis type="category" dataKey="name" width={260} tick={{ fontSize: 10, fill: "#64748b" }} />
+                    <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" horizontal={false} />
+                  <XAxis type="number" tick={{ fontSize: 10, fill: AXIS_TICK_COLOR }} tickFormatter={fmtAxis} />
+                  <YAxis type="category" dataKey="name" width={260} tick={{ fontSize: 10, fill: AXIS_LABEL_COLOR }} />
                     <Tooltip {...TOOLTIP_STYLE} cursor={{ fill: "rgba(37,99,235,0.05)" }} formatter={(v: unknown) => [formatRupiah(v as number), "Nilai Aset"]} />
                     <Bar dataKey="nilai" fill="url(#asetBar)" radius={[0, 6, 6, 0]} barSize={18}>
-                      <LabelList dataKey="nilai" position="right" formatter={fmtAxis} fontSize={10} fill="#64748b" />
+                    <LabelList dataKey="nilai" position="right" formatter={fmtAxis} fontSize={10} fill={AXIS_LABEL_COLOR} />
                     </Bar>
                   </BarChart>
                 </ResponsiveContainer>
@@ -1361,7 +1476,7 @@ export function LaporanClient({ role, userName, periodeLabel, initialFrom, initi
             <Panel
               title="Fast-Moving"
               desc="Terjual â‰¥ 15 unit dalam siklus"
-              icon={<div className="flex h-9 w-9 items-center justify-center rounded-xl border border-emerald-100 bg-emerald-50 text-emerald-600"><CheckCircle size={17} /></div>}
+              icon={<div className="flex h-9 w-9 items-center justify-center rounded-xl border border-primary-100 bg-primary-50 text-primary-600"><CheckCircle size={17} /></div>}
             >
               <Table className="border-none shadow-none bg-transparent rounded-none">
                 <thead>
@@ -1378,9 +1493,9 @@ export function LaporanClient({ role, userName, periodeLabel, initialFrom, initi
                       <Td className="font-mono text-[10px] text-slate-400">{s.kode}</Td>
                       <Td className="font-semibold text-slate-700">{s.nama}</Td>
                       <Td className="text-right font-mono text-xs">{s.stokAkhir} pcs</Td>
-                      <Td className="text-right font-mono font-bold text-emerald-600">
+                      <Td className="text-right font-mono font-bold text-primary-600">
                         <span className="inline-flex items-center justify-end gap-1">
-                          {s.soldQty} unit <ArrowUpRight size={12} className="text-emerald-500" />
+                          {s.soldQty} unit <ArrowUpRight size={12} className="text-primary-500" />
                         </span>
                       </Td>
                     </tr>
@@ -1451,7 +1566,7 @@ export function LaporanClient({ role, userName, periodeLabel, initialFrom, initi
                     <Td className="text-right font-mono font-bold text-slate-600">{s.stokAkhir} pcs</Td>
                     <Td className="text-right font-mono text-xs text-slate-500">{isGudang ? formatRupiah(s.hargaBeli) : "ðŸ”’"}</Td>
                     <Td className="text-right font-mono text-xs text-slate-500">{formatRupiah(s.hargaJual)}</Td>
-                    <Td className="text-right font-mono font-semibold text-slate-800">{isGudang ? formatRupiah(s.nilaiAset) : "ðŸ”’ Dibatasi"}</Td>
+                    <Td className="text-right font-mono font-semibold text-foreground">{isGudang ? formatRupiah(s.nilaiAset) : "ðŸ”’ Dibatasi"}</Td>
                   </tr>
                 ))}
               </tbody>

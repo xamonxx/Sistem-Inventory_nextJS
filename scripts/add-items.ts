@@ -1,5 +1,5 @@
 /**
- * Tambah master barang dari daftar harga PUTRA CORPORATION HARDWARE.
+ * Tambah master barang dari daftar harga PUTRA CORPORATION SOFTWARE.
  * Jalankan: npm run db:add-items
  *
  * - kode di-generate PC-00001.. (urut, dilewati bila sudah ada)

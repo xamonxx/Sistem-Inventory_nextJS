@@ -42,12 +42,14 @@ export async function loginAction(_prev: unknown, formData: FormData) {
     return { error: "Username atau password salah." };
   }
 
-  // Rate limit per-IP (fallback ke username bila IP tak terbaca).
+  // Jangan percaya header proxy kecuali deployment memang berada di trusted proxy.
   const hdrs = await headers();
-  const ip =
-    hdrs.get("x-forwarded-for")?.split(",")[0]?.trim() ||
-    hdrs.get("x-real-ip") ||
-    "unknown";
+  const trustProxyHeaders = process.env.TRUST_PROXY_HEADERS === "true";
+  const ip = trustProxyHeaders
+    ? hdrs.get("x-forwarded-for")?.split(",")[0]?.trim() ||
+      hdrs.get("x-real-ip") ||
+      "trusted-proxy-unknown"
+    : "direct";
   if (!rateLimit(`${ip}:${username.toLowerCase()}`)) {
     return { error: "Terlalu banyak percobaan. Coba lagi beberapa menit." };
   }

@@ -62,7 +62,7 @@ export function Drawer({
   const drawer = (
     <div
       className={cn(
-        "fixed inset-0 flex justify-end overflow-hidden transition-opacity duration-300",
+        "fixed inset-0 flex items-end justify-center overflow-hidden transition-opacity duration-300 sm:items-stretch sm:justify-end",
         isOpen ? "pointer-events-auto" : "pointer-events-none"
       )}
       // Sedikit di bawah nilai maksimum agar overlay yang dibuka DARI dalam
@@ -72,7 +72,7 @@ export function Drawer({
       {/* Backdrop overlay */}
       <div
         className={cn(
-          "absolute inset-0 z-0 bg-slate-900/40 backdrop-blur-xs transition-opacity duration-300",
+          "absolute inset-0 z-0 bg-slate-950/35 backdrop-blur-xs transition-opacity duration-300",
           isOpen ? "opacity-100" : "opacity-0"
         )}
         onClick={onClose}
@@ -82,24 +82,24 @@ export function Drawer({
       <div
         ref={panelRef}
         className={cn(
-          "relative z-10 flex h-full w-full flex-col bg-white shadow-[var(--shadow-drawer)] transition-transform duration-300 ease-out border-l border-border",
+          "relative z-10 flex h-[92dvh] w-full flex-col rounded-t-2xl border-t border-border bg-card shadow-[var(--shadow-drawer)] transition-transform duration-300 ease-out sm:h-full sm:rounded-none sm:border-l sm:border-t-0 dark:bg-card",
           widths[size],
-          isOpen ? "translate-x-0" : "translate-x-full"
+          isOpen ? "translate-y-0 sm:translate-x-0" : "translate-y-full sm:translate-x-full"
         )}
       >
         {/* Drawer Header */}
-        <div className="flex items-center justify-between border-b border-border px-6 py-5">
-          <h3 className="text-lg font-bold text-slate-900 tracking-tight leading-none">{title}</h3>
+        <div className="flex items-center justify-between border-b border-border px-4 py-4 sm:px-6 sm:py-5">
+          <h3 className="text-lg font-bold text-foreground tracking-tight leading-none">{title}</h3>
           <button
             onClick={onClose}
-            className="flex h-9 w-9 items-center justify-center rounded-xl text-slate-400 hover:bg-slate-100 hover:text-slate-700 transition cursor-pointer"
+            className="flex h-9 w-9 items-center justify-center rounded-xl text-[var(--text-muted-2)] hover:bg-[var(--surface-hover)] hover:text-foreground transition cursor-pointer"
           >
             <X size={20} />
           </button>
         </div>
 
         {/* Drawer Content */}
-        <div className="flex-1 overflow-y-auto px-6 py-6 scrollbar-thin">
+        <div className="flex-1 overflow-y-auto px-4 py-4 scrollbar-thin sm:px-6 sm:py-6">
           {children}
         </div>
       </div>

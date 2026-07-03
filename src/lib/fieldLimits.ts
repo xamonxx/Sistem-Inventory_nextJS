@@ -6,10 +6,12 @@
  */
 export const FIELD_LIMITS = {
   // Data pelanggan / transaksi (kasir & retur)
-  namaClient: 20,
-  namaWs: 20,
-  projectNama: 30,
-  projectGroupNama: 20,
+  // Catatan: nama perusahaan/PT bisa panjang ("PT Jaya Perkasa Mandiri" = 23).
+  // Batas dibuat cukup lega; struk & invoice sudah otomatis wrap teks panjang.
+  namaClient: 60,
+  namaWs: 40,
+  projectNama: 60,
+  projectGroupNama: 40,
   alamat: 200,
   alasan: 250,
 

@@ -15,7 +15,7 @@ export default function NotFound() {
 
         {/* Content details */}
         <div className="space-y-2">
-          <h1 className="text-4xl font-extrabold tracking-tight text-slate-800">404</h1>
+          <h1 className="text-4xl font-extrabold tracking-tight text-foreground">404</h1>
           <h2 className="text-lg font-bold text-slate-700">Halaman Tidak Ditemukan</h2>
           <p className="text-sm text-slate-400 max-w-sm mx-auto leading-relaxed">
             Maaf, halaman yang Anda cari tidak dapat ditemukan atau telah dipindahkan ke alamat lain.

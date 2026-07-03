@@ -1,4 +1,4 @@
-// Sistem Inventory & Kasir - PUTRA CORPORATION HARDWARE
+// Sistem Inventory & Kasir - PUTRA CORPORATION SOFTWARE
 // Stok = turunan StockLedger. Uang pakai Decimal. Harga di-snapshot di detail.
 
 generator client {
@@ -245,6 +245,7 @@ model ReturnItem {
 enum InvoiceStatus {
   DRAFT
   PENDING
+  PARTIAL
   LUNAS
 }
 

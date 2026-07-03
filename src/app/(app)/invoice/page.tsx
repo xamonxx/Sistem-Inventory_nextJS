@@ -1,8 +1,7 @@
 import { requireUser } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { createInvoiceVerifyUrl } from "@/lib/invoiceVerify";
 import { InvoiceClient, type InvoiceRow, type InvoiceItem } from "./InvoiceClient";
-
-const VERIFY_BASE = process.env.NEXT_PUBLIC_APP_URL ?? "https://putracorp.co.id";
 
 // Cache invoice page for 60 seconds (invoices don't change frequently)
 export const revalidate = 60;
@@ -116,7 +115,7 @@ export default async function InvoicePage() {
   );
 
   // Format dataset for Client Component
-  const formattedInvoices: InvoiceRow[] = invoices.map((inv) => {
+  const formattedInvoices: InvoiceRow[] = await Promise.all(invoices.map(async (inv) => {
     const totalVal = Number(inv.total);
     const paidVal = Number(inv.totalDibayar);
     const sisa = totalVal - paidVal;
@@ -180,7 +179,7 @@ export default async function InvoicePage() {
       status: computedStatus,
       tanggal: inv.tanggal.toISOString(),
       items,
-      verifyUrl: `${VERIFY_BASE}/verify/${inv.noInvoice}`,
+      verifyUrl: await createInvoiceVerifyUrl(inv.noInvoice),
       verifCount: verifCountMap.get(String(inv.id)) ?? 0,
       projectName: inv.project?.nama ?? undefined,
       noTransaksi: inv.transaction?.noTransaksi ?? inv.return?.transaction?.noTransaksi ?? undefined,
@@ -192,12 +191,12 @@ export default async function InvoicePage() {
         keterangan: p.keterangan,
       })),
     };
-  });
+  }));
 
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-extrabold tracking-tight text-slate-900">Invoices &amp; Piutang Dagang</h1>
+        <h1 className="text-2xl font-extrabold tracking-tight text-foreground">Invoices &amp; Piutang Dagang</h1>
         <p className="text-xs font-semibold text-slate-500 mt-1">
           Lacak pembayaran piutang berjalan, verifikasi tanggal jatuh tempo, dan input cicilan kas.
         </p>

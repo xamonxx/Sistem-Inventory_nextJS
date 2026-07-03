@@ -212,7 +212,7 @@ export function ReturClient({
   const totalGanti = repItems.reduce((acc, x) => acc + x.harga * x.qty, 0);
   const selisih = totalGanti - totalRetur; // positive: customer pays; negative: refund customer
 
-  const returnItems = origTrx?.items ?? [];
+  const returnItems = useMemo(() => origTrx?.items ?? [], [origTrx?.items]);
   const showReturnItemTools = returnItems.length > 5;
   const filteredReturnItems = useMemo(() => {
     const query = retItemQuery.trim().toLowerCase();
@@ -286,6 +286,7 @@ export function ReturClient({
         setNota({
           noReturn: res.noReturn,
           noInvoice: res.invoiceNo ?? null,
+          verifyUrl: res.verifyUrl ?? null,
           tanggal: new Date().toISOString(),
           namaClient: origTrx?.namaClient ?? "",
           alamat: origTrx?.alamat ?? "",
@@ -352,28 +353,28 @@ export function ReturClient({
   return (
     <div className="space-y-6">
       {/* ============ PROGRESS STEPPER (redesain) ============ */}
-      <div className="overflow-x-auto rounded-[20px] border border-border bg-gradient-to-br from-white to-slate-50/60 p-4 shadow-[var(--shadow-card)] sm:p-6">
-        <div className="flex min-w-[300px] items-start">
+      <div className="overflow-hidden rounded-[20px] border border-border bg-gradient-to-br from-white to-slate-50/60 p-4 shadow-[var(--shadow-card)] dark:from-card dark:to-card sm:p-6">
+        <div className="flex min-w-0 items-start">
           {stepDefs.map((s, i) => {
             const done = i < currentIdx;
             const active = i === currentIdx;
             return (
               <Fragment key={s.n}>
-                <div className="flex w-14 shrink-0 flex-col items-center gap-2 sm:w-28">
+                <div className="flex min-w-0 flex-1 shrink flex-col items-center gap-2 sm:w-28">
                   <div
                     className={`flex h-11 w-11 items-center justify-center rounded-2xl transition-all duration-300 ${
                       active
-                        ? "scale-110 bg-[var(--primary)] text-white shadow-lg shadow-orange-200/70 ring-4 ring-orange-100"
+                        ? "scale-110 bg-[var(--primary)] text-white shadow-lg shadow-primary-200/60 dark:shadow-primary-500/20 ring-4 ring-primary-100 dark:ring-primary-500/20"
                         : done
-                        ? "bg-emerald-500 text-white shadow-sm"
-                        : "border-2 border-slate-200 bg-white text-slate-400"
+                        ? "bg-primary-500 text-white shadow-sm"
+                        : "border-2 border-border bg-card text-slate-400"
                     }`}
                   >
                     {done ? <Check size={20} /> : <s.Icon size={19} />}
                   </div>
                   <span
-                    className={`text-center text-[11px] leading-tight ${
-                      active ? "font-bold text-[var(--primary)]" : done ? "font-semibold text-emerald-600" : "font-semibold text-slate-400"
+                    className={`max-w-full break-words text-center text-[9px] leading-tight sm:text-[11px] ${
+                      active ? "font-bold text-[var(--primary)]" : done ? "font-semibold text-primary-600" : "font-semibold text-slate-400"
                     }`}
                   >
                     {s.label}
@@ -382,7 +383,7 @@ export function ReturClient({
                 {i < stepDefs.length - 1 && (
                   <div
                     className={`mt-5 h-1 flex-1 rounded-full transition-all duration-500 ${
-                      i < currentIdx ? "bg-[var(--primary)]" : "bg-slate-200"
+                      i < currentIdx ? "bg-[var(--primary)]" : "bg-slate-200 dark:bg-slate-700"
                     }`}
                   />
                 )}
@@ -395,12 +396,12 @@ export function ReturClient({
       {/* ============ STEP 1: Cari transaksi ============ */}
       {step === 1 && (
         <Card className="mx-auto max-w-lg p-0 overflow-visible">
-          <div className="flex items-center gap-3 border-b border-border bg-slate-50/60 px-6 py-5 rounded-t-[17px]">
+          <div className="flex items-center gap-3 border-b border-border bg-slate-50/60 dark:bg-slate-900/40 px-6 py-5 rounded-t-[17px]">
             <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-[var(--primary)]/10 text-[var(--primary)]">
               <ReceiptText size={20} />
             </div>
             <div>
-              <h2 className="text-base font-bold text-slate-900">Cari Penjualan Asli</h2>
+              <h2 className="text-base font-bold text-foreground">Cari Penjualan Asli</h2>
               <p className="text-xs text-slate-500">Masukkan kode nota untuk memverifikasi item yang diretur.</p>
             </div>
           </div>
@@ -427,7 +428,7 @@ export function ReturClient({
                 />
               </div>
               {showSuggestions && filteredSuggestions.length > 0 && (
-                <div className="absolute left-0 right-0 z-50 mt-1 max-h-60 overflow-y-auto rounded-xl border border-border bg-white p-1.5 shadow-lg">
+                <div className="absolute left-0 right-0 z-50 mt-1 max-h-60 overflow-y-auto rounded-xl border border-border bg-card p-1.5 shadow-lg">
                   {filteredSuggestions.map((tx) => (
                     <button
                       key={tx.noTransaksi}
@@ -436,9 +437,9 @@ export function ReturClient({
                         setSearchCode(tx.noTransaksi);
                         setShowSuggestions(false);
                       }}
-                      className="flex w-full items-center justify-between rounded-lg px-3 py-2 text-left text-xs font-semibold text-slate-700 transition hover:bg-slate-50 hover:text-slate-900 cursor-pointer select-none"
+                      className="flex w-full items-center justify-between rounded-lg px-3 py-2 text-left text-xs font-semibold text-slate-700 transition hover:bg-slate-50 dark:hover:bg-slate-900 hover:text-foreground cursor-pointer select-none"
                     >
-                      <span className="font-mono text-slate-900">{tx.noTransaksi}</span>
+                      <span className="font-mono text-foreground">{tx.noTransaksi}</span>
                       {tx.namaClient && (
                         <span className="max-w-[150px] truncate text-[10px] text-slate-500">{tx.namaClient}</span>
                       )}
@@ -459,28 +460,28 @@ export function ReturClient({
       {/* ============ STEP 2: Barang diretur ============ */}
       {step === 2 && origTrx && (
         <Card className="space-y-5 overflow-hidden p-0">
-          <div className="flex flex-col gap-3 border-b border-border bg-slate-50/60 px-6 py-5 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex flex-col gap-3 border-b border-border bg-slate-50/60 dark:bg-slate-900/40 px-6 py-5 sm:flex-row sm:items-center sm:justify-between">
             <div className="flex items-center gap-3">
               <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-[var(--primary)]/10 text-[var(--primary)]">
                 <PackageSearch size={20} />
               </div>
               <div>
-                <h2 className="text-base font-bold text-slate-900">Pilih Barang Retur</h2>
+                <h2 className="text-base font-bold text-foreground">Pilih Barang Retur</h2>
                 <p className="text-xs text-slate-500">Centang dan tentukan kuantitas barang yang dikembalikan.</p>
               </div>
             </div>
-            <div className="rounded-xl border border-border bg-white px-3 py-2 text-xs font-bold text-slate-500">
-              Nota: <span className="font-mono text-slate-800">{origTrx.noTransaksi}</span> &middot;{" "}
+            <div className="rounded-xl border border-border bg-card px-3 py-2 text-xs font-bold text-slate-500">
+              Nota: <span className="font-mono text-foreground">{origTrx.noTransaksi}</span> &middot;{" "}
               {origTrx.namaClient || "Pelanggan Umum"}
             </div>
           </div>
 
           <div className="space-y-5 px-6 pb-6">
             {showReturnItemTools && (
-              <div className="flex flex-col gap-3 rounded-xl border border-border bg-white/80 p-3 sm:flex-row sm:items-center sm:justify-between">
+              <div className="flex flex-col gap-3 rounded-xl border border-border bg-slate-50/70 dark:bg-slate-900/40 p-3 sm:flex-row sm:items-center sm:justify-between">
                 <div className="min-w-0">
-                  <p className="text-xs font-bold uppercase tracking-wider text-slate-600">Pencarian Barang Retur</p>
-                  <p className="mt-0.5 text-[11px] font-semibold text-slate-500">
+                  <p className="text-xs font-bold uppercase tracking-wider text-slate-600 dark:text-slate-300">Pencarian Barang Retur</p>
+                  <p className="mt-0.5 text-[11px] font-semibold text-muted">
                     {totalFilteredReturnItems} dari {returnItems.length} barang nota ditampilkan.
                   </p>
                 </div>
@@ -523,11 +524,11 @@ export function ReturClient({
                           checked={isSelected}
                           onChange={(e) => toggleReturnItem(it, e.target.checked)}
                           disabled={it.availableForReturn <= 0}
-                          className="h-4.5 w-4.5 rounded border-slate-300 text-[var(--primary)] focus:ring-transparent cursor-pointer"
+                          className="h-4.5 w-4.5 rounded border-border text-[var(--primary)] focus:ring-transparent cursor-pointer"
                         />
                       </Td>
                       <Td>
-                        <div className="text-sm font-bold text-slate-800">{it.nama}</div>
+                        <div className="text-sm font-bold text-foreground">{it.nama}</div>
                         <div className="mt-0.5 font-mono text-[10px] text-slate-400">{it.kode}</div>
                       </Td>
                       <Td className="text-right font-mono text-xs">{formatRupiah(it.harga)}</Td>
@@ -571,7 +572,7 @@ export function ReturClient({
                 total={totalFilteredReturnItems}
                 onPage={setReturnPage}
                 perPageOptions={[5]}
-                className="rounded-xl border border-border bg-white/80 px-3 pb-3"
+                className="rounded-xl border border-border bg-slate-50/70 dark:bg-slate-900/40 px-3 pb-3"
               />
             )}
 
@@ -588,15 +589,15 @@ export function ReturClient({
                   placeholder="mis. salah beli ukuran, cacat fisik plywood"
                 />
               </div>
-              <div className="flex items-center justify-between rounded-xl border border-emerald-100 bg-emerald-50 p-4">
-                <div className="flex items-center gap-3 text-emerald-800">
-                  <ArrowUpCircle size={24} className="text-emerald-600" />
+              <div className="flex items-center justify-between rounded-xl border border-primary-100 dark:border-primary-500/25 bg-primary-50 dark:bg-primary-500/10 p-4">
+                <div className="flex items-center gap-3 text-primary-800 dark:text-primary-300">
+                  <ArrowUpCircle size={24} className="text-primary-600 dark:text-primary-400" />
                   <div>
                     <p className="text-xs font-bold uppercase">Nilai Pengembalian (+)</p>
-                    <p className="mt-0.5 text-[10px] text-emerald-600">Stok barang akan bertambah di kartu gudang.</p>
+                    <p className="mt-0.5 text-[10px] text-primary-600 dark:text-primary-400">Stok barang akan bertambah di kartu gudang.</p>
                   </div>
                 </div>
-                <span className="font-mono text-lg font-extrabold text-emerald-700">{formatRupiah(totalRetur)}</span>
+                <span className="font-mono text-lg font-extrabold text-primary-700 dark:text-primary-300">{formatRupiah(totalRetur)}</span>
               </div>
             </div>
 
@@ -615,12 +616,12 @@ export function ReturClient({
       {/* ============ STEP 3: Barang pengganti (TUKAR) ============ */}
       {step === 3 && (
         <Card className="space-y-5 overflow-hidden p-0">
-          <div className="flex items-center gap-3 border-b border-border bg-slate-50/60 px-6 py-5">
+          <div className="flex items-center gap-3 border-b border-border bg-slate-50/60 dark:bg-slate-900/40 px-6 py-5">
             <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-[var(--primary)]/10 text-[var(--primary)]">
               <Repeat2 size={20} />
             </div>
             <div>
-              <h2 className="text-base font-bold text-slate-900">Pilih Barang Pengganti (Opsional)</h2>
+              <h2 className="text-base font-bold text-foreground">Pilih Barang Pengganti (Opsional)</h2>
               <p className="text-xs text-slate-500">Cari barang baru yang keluar dari gudang fisik (kosongkan jika hanya retur biasa).</p>
             </div>
           </div>
@@ -639,16 +640,16 @@ export function ReturClient({
                 />
               </div>
               {repQuery.trim() && (
-                <div className="max-h-60 divide-y divide-border overflow-y-auto rounded-xl border border-border bg-white shadow-lg">
+                <div className="max-h-60 divide-y divide-border overflow-y-auto rounded-xl border border-border bg-card shadow-lg">
                   {repFiltered.map((it) => (
                     <button
                       key={it.id}
                       type="button"
                       onClick={() => addRepItem(it)}
-                      className="flex w-full items-center justify-between px-4 py-2.5 text-left text-sm transition hover:bg-slate-50 cursor-pointer"
+                      className="flex w-full items-center justify-between px-4 py-2.5 text-left text-sm transition hover:bg-slate-50 dark:hover:bg-slate-900 cursor-pointer"
                     >
                       <span className="flex flex-col">
-                        <span className="text-xs font-semibold text-slate-800">{it.nama}</span>
+                        <span className="text-xs font-semibold text-foreground">{it.nama}</span>
                         <span className="mt-0.5 font-mono text-[9px] text-slate-400">{it.kode}</span>
                       </span>
                       <span className="text-xs font-bold text-[var(--primary)]">{formatRupiah(it.hargaJual)}</span>
@@ -675,13 +676,13 @@ export function ReturClient({
                       <button
                         type="button"
                         onClick={() => removeRepItem(l.itemId)}
-                        className="mx-auto flex h-8 w-8 items-center justify-center rounded-lg text-slate-400 transition hover:bg-red-50 hover:text-red-500 cursor-pointer"
+                        className="mx-auto flex h-8 w-8 items-center justify-center rounded-lg text-slate-400 transition hover:bg-red-50 dark:hover:bg-red-500/10 hover:text-red-500 cursor-pointer"
                       >
                         <Trash2 size={14} />
                       </button>
                     </Td>
                     <Td>
-                      <div className="text-sm font-bold text-slate-800">{l.nama}</div>
+                      <div className="text-sm font-bold text-foreground">{l.nama}</div>
                       <div className="mt-0.5 font-mono text-[10px] text-slate-400">{l.kode}</div>
                     </Td>
                     <Td className="text-right font-mono text-xs">{formatRupiah(l.harga)}</Td>
@@ -690,7 +691,7 @@ export function ReturClient({
                         <button
                           type="button"
                           onClick={() => updateRepQty(l.itemId, l.qty - 1)}
-                          className="flex h-8 w-8 items-center justify-center rounded-md border border-border bg-slate-50 text-slate-600 hover:bg-slate-100 cursor-pointer"
+                          className="flex h-8 w-8 items-center justify-center rounded-md border border-border bg-slate-50 dark:bg-slate-900 text-slate-600 hover:bg-slate-100 dark:hover:bg-slate-800 cursor-pointer"
                         >
                           <Minus size={14} />
                         </button>
@@ -705,13 +706,13 @@ export function ReturClient({
                         <button
                           type="button"
                           onClick={() => updateRepQty(l.itemId, l.qty + 1)}
-                          className="flex h-8 w-8 items-center justify-center rounded-md border border-border bg-slate-50 text-slate-600 hover:bg-slate-100 cursor-pointer"
+                          className="flex h-8 w-8 items-center justify-center rounded-md border border-border bg-slate-50 dark:bg-slate-900 text-slate-600 hover:bg-slate-100 dark:hover:bg-slate-800 cursor-pointer"
                         >
                           <Plus size={14} />
                         </button>
                       </div>
                     </Td>
-                    <Td className="text-right font-mono text-xs font-bold text-slate-800">{formatRupiah(l.harga * l.qty)}</Td>
+                    <Td className="text-right font-mono text-xs font-bold text-foreground">{formatRupiah(l.harga * l.qty)}</Td>
                   </tr>
                 ))}
                 {repItems.length === 0 && (
@@ -756,12 +757,12 @@ export function ReturClient({
       {/* ============ STEP 4: Penyelesaian ============ */}
       {step === 4 && (
         <Card className="mx-auto max-w-xl space-y-6 overflow-hidden p-0">
-          <div className="flex items-center gap-3 border-b border-border bg-slate-50/60 px-6 py-5">
+          <div className="flex items-center gap-3 border-b border-border bg-slate-50/60 dark:bg-slate-900/40 px-6 py-5">
             <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-[var(--primary)]/10 text-[var(--primary)]">
               <Wallet size={20} />
             </div>
             <div>
-              <h2 className="text-base font-bold text-slate-900">Penyelesaian Selisih</h2>
+              <h2 className="text-base font-bold text-foreground">Penyelesaian Selisih</h2>
               <p className="text-xs text-slate-500">Verifikasi nominal sebelum transaksi disimpan.</p>
             </div>
           </div>
@@ -771,10 +772,10 @@ export function ReturClient({
             <div
               className={`rounded-2xl border p-5 text-center ${
                 selisih > 0
-                  ? "border-red-100 bg-red-50"
+                  ? "border-red-100 dark:border-red-500/25 bg-red-50 dark:bg-red-500/10"
                   : selisih < 0
-                  ? "border-emerald-100 bg-emerald-50"
-                  : "border-border bg-slate-50"
+                  ? "border-primary-100 dark:border-primary-500/25 bg-primary-50 dark:bg-primary-500/10"
+                  : "border-border bg-slate-50 dark:bg-slate-900"
               }`}
             >
               <p className="text-xs font-bold uppercase tracking-wider text-slate-500">
@@ -782,17 +783,17 @@ export function ReturClient({
               </p>
               <p
                 className={`mt-1 font-mono text-4xl font-extrabold ${
-                  selisih > 0 ? "text-red-600" : selisih < 0 ? "text-emerald-600" : "text-slate-800"
+                  selisih > 0 ? "text-red-600 dark:text-red-400" : selisih < 0 ? "text-primary-600 dark:text-primary-400" : "text-foreground"
                 }`}
               >
                 {formatRupiah(Math.abs(selisih))}
               </p>
             </div>
 
-            <div className="space-y-3 rounded-xl border border-border bg-white p-4 text-xs">
+            <div className="space-y-3 rounded-xl border border-border bg-card p-4 text-xs">
               <div className="flex justify-between border-b border-dashed border-border pb-2">
                 <span className="font-semibold text-slate-500">Total Nilai Barang Retur (+)</span>
-                <span className="font-mono font-bold text-emerald-600">{formatRupiah(totalRetur)}</span>
+                <span className="font-mono font-bold text-primary-600">{formatRupiah(totalRetur)}</span>
               </div>
               {tipe === "TUKAR" && (
                 <div className="flex justify-between border-b border-dashed border-border pb-2">
@@ -808,7 +809,7 @@ export function ReturClient({
                   </span>
                 ) : selisih < 0 ? (
                   <span>
-                    <strong className="text-emerald-700">ℹ️ Pengembalian Dana:</strong> Kasir mengembalikan{" "}
+                    <strong className="text-primary-700">ℹ️ Pengembalian Dana:</strong> Kasir mengembalikan{" "}
                     <strong>{formatRupiah(Math.abs(selisih))}</strong> tunai kepada pelanggan.
                   </span>
                 ) : (
@@ -819,7 +820,7 @@ export function ReturClient({
               </div>
             </div>
 
-            {error && <p className="rounded-lg bg-red-50 p-2.5 text-xs font-semibold text-red-700">{error}</p>}
+            {error && <p className="rounded-lg bg-red-50 dark:bg-red-500/10 p-2.5 text-xs font-semibold text-red-700 dark:text-red-300">{error}</p>}
 
             <div className="flex flex-col-reverse gap-2.5 border-t border-border pt-4 sm:flex-row sm:items-center sm:justify-between">
               <Button type="button" variant="outline" onClick={() => setStep(3)}>
@@ -842,11 +843,11 @@ export function ReturClient({
       {/* ============ Thermal Receipt dialog ============ */}
       {nota && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 p-4 backdrop-blur-xs">
-          <div className="w-full max-w-md overflow-y-auto rounded-[20px] border border-border bg-white shadow-2xl max-h-[90vh]">
+          <div className="w-full max-w-md overflow-y-auto rounded-[20px] border border-border bg-card shadow-2xl max-h-[90vh]">
             <div className="print-area">
               <Nota data={nota} />
             </div>
-            <div className="flex flex-col gap-2 rounded-b-[20px] border-t border-border bg-slate-50 p-4">
+            <div className="flex flex-col gap-2 rounded-b-[20px] border-t border-border bg-slate-50 dark:bg-slate-900 p-4">
               <div className="flex flex-wrap sm:flex-nowrap justify-between gap-1.5 w-full">
                 <Button
                   onClick={() => printArea({ thermal: true })}

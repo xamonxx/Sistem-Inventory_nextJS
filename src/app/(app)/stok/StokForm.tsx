@@ -1,14 +1,20 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useMemo, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { barangMasuk, koreksiStok } from "./actions";
-import { Button, Card, Input, Label, Select, CharCounter } from "@/components/ui";
+import { Button, Card, Input, Label, CharCounter } from "@/components/ui";
 import { FIELD_LIMITS } from "@/lib/fieldLimits";
 import { toast } from "sonner";
-import { X, ArrowDownCircle, RefreshCcw } from "lucide-react";
+import { X, ArrowDownCircle, RefreshCcw, Check } from "lucide-react";
 
 type Item = { id: number; kode: string; nama: string };
+
+function findMatchingItems(items: Item[], query: string) {
+  const normalized = query.trim().toLowerCase();
+  if (!normalized) return items;
+  return items.filter((item) => `${item.kode} ${item.nama}`.toLowerCase().includes(normalized));
+}
 
 export function StokForm({ items }: { items: Item[] }) {
   const router = useRouter();
@@ -16,21 +22,45 @@ export function StokForm({ items }: { items: Item[] }) {
   // ===== Stock action modal (Barang Masuk / Koreksi) =====
   const [isStokOpen, setIsStokOpen] = useState(false);
   const [stokTab, setStokTab] = useState<"MASUK" | "KOREKSI">("MASUK");
+  const [itemSearch, setItemSearch] = useState("");
   const [formItemId, setFormItemId] = useState<string>("");
+  const [showSuggestions, setShowSuggestions] = useState(false);
   const [qtyMasuk, setQtyMasuk] = useState("1");
   const [stokSeharusnya, setStokSeharusnya] = useState("");
   const [keterangan, setKeterangan] = useState("");
   const [stokError, setStokError] = useState<string | null>(null);
   const [isSavingStok, startStokTransition] = useTransition();
+  const suggestRef = useRef<HTMLDivElement>(null);
 
   const openStokModal = (tab: "MASUK" | "KOREKSI") => {
     setStokTab(tab);
+    setItemSearch("");
     setFormItemId("");
+    setShowSuggestions(false);
     setQtyMasuk("1");
     setStokSeharusnya("");
     setKeterangan("");
     setStokError(null);
     setIsStokOpen(true);
+  };
+
+  const filteredItems = useMemo(() => findMatchingItems(items, itemSearch), [items, itemSearch]);
+
+  const selectedItem = useMemo(
+    () => items.find((item) => String(item.id) === formItemId) ?? null,
+    [items, formItemId]
+  );
+
+  const handleItemSearchChange = (value: string) => {
+    setItemSearch(value);
+    setFormItemId("");
+    setShowSuggestions(true);
+  };
+
+  const handleItemSelect = (item: Item) => {
+    setFormItemId(String(item.id));
+    setItemSearch(`${item.kode} · ${item.nama}`);
+    setShowSuggestions(false);
   };
 
   const handleStokSubmit = (e: React.FormEvent) => {
@@ -82,7 +112,7 @@ export function StokForm({ items }: { items: Item[] }) {
       {/* Action bar — hanya tombol, form muncul di modal */}
       <Card className="flex flex-col gap-4 p-5 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h2 className="font-semibold text-slate-800">Manajemen Persediaan</h2>
+          <h2 className="font-semibold text-foreground">Manajemen Persediaan</h2>
           <p className="text-xs text-muted">Catat barang masuk/restock atau lakukan koreksi penyesuaian stok.</p>
         </div>
         <div className="flex flex-wrap items-center gap-2.5">
@@ -103,11 +133,11 @@ export function StokForm({ items }: { items: Item[] }) {
         >
           <div
             onClick={(e) => e.stopPropagation()}
-            className="w-full max-w-md overflow-y-auto rounded-2xl border border-border bg-white p-6 shadow-2xl max-h-[90vh] anim-rise"
+            className="w-full max-w-md overflow-y-auto rounded-2xl border border-border bg-card p-6 shadow-2xl max-h-[90vh] anim-rise"
           >
             <div className="mb-4 flex items-center justify-between border-b border-border pb-3">
               <div>
-                <h3 className="text-base font-bold text-slate-900">
+                <h3 className="text-base font-bold text-foreground">
                   {stokTab === "MASUK" ? "Barang Masuk / Restock" : "Koreksi / Penyesuaian Stok"}
                 </h3>
                 <p className="mt-0.5 text-xs text-slate-500">
@@ -126,13 +156,13 @@ export function StokForm({ items }: { items: Item[] }) {
             </div>
 
             {/* Tab selector */}
-            <div className="mb-4 flex rounded-xl border border-slate-200 bg-slate-100 p-1">
+            <div className="mb-4 flex rounded-xl border border-border bg-slate-100 dark:bg-slate-800 p-1">
               <button
                 type="button"
                 onClick={() => { setStokTab("MASUK"); setStokError(null); }}
                 className={`flex-1 rounded-lg py-2 text-center text-xs font-bold transition-all cursor-pointer ${
                   stokTab === "MASUK"
-                    ? "border border-slate-200/50 bg-white text-emerald-700 shadow-sm"
+                    ? "border border-border/50 bg-card text-primary-700 shadow-sm"
                     : "text-slate-500 hover:text-slate-700"
                 }`}
               >
@@ -143,7 +173,7 @@ export function StokForm({ items }: { items: Item[] }) {
                 onClick={() => { setStokTab("KOREKSI"); setStokError(null); }}
                 className={`flex-1 rounded-lg py-2 text-center text-xs font-bold transition-all cursor-pointer ${
                   stokTab === "KOREKSI"
-                    ? "border border-slate-200/50 bg-white text-amber-700 shadow-sm"
+                    ? "border border-border/50 bg-card text-amber-700 shadow-sm"
                     : "text-slate-500 hover:text-slate-700"
                 }`}
               >
@@ -152,16 +182,58 @@ export function StokForm({ items }: { items: Item[] }) {
             </div>
 
             <form onSubmit={handleStokSubmit} className="space-y-4">
-              <div>
+              <div className="relative" ref={suggestRef}>
                 <Label>Barang</Label>
-                <Select value={formItemId} onChange={(e) => setFormItemId(e.target.value)} required>
-                  <option value="">— pilih barang —</option>
-                  {items.map((i) => (
-                    <option key={i.id} value={i.id}>
-                      {i.kode} · {i.nama}
-                    </option>
-                  ))}
-                </Select>
+                <Input
+                  value={itemSearch}
+                  onChange={(e) => handleItemSearchChange(e.target.value)}
+                  onFocus={() => setShowSuggestions(true)}
+                  onBlur={() => setTimeout(() => setShowSuggestions(false), 150)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") {
+                      e.preventDefault();
+                      if (filteredItems[0]) handleItemSelect(filteredItems[0]);
+                    }
+                    if (e.key === "Escape") setShowSuggestions(false);
+                  }}
+                  maxLength={FIELD_LIMITS.search}
+                  placeholder="Ketik kode SKU atau nama barang..."
+                  autoComplete="off"
+                />
+
+                {/* Auto-suggestion dropdown */}
+                {showSuggestions && filteredItems.length > 0 && (
+                  <div className="absolute z-50 mt-1 w-full rounded-xl border border-border bg-card shadow-xl overflow-hidden">
+                    <div className="max-h-52 overflow-y-auto">
+                      {filteredItems.slice(0, 30).map((item) => (
+                        <button
+                          key={item.id}
+                          type="button"
+                          onMouseDown={() => handleItemSelect(item)}
+                          className={`flex w-full items-center gap-3 px-3 py-2.5 text-left text-sm transition-colors hover:bg-[var(--row-hover)] ${
+                            String(item.id) === formItemId ? "bg-[var(--row-hover)]" : ""
+                          }`}
+                        >
+                          {String(item.id) === formItemId && (
+                            <Check size={13} className="shrink-0 text-primary-600" />
+                          )}
+                          <span className="font-mono text-[11px] text-slate-500 shrink-0 w-20 truncate">{item.kode}</span>
+                          <span className="truncate text-foreground font-medium text-xs">{item.nama}</span>
+                        </button>
+                      ))}
+                    </div>
+                    <div className="border-t border-border px-3 py-1.5 text-[10px] text-slate-400">
+                      {filteredItems.length} barang cocok{filteredItems.length > 30 ? " · scroll untuk lihat lebih" : ""}
+                    </div>
+                  </div>
+                )}
+
+                {/* Selected item indicator */}
+                {selectedItem && (
+                  <p className="mt-1.5 text-[11px] font-medium text-primary-600 flex items-center gap-1">
+                    <Check size={11} /> Dipilih: <span className="font-mono">{selectedItem.kode}</span> · {selectedItem.nama}
+                  </p>
+                )}
               </div>
 
               {stokTab === "MASUK" ? (

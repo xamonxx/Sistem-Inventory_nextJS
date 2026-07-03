@@ -22,6 +22,8 @@ import {
 import type { Role } from "@prisma/client";
 import { cn } from "@/lib/utils";
 import { logoutAction } from "@/app/login/actions";
+import { ThemeToggle } from "./ThemeToggle";
+import { AppLogo } from "./AppLogo";
 
 type Item = { href: string; label: string; icon: React.ElementType; roles?: Role[] };
 
@@ -97,7 +99,7 @@ function SidebarContent({
     return (
       <div className="space-y-1">
         <p className={cn(
-          "px-4 pt-4 pb-1 text-[9px] font-bold uppercase tracking-[0.18em] text-emerald-50/35 transition-[opacity,max-height,padding] duration-200 truncate origin-left select-none",
+          "px-4 pt-4 pb-1 text-[9px] font-bold uppercase tracking-[0.18em] text-primary-50/35 transition-[opacity,max-height,padding] duration-200 truncate origin-left select-none",
           isCollapsed ? "lg:opacity-0 lg:max-h-0 lg:pt-0 lg:pb-0 lg:overflow-hidden" : ""
         )}>
           {title}
@@ -114,7 +116,7 @@ function SidebarContent({
                 "group relative flex items-center rounded-xl px-3 py-2.5 text-xs font-medium transition-[background-color,color] duration-200 select-none w-full overflow-visible",
                 active
                   ? "bg-white/[0.08] text-white font-semibold"
-                  : "text-emerald-50/55 hover:bg-white/[0.06] hover:text-white"
+                  : "text-primary-50/55 hover:bg-white/[0.06] hover:text-white"
               )}
             >
               {active && (
@@ -127,8 +129,8 @@ function SidebarContent({
                   className={cn(
                     "transition-colors duration-200",
                     active
-                      ? "text-[#5eead4]"
-                      : "text-emerald-50/55 group-hover:text-white"
+                      ? "text-[#7dd3fc]"
+                      : "text-primary-50/55 group-hover:text-white"
                   )}
                 />
               </div>
@@ -154,18 +156,21 @@ function SidebarContent({
   return (
     <>
       {/* Mobile Top Navbar Header */}
-      <header className="no-print sticky top-0 z-40 flex h-16 w-full items-center justify-between border-b border-emerald-900/50 bg-[#071713] px-4 text-white lg:hidden">
+      <header className="no-print sticky top-0 z-40 flex h-16 w-full items-center justify-between border-b border-primary-900/50 bg-[#071b2e] px-3 text-white sm:px-4 lg:hidden">
         <button
           onClick={() => setIsOpen(true)}
-          className="flex h-10 w-10 items-center justify-center rounded-xl text-slate-400 hover:bg-slate-800 hover:text-white transition cursor-pointer"
+          className="flex h-11 w-11 items-center justify-center rounded-xl text-slate-400 hover:bg-slate-800 hover:text-white transition cursor-pointer"
         >
           <Menu size={20} />
         </button>
-        <span className="text-[15px] font-black uppercase tracking-tight text-white whitespace-nowrap">
+        <span className="min-w-0 truncate px-2 text-center text-[14px] font-black uppercase tracking-tight text-white sm:text-[15px]">
           PUTRA CORPORATION
         </span>
-        <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-white/10 text-xs font-bold text-white uppercase border border-white/10">
-          {initials}
+        <div className="flex items-center gap-2">
+          <ThemeToggle />
+          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-white/10 text-xs font-bold text-white uppercase border border-white/10">
+            {initials}
+          </div>
         </div>
       </header>
 
@@ -173,43 +178,43 @@ function SidebarContent({
       {isOpen && (
         <div
           onClick={() => setIsOpen(false)}
-          className="fixed inset-0 z-45 bg-slate-900/60 backdrop-blur-xs transition-opacity lg:hidden"
+          className="fixed inset-0 z-[45] bg-slate-900/60 backdrop-blur-xs transition-opacity lg:hidden"
         />
       )}
 
       {/* Sidebar Navigation Panel Drawer */}
       <aside
         className={cn(
-          "no-print bg-[#071713] text-emerald-50/80",
-          "lg:fixed lg:left-0 lg:top-0 lg:bottom-0 lg:flex lg:h-screen lg:shrink-0 lg:flex-col lg:border-r lg:border-emerald-950/70 lg:transition-[width] lg:duration-200 lg:ease-in-out lg:z-30",
+          "no-print bg-[#071b2e] text-primary-50/80",
+          "lg:fixed lg:left-0 lg:top-0 lg:bottom-0 lg:flex lg:h-screen lg:shrink-0 lg:flex-col lg:border-r lg:border-primary-950/70 lg:transition-[width] lg:duration-200 lg:ease-in-out lg:z-30",
           isCollapsed ? "lg:w-[80px]" : "lg:w-[280px]",
-          "max-lg:fixed max-lg:inset-y-0 max-lg:left-0 max-lg:z-50 max-lg:w-[280px] flex flex-col max-lg:transition-transform max-lg:duration-200 max-lg:ease-in-out",
+          "max-lg:fixed max-lg:top-0 max-lg:left-0 max-lg:z-50 max-lg:h-[100dvh] max-lg:w-[min(300px,85vw)] flex flex-col max-lg:transition-transform max-lg:duration-200 max-lg:ease-in-out",
           isOpen ? "max-lg:translate-x-0" : "max-lg:-translate-x-full"
         )}
         style={{ willChange: "width" }}
       >
         {/* Brand logo & Close button */}
         <div className={cn(
-          "flex items-center h-16 w-full border-b border-white/10 overflow-hidden transition-[padding] duration-200",
+          "flex items-center h-16 lg:h-[76px] w-full border-b border-white/10 overflow-hidden transition-[padding] duration-200",
           isCollapsed ? "lg:px-4 lg:justify-center" : "px-5"
         )}>
           <div className="flex items-center w-full">
-            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-gradient-to-tr from-[var(--primary)] to-[#25b7a7] text-white shadow-[0_0_18px_rgba(15,118,110,0.35)]">
-              <Boxes size={20} strokeWidth={2.2} />
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-gradient-to-tr from-[var(--primary)] to-[#38bdf8] text-white shadow-[0_0_18px_rgba(2,132,199,0.35)]">
+              <AppLogo className="h-7 w-7" />
             </div>
             <div className={cn(
               "leading-tight transition-[opacity,max-width,margin] duration-200 ease-in-out truncate origin-left",
               isCollapsed ? "lg:opacity-0 lg:max-w-0 lg:ml-0 lg:overflow-hidden lg:invisible" : "opacity-100 max-w-[180px] ml-3"
             )}>
               <p className="font-display text-sm font-black tracking-tight text-white uppercase">PUTRA CORP</p>
-              <div className="text-[8px] font-black uppercase tracking-[0.18em] text-emerald-100 bg-white/10 px-1.5 py-0.5 rounded-[4px] w-max mt-0.5 select-none">
-                HARDWARE ERP
+              <div className="text-[8px] font-black uppercase tracking-[0.18em] text-primary-100 bg-white/10 px-1.5 py-0.5 rounded-[4px] w-max mt-0.5 select-none">
+                SOFTWARE ERP
               </div>
             </div>
           </div>
           <button
             onClick={() => setIsOpen(false)}
-            className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-slate-400 hover:bg-slate-800 hover:text-white transition lg:hidden cursor-pointer"
+            className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg text-slate-400 hover:bg-slate-800 hover:text-white transition lg:hidden cursor-pointer"
           >
             <X size={18} />
           </button>
@@ -235,7 +240,7 @@ function SidebarContent({
               setIsCollapsed(next);
               document.cookie = `si_sidebar_collapsed=${next}; path=/; max-age=${60 * 60 * 24 * 365}; SameSite=Lax`;
             }}
-            className="group relative flex items-center rounded-xl px-3 py-2.5 text-xs font-semibold text-emerald-50/55 transition-[background-color,color] duration-200 hover:bg-white/[0.06] hover:text-white cursor-pointer w-full overflow-visible"
+            className="group relative flex items-center rounded-xl px-3 py-2.5 text-xs font-semibold text-primary-50/55 transition-[background-color,color] duration-200 hover:bg-white/[0.06] hover:text-white cursor-pointer w-full overflow-visible"
           >
             <div className="flex items-center justify-center shrink-0 w-5 h-5">
               {isCollapsed ? <ChevronRight size={16} /> : <ChevronLeft size={16} />}
@@ -257,8 +262,8 @@ function SidebarContent({
 
         {/* User profile & Logout Card Container */}
         <div className={cn(
-          "border-t border-white/10 transition-all duration-200",
-          isCollapsed ? "lg:overflow-visible p-2" : "overflow-hidden p-3"
+          "border-t border-white/10 transition-all duration-200 pb-[max(0.75rem,env(safe-area-inset-bottom))]",
+          isCollapsed ? "lg:overflow-visible p-2 lg:pb-2" : "overflow-hidden p-3 lg:pb-3"
         )}>
           <div className={cn(
             "flex items-center transition-all duration-200 w-full border rounded-xl",
@@ -272,7 +277,7 @@ function SidebarContent({
               isCollapsed ? "lg:opacity-0 lg:max-w-0 lg:ml-0 lg:overflow-hidden lg:invisible" : "opacity-100 max-w-[180px] ml-3"
             )}>
               <p className="truncate text-xs font-bold text-white">{nama}</p>
-              <p className="text-[9px] font-bold uppercase tracking-wider text-emerald-100/80 mt-0.5 select-none">
+              <p className="text-[9px] font-bold uppercase tracking-wider text-primary-100/80 mt-0.5 select-none">
                 {role === "ADMIN_KASIR" ? "KASIR POS" : "GUDANG LOGISTIK"}
               </p>
             </div>

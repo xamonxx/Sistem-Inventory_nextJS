@@ -9,6 +9,8 @@ import { nextDocNumber } from "@/lib/counters";
 import { logActivity } from "@/lib/activity";
 import { FIELD_LIMITS } from "@/lib/fieldLimits";
 import { dbId, money, qtyPositive, optionalText, safeError, firstIssue } from "@/lib/validation";
+import { buildReturnItemCreateData } from "@/lib/returnRules";
+import { createInvoiceVerifyUrl } from "@/lib/invoiceVerify";
 
 const returnItemSchema = z.object({
   transactionItemId: dbId,
@@ -38,8 +40,6 @@ const schema = z.object({
 }, { message: "Tukar barang wajib memiliki barang pengganti." });
 
 export type ReturPayload = z.infer<typeof schema>;
-type ReturnItemInput = z.infer<typeof returnItemSchema>;
-type ReplacementItemInput = z.infer<typeof replacementItemSchema>;
 
 export async function createReturn(payload: ReturPayload) {
   const user = await requireRole("ADMIN_KASIR", "ADMIN_GUDANG");
@@ -128,6 +128,15 @@ export async function createReturn(payload: ReturPayload) {
   }
   const selisih = totalGanti - totalRetur;
 
+  const returnItemCreate = buildReturnItemCreateData({
+    tipe: d.tipe,
+    returnItems: d.returnItems,
+    replacementItems,
+  });
+  if (!returnItemCreate.ok) {
+    return { error: returnItemCreate.error };
+  }
+
   try {
   const result = await prisma.$transaction(async (tx) => {
     const noReturn = await nextDocNumber(tx, "return");
@@ -144,23 +153,7 @@ export async function createReturn(payload: ReturPayload) {
         namaWs: d.namaWs || null,
         userId: user.id,
         items: {
-          create: d.returnItems.map((ri) => ({
-            transactionItemId: ri.transactionItemId,
-            itemId: ri.itemId,
-            namaSnapshot: ri.namaSnapshot,
-            hargaSnapshot: ri.hargaSnapshot,
-            qtyReturned: ri.qtyReturned,
-            subtotal: ri.hargaSnapshot * ri.qtyReturned,
-            ...(d.tipe === "TUKAR" ? {
-              itemGantiId: replacementItems.find((r) => r.itemId === replacementItems[0]?.itemId)?.itemId ?? null,
-              namaGantiSnapshot: replacementItems.find((r) => r.itemId === replacementItems[0]?.itemId)?.nama ?? null,
-              hargaGantiSnapshot: replacementItems.find((r) => r.itemId === replacementItems[0]?.itemId)?.hargaJual ?? null,
-              qtyGanti: replacementItems.find((r) => r.itemId === replacementItems[0]?.itemId)?.qtyReplacement ?? null,
-              subtotalGanti: replacementItems.find((r) => r.itemId === replacementItems[0]?.itemId)
-                ? (replacementItems.find((r) => r.itemId === replacementItems[0]?.itemId)!.hargaJual * replacementItems.find((r) => r.itemId === replacementItems[0]?.itemId)!.qtyReplacement)
-                : null,
-            } : {}),
-          })),
+          create: returnItemCreate.createData,
         },
       },
       include: { items: true },
@@ -234,11 +227,16 @@ export async function createReturn(payload: ReturPayload) {
   const returnItemNames = d.returnItems.map((ri) => ri.namaSnapshot).join(", ");
   const gantiItemNames = replacementItems.map((ri) => ri.nama).join(", ");
 
+  const verifyUrl = result.invoiceNo
+    ? await createInvoiceVerifyUrl(result.invoiceNo)
+    : null;
+
   return {
     ok: true,
     id: result.id,
     noReturn: result.noReturn,
     invoiceNo: result.invoiceNo,
+    verifyUrl,
     selisih: result.selisih,
     namaRetur: returnItemNames,
     qtyRetur: d.returnItems.reduce((s, ri) => s + ri.qtyReturned, 0),

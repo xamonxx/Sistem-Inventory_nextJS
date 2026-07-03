@@ -8,6 +8,7 @@ import { requireRole } from "@/lib/auth";
 import { logActivity } from "@/lib/activity";
 import { dbId, money, safeError, firstIssue } from "@/lib/validation";
 import { FIELD_LIMITS } from "@/lib/fieldLimits";
+import { invoiceItemPayloadSchema } from "@/lib/invoiceRules";
 
 const bayarSchema = z.object({
   invoiceId: dbId,
@@ -36,7 +37,7 @@ export async function bayarInvoice(invoiceId: number, jumlah: number, tipe: Paym
     const newPayment = await prisma.$transaction(async (tx) => {
       await tx.invoice.update({
         where: { id: invoiceId },
-        data: { totalDibayar, status: lunas ? "LUNAS" : "PENDING" },
+        data: { totalDibayar, status: lunas ? "LUNAS" : "PARTIAL" },
       });
 
       return await tx.payment.create({
@@ -141,6 +142,9 @@ export async function updateInvoice(
 
 export async function deleteInvoice(id: number) {
   const user = await requireRole("ADMIN_KASIR");
+  const parsed = dbId.safeParse(id);
+  if (!parsed.success) return { error: firstIssue(parsed.error) };
+  id = parsed.data;
 
   try {
     const inv = await prisma.invoice.findUnique({
@@ -250,6 +254,9 @@ export async function deleteInvoice(id: number) {
 
 export async function deleteInvoices(ids: number[]) {
   const user = await requireRole("ADMIN_KASIR");
+  const parsed = z.array(dbId).min(1, "Minimal 1 invoice dipilih.").max(200, "Terlalu banyak invoice dipilih.").safeParse(ids);
+  if (!parsed.success) return { error: firstIssue(parsed.error) };
+  ids = Array.from(new Set(parsed.data));
 
   try {
     const invoices = await prisma.invoice.findMany({
@@ -384,6 +391,9 @@ export async function updateInvoiceAndItems(
   const parsed = updateInvoiceSchema.safeParse({ id, ...metadata });
   if (!parsed.success) return { error: firstIssue(parsed.error) };
   const val = parsed.data;
+  const parsedItems = invoiceItemPayloadSchema.safeParse(itemsPayload);
+  if (!parsedItems.success) return { error: firstIssue(parsedItems.error) };
+  const invoiceItems = parsedItems.data;
 
   const existing = await prisma.invoice.findFirst({
     where: {
@@ -416,7 +426,7 @@ export async function updateInvoiceAndItems(
     });
     if (returnedRefs.length > 0) {
       const returnedTxItemIds = new Set(returnedRefs.map((r) => r.transactionItemId));
-      const keptItemIds = new Set(itemsPayload.filter((p) => p.qty > 0).map((p) => p.itemId));
+      const keptItemIds = new Set(invoiceItems.filter((p) => p.qty > 0).map((p) => p.itemId));
       const blocked = existingTxItems
         .filter((x) => returnedTxItemIds.has(x.id) && !keptItemIds.has(x.itemId))
         .map((x) => x.namaSnapshot);
@@ -465,7 +475,7 @@ export async function updateInvoiceAndItems(
           where: { transactionId: txId },
         });
 
-        for (const payloadItem of itemsPayload) {
+        for (const payloadItem of invoiceItems) {
           const matched = existingTxItems.find((x) => x.itemId === payloadItem.itemId);
           
           if (!matched) {
@@ -533,7 +543,7 @@ export async function updateInvoiceAndItems(
           }
         }
 
-        const payloadItemIds = itemsPayload.map((x) => x.itemId);
+        const payloadItemIds = invoiceItems.map((x) => x.itemId);
         for (const extItem of existingTxItems) {
           if (!payloadItemIds.includes(extItem.itemId)) {
             await tx.transactionItem.delete({
@@ -572,11 +582,12 @@ export async function updateInvoiceAndItems(
         const newTotal = Number(updatedInv.total);
         const newTotalDibayar = Math.min(Number(updatedInv.totalDibayar), newTotal);
         const lunas = newTotalDibayar >= newTotal;
+        const nextStatus = lunas ? "LUNAS" : newTotalDibayar > 0 ? "PARTIAL" : "PENDING";
         await tx.invoice.update({
           where: { id: val.id },
           data: {
             totalDibayar: newTotalDibayar,
-            status: lunas ? "LUNAS" : "PENDING",
+            status: nextStatus,
           },
         });
       }
@@ -587,7 +598,7 @@ export async function updateInvoiceAndItems(
       aksi: "UPDATE_INVOICE_DAN_BARANG",
       entitas: "Invoice",
       entitasId: val.id,
-      detail: { noInvoice: val.noInvoice, itemsCount: itemsPayload.length },
+      detail: { noInvoice: val.noInvoice, itemsCount: invoiceItems.length },
     });
 
     revalidatePath("/invoice");

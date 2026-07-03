@@ -1,10 +1,8 @@
 import { prisma } from "@/lib/prisma";
 import { getStokAkhirMap } from "@/lib/stock";
 
-/** Rentang tanggal filter laporan (inklusif). */
 export type ReportRange = { from?: Date; to?: Date };
 
-/** Where-clause TransactionItem berdasar tanggal transaksi induk. */
 function txItemDateWhere(range?: ReportRange) {
   if (!range || (!range.from && !range.to)) return undefined;
   const tanggal: { gte?: Date; lte?: Date } = {};
@@ -13,7 +11,6 @@ function txItemDateWhere(range?: ReportRange) {
   return { transaction: { is: { tanggal } } };
 }
 
-/** Where-clause berbasis kolom tanggal langsung (Invoice, dll). */
 function dateWhere(range?: ReportRange) {
   if (!range || (!range.from && !range.to)) return undefined;
   const tanggal: { gte?: Date; lte?: Date } = {};
@@ -22,38 +19,43 @@ function dateWhere(range?: ReportRange) {
   return tanggal;
 }
 
-/** Omset & margin per item (basis: TransactionItem). */
 export async function laporanMargin(range?: ReportRange) {
   const dateFilter = txItemDateWhere(range);
-  const grouped = await prisma.transactionItem.groupBy({
-    by: ["itemId", "namaSnapshot"],
-    _sum: { qty: true, subtotal: true },
+  const lines = await prisma.transactionItem.findMany({
     where: dateFilter,
+    select: {
+      itemId: true,
+      namaSnapshot: true,
+      qty: true,
+      subtotal: true,
+      hargaSnapshot: true,
+      hargaBeliSnapshot: true,
+      item: { select: { kode: true } },
+    },
   });
 
-  const rows = await Promise.all(
-    grouped.map(async (g) => {
-      // margin = Σ (hargaJual - hargaBeli) * qty pada baris terkait (periode sama)
-      const lines = await prisma.transactionItem.findMany({
-        where: { itemId: g.itemId, ...(dateFilter ?? {}) },
-        select: { qty: true, hargaSnapshot: true, hargaBeliSnapshot: true },
-      });
-      const margin = lines.reduce(
-        (a, l) => a + (Number(l.hargaSnapshot) - Number(l.hargaBeliSnapshot)) * l.qty,
-        0
-      );
-      return {
-        nama: g.namaSnapshot,
-        qtyTerjual: g._sum.qty ?? 0,
-        omset: Number(g._sum.subtotal ?? 0),
-        margin,
-      };
-    })
-  );
-  return rows.sort((a, b) => b.omset - a.omset);
+  const rows = new Map<
+    number,
+    { kode: string; nama: string; qtyTerjual: number; omset: number; margin: number }
+  >();
+
+  for (const line of lines) {
+    const current = rows.get(line.itemId) ?? {
+      kode: line.item.kode,
+      nama: line.namaSnapshot,
+      qtyTerjual: 0,
+      omset: 0,
+      margin: 0,
+    };
+    current.qtyTerjual += line.qty;
+    current.omset += Number(line.subtotal);
+    current.margin += (Number(line.hargaSnapshot) - Number(line.hargaBeliSnapshot)) * line.qty;
+    rows.set(line.itemId, current);
+  }
+
+  return Array.from(rows.values()).sort((a, b) => b.omset - a.omset);
 }
 
-/** Barang terlaris (top by qty terjual). */
 export async function barangTerlaris(limit = 10, range?: ReportRange) {
   const rows = await laporanMargin(range);
   return [...rows].sort((a, b) => b.qtyTerjual - a.qtyTerjual).slice(0, limit);

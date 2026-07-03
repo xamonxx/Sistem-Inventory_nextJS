@@ -1,3 +1,7 @@
+"use client";
+
+import { useEffect, useState } from "react";
+import QRCode from "qrcode";
 import { formatRupiah, formatTanggal } from "@/lib/utils";
 
 export type NotaItem = { kode?: string; nama: string; harga: number; qty: number; subtotal: number };
@@ -14,11 +18,12 @@ export type NotaData = {
   atasNama?: string | null; // opsional, untuk transfer/kredit
   items: NotaItem[];
   total: number;
-  diskon?: number; // total diskon yang diberikan (Rp), opsional
   bayar?: number; // uang diterima (tunai), opsional
   kembali?: number; // uang kembalian, opsional
   judul?: string;
   catatan?: string;
+  verifyUrl?: string | null;
+  qrDataUrl?: string | null;
 };
 
 const COMPANY = "PUTRA CORPORATION";
@@ -38,7 +43,7 @@ function renderItemName(name: string, isThermal: boolean = false) {
   if (name.startsWith("[GANTI]")) {
     return (
       <span className="leading-tight">
-        <strong className={`font-extrabold font-sans mr-1 ${isThermal ? "text-[#166534]" : "text-emerald-700"}`}>[GANTI]</strong>
+        <strong className={`font-extrabold font-sans mr-1 ${isThermal ? "text-[#0369a1]" : "text-primary-700"}`}>[GANTI]</strong>
         <span>{name.slice(7).trim()}</span>
       </span>
     );
@@ -47,6 +52,28 @@ function renderItemName(name: string, isThermal: boolean = false) {
 }
 
 export function Nota({ data }: { data: NotaData }) {
+  const [generatedQr, setGeneratedQr] = useState("");
+
+  useEffect(() => {
+    if (!data.verifyUrl || data.qrDataUrl) {
+      setGeneratedQr("");
+      return;
+    }
+
+    let cancelled = false;
+    QRCode.toDataURL(data.verifyUrl, { margin: 1, width: 150 })
+      .then((url) => {
+        if (!cancelled) setGeneratedQr(url);
+      })
+      .catch(() => {
+        if (!cancelled) setGeneratedQr("");
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [data.verifyUrl, data.qrDataUrl]);
+
   // Calculate due date (30 days from transaction date)
   const dueDate = new Date(data.tanggal);
   dueDate.setDate(dueDate.getDate() + 30);
@@ -54,29 +81,26 @@ export function Nota({ data }: { data: NotaData }) {
   // Status mapping
   const isCredit = data.catatan?.toLowerCase().includes("credit") || data.catatan?.toLowerCase().includes("tempo");
   const isReturn = data.total < 0;
-  const stat = isReturn 
+  const belumBayar = data.bayar != null && data.bayar <= 0 && data.total > 0;
+  const stat = isReturn
     ? { label: "RETUR", fg: "#3730A3", bg: "#E0E7FF" }
-    : isCredit 
-    ? { label: "TEMPO", fg: "#991B1B", bg: "#FEE2E2" } 
+    : isCredit
+    ? { label: "TEMPO", fg: "#991B1B", bg: "#FEE2E2" }
+    : belumBayar
+    ? { label: "BELUM LUNAS", fg: "#991B1B", bg: "#FEE2E2" }
     : { label: "LUNAS", fg: "#166534", bg: "#DCFCE7" };
 
   const lunas = stat.label === "LUNAS";
   const totalQty = data.items.reduce((a, it) => a + it.qty, 0);
 
-  // Verification URL & QR code
-  const verifyUrl = typeof window !== "undefined"
-    ? `${window.location.origin}/verify?code=${data.noInvoice ?? data.noTransaksi ?? ""}`
-    : "";
-  const qrDataUrl = verifyUrl
-    ? `https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(verifyUrl)}`
-    : "";
+  const qrDataUrl = data.qrDataUrl ?? generatedQr;
 
   return (
     <>
       {/* 1. THERMAL PRINT LAYOUT (Compact, default for POS receipt) */}
-      <div className="thermal-print-layout bg-white p-6 text-sm text-black font-mono">
+      <div className="thermal-print-layout bg-white p-4 sm:p-6 text-sm text-black font-mono overflow-hidden">
         <div className="border-b border-dashed border-slate-400 pb-3 text-center">
-          <h2 className="text-base font-bold font-sans">{COMPANY}</h2>
+          <p className="thermal-brand-title text-base font-bold font-sans text-[#111827]">{COMPANY}</p>
           {ADDRESS && <p className="text-[10px] leading-tight mt-1">{ADDRESS}</p>}
           <p className="mt-2 font-bold font-sans text-xs tracking-wider">{data.judul ?? "NOTA TRANSAKSI"}</p>
         </div>
@@ -91,7 +115,13 @@ export function Nota({ data }: { data: NotaData }) {
           {data.namaWs && <Row k="Bengkel (WS)" v={data.namaWs} />}
         </div>
 
-        <table className="w-full py-2 text-[11px]">
+        <table className="w-full py-2 text-[11px] table-fixed">
+          <colgroup>
+            <col className="w-[40%]" />
+            <col className="w-[10%]" />
+            <col className="w-[25%]" />
+            <col className="w-[25%]" />
+          </colgroup>
           <thead>
             <tr className="border-b border-slate-300">
               <th className="py-1 text-left font-semibold">Barang</th>
@@ -103,24 +133,18 @@ export function Nota({ data }: { data: NotaData }) {
           <tbody>
             {data.items.map((it, i) => (
               <tr key={i} className="align-top">
-                <td className="py-1 max-w-[140px] break-words whitespace-normal leading-tight">
+                <td className="py-1 break-words whitespace-normal leading-tight">
                   {renderItemName(it.nama, true)}
                 </td>
                 <td className="py-1 text-center">{it.qty}</td>
-                <td className="py-1 text-right">{formatRupiah(it.harga)}</td>
-                <td className="py-1 text-right">{formatRupiah(it.subtotal)}</td>
+                <td className="py-1 text-right text-[10px]">{formatRupiah(it.harga)}</td>
+                <td className="py-1 text-right text-[10px]">{formatRupiah(it.subtotal)}</td>
               </tr>
             ))}
           </tbody>
         </table>
 
         <div className="border-t border-dashed border-slate-400 pt-2 text-[11px]">
-          {data.diskon != null && data.diskon > 0 && (
-            <div className="flex justify-between">
-              <span>Total Diskon</span>
-              <span>-{formatRupiah(data.diskon)}</span>
-            </div>
-          )}
           <div className="flex justify-between text-xs font-bold font-sans mt-1">
             <span>{data.total < 0 ? "REFUND" : "TOTAL AKHIR"}</span>
             <span>{formatRupiah(Math.abs(data.total))}</span>
@@ -153,7 +177,7 @@ export function Nota({ data }: { data: NotaData }) {
       {/* 2. PREMIUM A4 ENTERPRISE INVOICE LAYOUT (Elegant, spaced, professional corporate invoice) */}
       <div className="a4-print-layout bg-white text-[#111827] invoice-doc hidden">
         {/* Thin accent bar */}
-        <div className="invoice-accent-bar h-1.5 w-full bg-[#EA580C]" />
+        <div className="invoice-accent-bar h-1.5 w-full bg-[#0284c7]" />
 
         <div className="inv-body px-9 py-7">
           {/* ============ HEADER ============ */}
@@ -163,10 +187,10 @@ export function Nota({ data }: { data: NotaData }) {
                 PC
               </div>
               <div className="leading-tight">
-                <h1 className="max-w-[250px] text-[18px] font-extrabold uppercase leading-[1.05] tracking-[0.025em] text-[#111827]">
+                <p className="max-w-[250px] text-[18px] font-extrabold uppercase leading-[1.05] tracking-[0.025em] text-[#111827]">
                   {COMPANY}
-                </h1>
-                <p className="mt-0.5 text-[9px] font-bold uppercase tracking-[0.08em] text-[#EA580C]">
+                </p>
+                <p className="mt-0.5 text-[9px] font-bold uppercase tracking-[0.08em] text-[#0284c7]">
                   BUILDING MATERIALS SUPPLIER
                 </p>
                 <div className="mt-1.5 space-y-px text-[10px] leading-snug text-[#64748B]">
@@ -178,8 +202,8 @@ export function Nota({ data }: { data: NotaData }) {
             </div>
 
             <div className="text-right">
-              <h2 className="text-[18px] font-bold leading-none tracking-tight text-[#1E293B]">INVOICE</h2>
-              <p className="mt-1 font-mono text-[16px] font-semibold text-[#EA580C]">{data.noInvoice ?? data.noTransaksi ?? "-"}</p>
+              <p className="text-[18px] font-bold leading-none tracking-tight text-[#1E293B]">INVOICE</p>
+              <p className="mt-1 font-mono text-[16px] font-semibold text-[#0284c7]">{data.noInvoice ?? data.noTransaksi ?? "-"}</p>
               <dl className="mt-2.5 space-y-0.5 text-[10px]">
                 <div className="flex justify-end gap-2">
                   <dt className="text-[#94A3B8]">Tanggal</dt>
@@ -255,7 +279,7 @@ export function Nota({ data }: { data: NotaData }) {
               <tbody>
                 {data.items.map((it, i) => (
                   <tr key={i} className="border-b border-[#E5E7EB]">
-                    <td className="h-[28px] px-3 font-mono font-semibold text-[#EA580C]">{it.kode ?? "-"}</td>
+                    <td className="h-[28px] px-3 font-mono font-semibold text-[#0284c7]">{it.kode ?? "-"}</td>
                     <td className="h-[28px] px-3 font-medium text-[#111827]">{renderItemName(it.nama)}</td>
                     <td className="h-[28px] px-3 text-center font-semibold tabular-nums">{it.qty}</td>
                     <td className="h-[28px] px-3 text-center text-[#64748B]">Unit</td>
@@ -335,7 +359,7 @@ export function Nota({ data }: { data: NotaData }) {
           {/* ============ FOOTER ============ */}
           <div className="mt-6 flex items-center justify-between border-t border-[#E5E7EB] pt-3 text-[9px] text-[#94A3B8]">
             <span>Invoice dibuat otomatis oleh sistem.</span>
-            <span className="font-semibold text-[#EA580C]">www.putracorp.co.id</span>
+            <span className="font-semibold text-[#0284c7]">www.putracorp.co.id</span>
           </div>
         </div>
       </div>

@@ -247,14 +247,14 @@ export function DatePicker({
         onClick={() => setIsOpen(!isOpen)}
         className={cn(
           "flex h-full w-full items-center justify-between px-4 text-xs font-semibold text-left outline-none transition-all cursor-pointer shadow-sm select-none",
-          "border border-border rounded-lg bg-white hover:bg-[#f6faf8]",
+          "border border-border rounded-lg bg-card dark:bg-slate-900 hover:bg-[#f6faf8] dark:hover:bg-slate-950",
           isOpen && "border-[var(--primary)] ring-4 ring-[var(--primary)]/10",
-          disabled && "opacity-50 pointer-events-none bg-slate-50 text-slate-400"
+          disabled && "opacity-50 pointer-events-none bg-slate-50 dark:bg-slate-950 text-slate-400"
         )}
       >
         <div className="flex items-center gap-2.5 min-w-0">
           <CalendarIcon size={14} className="text-slate-500 shrink-0" />
-          <span className={cn("truncate font-bold", !internalValue ? "text-slate-400" : "text-slate-800")}>
+          <span className={cn("truncate font-bold", !internalValue ? "text-slate-400" : "text-foreground dark:text-slate-100")}>
             {formattedDisplay || placeholder}
           </span>
         </div>
@@ -264,17 +264,17 @@ export function DatePicker({
       {isOpen && (
         <div 
           className={cn(
-            "absolute mt-2 z-[9999] w-[290px] rounded-lg border border-border bg-white p-4 shadow-xl",
+            "absolute mt-2 z-[9999] w-[min(290px,calc(100vw-2rem))] rounded-lg border border-border bg-card p-4 shadow-xl dark:bg-card",
             align === "right" ? "right-0" : "left-0"
           )}
-          style={{ backgroundColor: "#ffffff" }}
+          style={{ backgroundColor: "var(--card)" }}
         >
           {/* Header Month/Year Navigator */}
-          <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+          <div className="flex items-center justify-between pb-3 border-b border-border">
             <button
               type="button"
               onClick={prevMonth}
-              className="p-1 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 text-slate-600 transition cursor-pointer"
+              className="flex h-8 w-8 items-center justify-center rounded-lg border border-border bg-card text-slate-600 transition hover:bg-slate-50 dark:bg-slate-900 dark:text-slate-400 dark:hover:bg-slate-800 cursor-pointer"
             >
               <ChevronLeft size={14} />
             </button>
@@ -283,7 +283,7 @@ export function DatePicker({
               <select
                 value={viewMonth}
                 onChange={(e) => setViewMonth(parseInt(e.target.value))}
-                className="text-xs font-bold text-slate-700 bg-transparent border-0 outline-none p-0 cursor-pointer focus:ring-0"
+                className="text-xs font-bold text-slate-700 dark:text-slate-300 bg-transparent border-0 outline-none p-0 cursor-pointer focus:ring-0 [&_option]:bg-card [&_option]:dark:bg-card [&_option]:text-foreground [&_option]:dark:text-slate-100"
               >
                 {MONTHS.map((m, idx) => (
                   <option key={m} value={idx}>{m}</option>
@@ -293,7 +293,7 @@ export function DatePicker({
               <select
                 value={viewYear}
                 onChange={(e) => setViewYear(parseInt(e.target.value))}
-                className="text-xs font-bold text-slate-700 bg-transparent border-0 outline-none p-0 cursor-pointer focus:ring-0 font-mono"
+                className="text-xs font-bold text-slate-700 dark:text-slate-300 bg-transparent border-0 outline-none p-0 cursor-pointer focus:ring-0 font-mono [&_option]:bg-card [&_option]:dark:bg-card [&_option]:text-foreground [&_option]:dark:text-slate-100"
               >
                 {yearsList.map((y) => (
                   <option key={y} value={y}>{y}</option>
@@ -304,7 +304,7 @@ export function DatePicker({
             <button
               type="button"
               onClick={nextMonth}
-              className="p-1 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 text-slate-600 transition cursor-pointer"
+              className="flex h-8 w-8 items-center justify-center rounded-lg border border-border bg-card text-slate-600 transition hover:bg-slate-50 dark:bg-slate-900 dark:text-slate-400 dark:hover:bg-slate-800 cursor-pointer"
             >
               <ChevronRight size={14} />
             </button>
@@ -325,11 +325,11 @@ export function DatePicker({
                 type="button"
                 onClick={() => handleSelectDay(cell.day, cell.isCurrentMonth, cell.offsetMonth)}
                 className={cn(
-                  "h-7 w-7 rounded-lg text-[10px] font-bold flex items-center justify-center transition-all cursor-pointer select-none",
-                  cell.isCurrentMonth ? "text-slate-800" : "text-slate-300",
+                  "flex h-8 w-8 items-center justify-center rounded-lg text-[10px] font-bold transition-all cursor-pointer select-none",
+                  cell.isCurrentMonth ? "text-foreground dark:text-slate-200" : "text-slate-300 dark:text-slate-700",
                   cell.isToday && !cell.isSelected && "border border-[var(--primary)] text-[var(--primary)] bg-[var(--primary)]/5",
                   cell.isSelected && "bg-[var(--primary)] text-white font-extrabold shadow-sm",
-                  !cell.isSelected && "hover:bg-slate-100"
+                  !cell.isSelected && "hover:bg-slate-100 dark:hover:bg-slate-800"
                 )}
               >
                 {cell.day}
@@ -338,11 +338,11 @@ export function DatePicker({
           </div>
 
           {/* Footer Shortcuts */}
-          <div className="flex justify-between items-center pt-3 mt-2 border-t border-slate-100">
+          <div className="flex justify-between items-center pt-3 mt-2 border-t border-border">
             <button
               type="button"
               onClick={handleClear}
-              className="text-[10px] font-bold text-red-600 hover:text-red-700 px-2 py-1 rounded transition cursor-pointer"
+              className="text-[10px] font-bold text-red-600 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300 px-2 py-1 rounded transition cursor-pointer"
             >
               Hapus
             </button>

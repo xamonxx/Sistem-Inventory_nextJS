@@ -46,7 +46,7 @@ export default async function KartuStokPage({ params }: { params: Promise<{ id: 
 
       <div className="grid grid-cols-2 gap-4 sm:grid-cols-5">
         <Card><p className="text-xs text-muted">Stok Awal</p><p className="text-lg font-bold">{item.stokAwal}</p></Card>
-        <Card><p className="text-xs text-muted">Total Masuk</p><p className="text-lg font-bold text-emerald-600">+{masuk}</p></Card>
+        <Card><p className="text-xs text-muted">Total Masuk</p><p className="text-lg font-bold text-primary-600">+{masuk}</p></Card>
         <Card><p className="text-xs text-muted">Total Keluar</p><p className="text-lg font-bold text-red-600">-{keluar}</p></Card>
         <Card><p className="text-xs text-muted">Total Retur</p><p className="text-lg font-bold text-blue-600">+{retur}</p></Card>
         <Card><p className="text-xs text-muted">Stok Akhir</p><p className={`text-lg font-bold ${saldo < item.minStok ? "text-red-600" : ""}`}>{saldo}</p></Card>
@@ -60,10 +60,10 @@ export default async function KartuStokPage({ params }: { params: Promise<{ id: 
             </thead>
             <tbody>
               {rows.map((l) => (
-                <tr key={l.id} className="hover:bg-slate-50">
+                <tr key={l.id} className="hover:bg-slate-50 dark:hover:bg-slate-900">
                   <Td>{formatTanggal(l.tanggal)}</Td>
                   <Td><Badge tone={TIPE_TONE[l.tipe]}>{l.tipe}</Badge></Td>
-                  <Td className={`text-right font-medium ${l.qty < 0 ? "text-red-600" : "text-emerald-600"}`}>{l.qty > 0 ? `+${l.qty}` : l.qty}</Td>
+                  <Td className={`text-right font-medium ${l.qty < 0 ? "text-red-600" : "text-primary-600"}`}>{l.qty > 0 ? `+${l.qty}` : l.qty}</Td>
                   <Td className="text-right font-semibold">{l.saldo}</Td>
                   <Td className="text-muted">{l.keterangan ?? "-"}</Td>
                   <Td className="text-muted">{l.user?.nama ?? "-"}</Td>

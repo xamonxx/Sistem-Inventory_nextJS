@@ -15,7 +15,7 @@ export const COLOR = {
   headerBg: "FFF1F5F9", // slate-100
   headerText: "FF0F172A", // slate-900
   border: "FFE2E8F0", // slate-200
-  green: "FFD1FAE5", // emerald-100
+  green: "FFE0F2FE", // primary-100
   blue: "FFDBEAFE", // blue-100
   yellow: "FFFEF9C3", // yellow-100
   orange: "FFFFEDD5", // orange-100

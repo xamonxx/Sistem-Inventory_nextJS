@@ -172,16 +172,16 @@ export function StokClient({
     <div className="space-y-6">
       {/* View Toggle and Filter Toolbar */}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-        <h2 className="text-lg font-bold text-slate-800">Riwayat & Filter Mutasi</h2>
+        <h2 className="text-lg font-bold text-foreground">Riwayat & Filter Mutasi</h2>
         
         {/* Toggle Control */}
-        <div className="flex bg-slate-100 p-0.5 rounded-lg border border-slate-200 shadow-xs self-end">
+        <div className="flex bg-slate-100 dark:bg-slate-800 p-0.5 rounded-lg border border-border shadow-xs self-end">
           <button
             type="button"
             onClick={() => setViewMode("table")}
             className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-md transition-all ${
               viewMode === "table"
-                ? "bg-white text-slate-900 shadow-sm"
+                ? "bg-card text-foreground shadow-sm"
                 : "text-slate-500 hover:text-slate-700"
             }`}
           >
@@ -193,7 +193,7 @@ export function StokClient({
             onClick={() => setViewMode("timeline")}
             className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-md transition-all ${
               viewMode === "timeline"
-                ? "bg-white text-slate-900 shadow-sm"
+                ? "bg-card text-foreground shadow-sm"
                 : "text-slate-500 hover:text-slate-700"
             }`}
           >
@@ -277,7 +277,7 @@ export function StokClient({
                       {formatTanggal(l.tanggal)}
                     </Td>
                     <Td>
-                      <div className="font-semibold text-slate-800 max-w-[130px] leading-tight">{l.itemName}</div>
+                      <div className="font-semibold text-foreground max-w-[130px] leading-tight">{l.itemName}</div>
                       <div className="font-mono text-[10px] text-slate-400">{l.itemKode}</div>
                     </Td>
                     <Td>
@@ -291,7 +291,7 @@ export function StokClient({
                         </span>
                       </Badge>
                     </Td>
-                    <Td className="text-right font-semibold font-mono text-emerald-600">
+                    <Td className="text-right font-semibold font-mono text-primary-600">
                       {isPositive ? `+${l.qty}` : "-"}
                     </Td>
                     <Td className="text-right font-semibold font-mono text-rose-600">
@@ -299,7 +299,7 @@ export function StokClient({
                     </Td>
                     <Td className="text-right font-bold font-mono">
                       {selectedItemId !== "" ? (
-                        <span className={l.runningBalance < l.itemMinStok ? "text-rose-600" : "text-slate-800"}>
+                        <span className={l.runningBalance < l.itemMinStok ? "text-rose-600" : "text-foreground"}>
                           {l.runningBalance}
                         </span>
                       ) : (
@@ -342,13 +342,13 @@ export function StokClient({
       )}
       {viewMode === "timeline" && (
         /* Timeline View */
-        <div className="relative border-l border-slate-200 pl-8 ml-4 space-y-6 py-2">
+        <div className="relative border-l border-border pl-8 ml-4 space-y-6 py-2">
           {processedRows.map((l) => {
             const isPositive = l.qty > 0;
             const isZero = l.qty === 0;
             
             const iconBg = {
-              MASUK: "bg-emerald-50 text-emerald-600 border-emerald-200",
+              MASUK: "bg-primary-50 text-primary-600 border-primary-200",
               KELUAR: "bg-rose-50 text-rose-600 border-rose-200",
               RETUR: "bg-blue-50 text-blue-600 border-blue-200",
               KOREKSI: "bg-amber-50 text-amber-600 border-amber-200",
@@ -365,7 +365,7 @@ export function StokClient({
                 </div>
 
                 {/* Timeline Card */}
-                <Card className="hover:border-slate-300 hover:shadow-xs transition-all duration-200 p-5">
+                <Card className="hover:border-border hover:shadow-xs transition-all duration-200 p-5">
                   <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                     <div className="space-y-2">
                       <div className="flex flex-wrap items-center gap-3">
@@ -383,7 +383,7 @@ export function StokClient({
                       </div>
                       
                       <div>
-                        <h3 className="font-bold text-slate-800 text-sm leading-tight">
+                        <h3 className="font-bold text-foreground text-sm leading-tight">
                           {l.itemName}
                         </h3>
                         <span className="font-mono text-[10px] text-slate-400">
@@ -397,9 +397,9 @@ export function StokClient({
                     </div>
 
                     {/* Quantity & Balance */}
-                    <div className="flex md:flex-col items-baseline md:items-end justify-between md:justify-center border-t md:border-t-0 pt-3 md:pt-0 border-slate-100">
+                    <div className="flex md:flex-col items-baseline md:items-end justify-between md:justify-center border-t md:border-t-0 pt-3 md:pt-0 border-border">
                       <div className="text-right">
-                        <span className={`text-base font-extrabold font-mono ${isPositive ? "text-emerald-600" : "text-rose-600"}`}>
+                        <span className={`text-base font-extrabold font-mono ${isPositive ? "text-primary-600" : "text-rose-600"}`}>
                           {isPositive ? `+${l.qty}` : l.qty}
                         </span>
                         <span className="text-xs text-slate-400 ml-1 font-semibold">pcs</span>
@@ -408,7 +408,7 @@ export function StokClient({
                       {selectedItemId !== "" ? (
                         <div className="text-right md:mt-1">
                           <span className="text-[11px] text-slate-400">Saldo: </span>
-                          <span className={`text-sm font-bold font-mono ${l.runningBalance < l.itemMinStok ? "text-rose-600" : "text-slate-800"}`}>
+                          <span className={`text-sm font-bold font-mono ${l.runningBalance < l.itemMinStok ? "text-rose-600" : "text-foreground"}`}>
                             {l.runningBalance}
                           </span>
                         </div>
@@ -434,10 +434,10 @@ export function StokClient({
       {/* Modal Quick Update Stok */}
       {canEdit && isUpdateOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 p-4 backdrop-blur-xs animate-fade-in" onClick={() => setIsUpdateOpen(false)}>
-          <div onClick={(e) => e.stopPropagation()} className="w-full max-w-md bg-white rounded-2xl overflow-y-auto max-h-[90vh] p-6 shadow-2xl border border-border anim-rise">
+          <div onClick={(e) => e.stopPropagation()} className="w-full max-w-md bg-card rounded-2xl overflow-y-auto max-h-[90vh] p-6 shadow-2xl border border-border anim-rise">
             <div className="flex items-center justify-between border-b border-border pb-3 mb-4">
               <div>
-                <h3 className="font-bold text-slate-900 text-base">Update Stok</h3>
+                <h3 className="font-bold text-foreground text-base">Update Stok</h3>
                 <p className="text-xs text-slate-500 font-semibold mt-0.5">{updateItemName}</p>
               </div>
               <button type="button" onClick={() => setIsUpdateOpen(false)} className="text-slate-400 hover:text-slate-700 transition cursor-pointer">
@@ -446,13 +446,13 @@ export function StokClient({
             </div>
 
             {/* Segment Tab Selector */}
-            <div className="flex bg-slate-100 p-1 rounded-xl border border-slate-200 mb-4">
+            <div className="flex bg-slate-100 dark:bg-slate-800 p-1 rounded-xl border border-border mb-4">
               <button
                 type="button"
                 onClick={() => { setUpdateTab("MASUK"); setUpdateError(null); }}
                 className={`flex-1 text-center py-2 text-xs font-bold rounded-lg transition-all cursor-pointer ${
                   updateTab === "MASUK"
-                    ? "bg-white text-emerald-700 shadow-sm border border-slate-200/50"
+                    ? "bg-card text-primary-700 shadow-sm border border-border/50"
                     : "text-slate-500 hover:text-slate-700"
                 }`}
               >
@@ -463,7 +463,7 @@ export function StokClient({
                 onClick={() => { setUpdateTab("KOREKSI"); setUpdateError(null); }}
                 className={`flex-1 text-center py-2 text-xs font-bold rounded-lg transition-all cursor-pointer ${
                   updateTab === "KOREKSI"
-                    ? "bg-white text-amber-700 shadow-sm border border-slate-200/50"
+                    ? "bg-card text-amber-700 shadow-sm border border-border/50"
                     : "text-slate-500 hover:text-slate-700"
                 }`}
               >

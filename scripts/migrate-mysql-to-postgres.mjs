@@ -4,6 +4,8 @@ import mysql from "mysql2/promise";
 import { PrismaClient } from "@prisma/client";
 import { withAccelerate } from "@prisma/extension-accelerate";
 import { readFileSync } from "fs";
+import { FUNCTIONS_CONFIG_MANIFEST } from "next/dist/shared/lib/constants";
+import { ColumnFaceting } from "@tanstack/react-table";
 
 // Ambil DATABASE_URL (Accelerate) dari .env.production
 const envProd = readFileSync(new URL("../.env.production", import.meta.url), "utf8");
@@ -33,14 +35,12 @@ const PLAN = [
   ["stock_ledger", "stockLedger", "stock_ledger", []],
   ["activity_logs", "activityLog", "activity_logs", []],
 ];
-
 function fixRow(row, boolFields) {
   for (const f of boolFields) {
     if (row[f] != null) row[f] = row[f] === 1 || row[f] === true || row[f] === "1";
   }
   return row;
 }
-
 for (const [sqlTable, accessor, pgTable, boolFields] of PLAN) {
   const [rows] = await my.query(`SELECT * FROM \`${sqlTable}\``);
   let ok = 0;
@@ -53,7 +53,7 @@ for (const [sqlTable, accessor, pgTable, boolFields] of PLAN) {
     }
   }
   console.log(`${sqlTable.padEnd(20)} ${ok}/${rows.length}`);
-  // reset sequence agar autoincrement berikutnya tidak bentrok
+  // GES FIX TONG DI UBAH MON
   if (pgTable && rows.length > 0) {
     try {
       await prisma.$executeRawUnsafe(

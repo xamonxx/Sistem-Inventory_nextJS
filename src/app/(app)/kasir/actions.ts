@@ -9,11 +9,12 @@ import { nextDocNumber } from "@/lib/counters";
 import { logActivity } from "@/lib/activity";
 import { FIELD_LIMITS } from "@/lib/fieldLimits";
 import { dbId, money, qtyPositive } from "@/lib/validation";
+import { validateCheckoutTotals } from "@/lib/checkoutRules";
+import { createInvoiceVerifyUrl } from "@/lib/invoiceVerify";
 
 const itemSchema = z.object({
   itemId: dbId,
   qty: qtyPositive,
-  discount: money.default(0),
 });
 
 const paymentComponentSchema = z.object({
@@ -57,9 +58,10 @@ export async function createTransaction(payload: KasirPayload) {
 
   // Verify item master availability
   const ids = d.items.map((i) => i.itemId);
-  const items = await prisma.item.findMany({ where: { id: { in: ids } } });
+  const uniqueIds = Array.from(new Set(ids));
+  const items = await prisma.item.findMany({ where: { id: { in: uniqueIds } } });
   const itemMap = new Map(items.map((i) => [i.id, i]));
-  if (items.length !== ids.length) {
+  if (items.length !== uniqueIds.length) {
     return { error: "Ada barang yang tidak ditemukan di database." };
   }
 
@@ -68,11 +70,21 @@ export async function createTransaction(payload: KasirPayload) {
     ? d.payments
     : [{ tipe: d.paymentMethod, jumlah: 0 }]; // jumlah 0 means we don't know the amount yet
 
-  const totalCashTransfer = effectivePayments
-    .filter((p) => p.tipe === "CASH" || p.tipe === "TRANSFER")
-    .reduce((sum, p) => sum + p.jumlah, 0);
-
-  const hasCredit = effectivePayments.some((p) => p.tipe === "CREDIT");
+  const checkoutValidation = validateCheckoutTotals({
+    lines: d.items.map((line) => {
+      const item = itemMap.get(line.itemId)!;
+      return {
+        itemId: line.itemId,
+        hargaJual: Number(item.hargaJual),
+        qty: line.qty,
+      };
+    }),
+    payments: effectivePayments,
+    buatInvoice: d.buatInvoice,
+  });
+  if (!checkoutValidation.ok) {
+    return { error: checkoutValidation.error };
+  }
 
   try {
     const result = await prisma.$transaction(async (tx) => {
@@ -167,7 +179,7 @@ export async function createTransaction(payload: KasirPayload) {
         const it = itemMap.get(line.itemId)!;
 
         const baseSubtotal = new Prisma.Decimal(it.hargaJual).mul(line.qty);
-        const subtotal = baseSubtotal.sub(line.discount);
+        const subtotal = baseSubtotal;
         grandTotal = grandTotal.add(subtotal);
 
         await tx.transactionItem.create({
@@ -217,10 +229,14 @@ export async function createTransaction(payload: KasirPayload) {
 
       // 7. Conditional Invoice creation
       let invoiceNo: string | null = null;
-      if (d.buatInvoice || hasCredit) {
+      if (d.buatInvoice || checkoutValidation.hasCredit) {
         invoiceNo = await nextDocNumber(tx, "invoice");
-        const totalDibayar = hasCredit ? new Prisma.Decimal(totalCashTransfer) : grandTotal;
-        const invoiceStatus = hasCredit && totalDibayar.lessThan(grandTotal) ? "PENDING" : "LUNAS";
+        const totalDibayar = new Prisma.Decimal(checkoutValidation.totalPaid);
+        const invoiceStatus = totalDibayar.greaterThanOrEqualTo(grandTotal)
+          ? "LUNAS"
+          : totalDibayar.isZero()
+            ? "PENDING"
+            : "PARTIAL";
 
         const invoice = await tx.invoice.create({
           data: {
@@ -264,7 +280,11 @@ export async function createTransaction(payload: KasirPayload) {
     revalidatePath("/invoice"); // Invoice list if created
     revalidateTag("stock");     // Invalidate stock cache
 
-    return { ok: true, ...result };
+    const verifyUrl = result.invoiceNo
+      ? await createInvoiceVerifyUrl(result.invoiceNo)
+      : null;
+
+    return { ok: true, ...result, verifyUrl };
   } catch (error: any) {
     console.error("Kasir checkout error:", error);
     return { error: "Terjadi kesalahan internal saat memproses checkout." };

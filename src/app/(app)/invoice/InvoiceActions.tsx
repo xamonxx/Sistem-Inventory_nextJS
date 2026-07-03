@@ -10,6 +10,7 @@ import { MessageCircle, Wallet, Printer, X, Download, Mail, Link2 } from "lucide
 import { toast } from "sonner";
 import { InvoiceDocument } from "@/components/InvoiceDocument";
 import { printArea } from "@/lib/print";
+import QRCode from "qrcode";
 
 export type InvoiceItem = {
   kode: string;
@@ -19,7 +20,6 @@ export type InvoiceItem = {
   subtotal: number;
   kategori?: string;
   satuan?: string;
-  diskon?: number;
 };
 
 export type InvoiceRow = {
@@ -46,19 +46,44 @@ export function InvoiceActions({ inv, canBayar }: { inv: InvoiceRow; canBayar: b
   const [openPrint, setOpenPrint] = useState(false);
   const [jumlah, setJumlah] = useState<number>(inv.total - inv.totalDibayar);
   const [metode, setMetode] = useState<"CASH" | "TRANSFER">("CASH");
+  const [qrDataUrl, setQrDataUrl] = useState<string | undefined>(inv.qrDataUrl);
   const [pending, start] = useTransition();
   const docRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!openPrint || !inv.verifyUrl || inv.qrDataUrl) {
+      setQrDataUrl(inv.qrDataUrl);
+      return;
+    }
+
+    let cancelled = false;
+    QRCode.toDataURL(inv.verifyUrl, { margin: 2, width: 160 })
+      .then((url) => {
+        if (!cancelled) setQrDataUrl(url);
+      })
+      .catch(() => {
+        if (!cancelled) setQrDataUrl(undefined);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [openPrint, inv.verifyUrl, inv.qrDataUrl]);
 
   // Auto-fit dokumen invoice agar full terlihat di preview (tidak mempengaruhi print)
   useEffect(() => {
     if (!openPrint) return;
+    const previewNode = docRef.current;
     const fit = () => {
       const el = docRef.current;
       if (!el) return;
       el.style.zoom = "1";
-      const natural = el.offsetHeight;
-      const avail = window.innerHeight * 0.82 - 56; // dikurangi toolbar
-      const z = Math.max(0.32, Math.min(1, avail / natural));
+      const naturalW = el.offsetWidth;
+      const naturalH = el.offsetHeight;
+      const parent = el.parentElement;
+      const availW = parent ? parent.clientWidth - 2 : window.innerWidth - 32;
+      const availH = parent ? parent.clientHeight - 2 : window.innerHeight * 0.82 - 56;
+      const z = Math.max(0.32, Math.min(1, availW / naturalW, availH / naturalH));
       el.style.zoom = String(z);
     };
     const t = setTimeout(fit, 80);
@@ -66,6 +91,7 @@ export function InvoiceActions({ inv, canBayar }: { inv: InvoiceRow; canBayar: b
     return () => {
       clearTimeout(t);
       window.removeEventListener("resize", fit);
+      if (previewNode) previewNode.style.zoom = "1";
     };
   }, [openPrint]);
 
@@ -178,16 +204,16 @@ export function InvoiceActions({ inv, canBayar }: { inv: InvoiceRow; canBayar: b
       {/* Payment Recording Modal */}
       {openPay && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/45 p-4 backdrop-blur-xs" onClick={() => setOpenPay(false)}>
-          <div onClick={(e) => e.stopPropagation()} className="w-full max-w-sm rounded-2xl bg-white p-6 shadow-2xl border border-border">
+          <div onClick={(e) => e.stopPropagation()} className="w-full max-w-sm rounded-2xl bg-card p-6 shadow-2xl border border-border">
             <div className="flex items-center justify-between border-b border-border pb-3 mb-4">
-              <h3 className="font-bold text-slate-900">Catat Pembayaran Piutang</h3>
+              <h3 className="font-bold text-foreground">Catat Pembayaran Piutang</h3>
               <button onClick={() => setOpenPay(false)} className="text-muted hover:text-foreground">
                 <X size={18} />
               </button>
             </div>
 
             <div className="space-y-4">
-              <div className="text-xs space-y-1 bg-slate-50 border border-border p-3 rounded-lg">
+              <div className="text-xs space-y-1 bg-slate-50 dark:bg-slate-900 border border-border p-3 rounded-lg">
                 <div className="flex justify-between"><span className="text-muted">No. Invoice:</span> <strong className="font-mono">{inv.noInvoice}</strong></div>
                 <div className="flex justify-between"><span className="text-muted">Total Tagihan:</span> <span>{formatRupiah(inv.total)}</span></div>
                 <div className="flex justify-between"><span className="text-muted">Sisa Piutang:</span> <strong className="text-amber-700">{formatRupiah(sisa)}</strong></div>
@@ -226,12 +252,12 @@ export function InvoiceActions({ inv, canBayar }: { inv: InvoiceRow; canBayar: b
 
       {/* Print Modal — Enterprise Invoice A4 */}
       {openPrint && (
-        <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/55 p-4 backdrop-blur-xs" onClick={() => setOpenPrint(false)}>
-          <div onClick={(e) => e.stopPropagation()} className="my-4 w-full max-w-3xl overflow-hidden rounded-2xl bg-white shadow-2xl">
+        <div className="fixed inset-0 z-50 flex items-center justify-center overscroll-contain bg-black/60 p-3 sm:p-5 backdrop-blur-sm" onClick={() => setOpenPrint(false)}>
+          <div onClick={(e) => e.stopPropagation()} className="flex max-h-[94vh] w-full max-w-[880px] flex-col overflow-hidden rounded-2xl bg-card shadow-[var(--shadow-modal)] border border-border anim-rise">
             {/* Toolbar */}
-            <div className="no-print flex flex-wrap items-center justify-between gap-2 border-b border-border bg-[var(--paper-2)] px-4 py-3">
-              <p className="text-sm font-semibold text-foreground">
-                Pratinjau Invoice <span className="font-mono text-[var(--primary)]">{inv.noInvoice}</span>
+            <div className="no-print flex shrink-0 flex-wrap items-center justify-between gap-2 border-b border-border bg-[var(--surface-2)] px-5 py-3.5">
+              <p className="text-sm font-bold text-foreground">
+                Pratinjau Invoice <span className="font-mono text-[var(--primary-strong)]">{inv.noInvoice}</span>
               </p>
               <div className="flex flex-wrap items-center gap-1.5">
                 <Button size="sm" onClick={cetak}><Printer size={14} /> Print</Button>
@@ -244,13 +270,13 @@ export function InvoiceActions({ inv, canBayar }: { inv: InvoiceRow; canBayar: b
             </div>
 
             {/* Document (auto-fit ke layar) */}
-            <div className="overflow-auto bg-[var(--paper-2)] p-4 sm:p-5" style={{ maxHeight: "calc(100vh - 120px)" }}>
+            <div className="print-preview-scroll min-h-0 flex-1 bg-[var(--paper-2)] p-4 sm:p-6 scrollbar-thin">
               <div
                 ref={docRef}
                 style={{ zoom: 1 }}
-                className="print-area mx-auto w-[800px] max-w-full origin-top overflow-hidden rounded-xl border border-border bg-white shadow-[0_4px_24px_-8px_rgba(15,23,42,0.18)]"
+                className="print-area print-a4-preview mx-auto origin-top overflow-visible rounded-xl border border-border bg-white shadow-[0_4px_24px_-8px_rgba(15,23,42,0.18)]"
               >
-                <InvoiceDocument inv={inv} qrDataUrl={inv.qrDataUrl} verifyUrl={inv.verifyUrl} />
+                <InvoiceDocument inv={inv} qrDataUrl={qrDataUrl} />
               </div>
             </div>
           </div>

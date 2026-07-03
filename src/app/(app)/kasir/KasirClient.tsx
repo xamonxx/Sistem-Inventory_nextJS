@@ -22,8 +22,8 @@ import {
   FolderOpen,
   X,
   CreditCard,
-  Percent,
   Camera,
+  PackageSearch,
 } from "lucide-react";
 import { Nota, type NotaData } from "@/components/Nota";
 import { ModernDialog } from "@/components/ModernDialog";
@@ -53,8 +53,6 @@ export function KasirClient({ items }: { items: Item[] }) {
     noRekening,
     atasNama,
     buatInvoice,
-    globalDiscount,
-    globalDiscountType,
     setTipe,
     setNamaClient,
     setAlamat,
@@ -66,13 +64,9 @@ export function KasirClient({ items }: { items: Item[] }) {
     setNoRekening,
     setAtasNama,
     setBuatInvoice,
-    setGlobalDiscount,
-    setGlobalDiscountType,
     addToCart,
     removeFromCart,
     updateQty,
-    updateDiscount,
-    updateDiscountType,
     clearCart,
   } = useKasirStore();
 
@@ -123,23 +117,15 @@ export function KasirClient({ items }: { items: Item[] }) {
     return items.filter((i) => i.nama.toLowerCase().includes(s) || i.kode.toLowerCase().includes(s));
   }, [q, items]);
 
-  // Cart math computations (Discounts removed entirely)
+  // Cart math computations
   const computed = useMemo(
-    () =>
-      computeCart(
-        cart.map((l) => ({ harga: l.harga, qty: l.qty, discount: 0, discountType: "RP" })),
-        0,
-        "RP"
-      ),
+    () => computeCart(cart.map((l) => ({ harga: l.harga, qty: l.qty }))),
     [cart]
   );
 
   const totalItemCount = cart.length;
   const totalQtyCount = cart.reduce((acc, x) => acc + x.qty, 0);
   const subtotalCost = computed.subtotal;
-  const totalLineDiscount = computed.totalLineDiscount;
-  const globalDiscountRp = computed.globalDiscount;
-  const totalDiscount = totalLineDiscount + globalDiscountRp;
   const grandTotalCost = computed.grandTotal;
 
   // Split payments sum validation
@@ -222,7 +208,7 @@ export function KasirClient({ items }: { items: Item[] }) {
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [cart, tipe, namaClient, alamat, namaWs, projectNama, projectGroupNama, paymentMethod, buatInvoice, globalDiscount, globalDiscountType, cashReceived, isSplitActive, splitCash, splitTransfer, splitCredit, step]);
+  }, [cart, tipe, namaClient, alamat, namaWs, projectNama, projectGroupNama, paymentMethod, buatInvoice, cashReceived, isSplitActive, splitCash, splitTransfer, splitCredit, step]);
 
   // Hold transaction logic
   function handleHoldCart() {
@@ -255,9 +241,6 @@ export function KasirClient({ items }: { items: Item[] }) {
       for (let i = 0; i < item.qty; i++) {
         addToCart({ id: item.itemId, kode: item.kode, nama: item.nama, hargaJual: item.harga, stok: item.stok });
       }
-      // Apply discounts
-      updateDiscount(item.itemId, item.discount);
-      updateDiscountType(item.itemId, item.discountType);
     });
 
     // Remove from held list
@@ -341,7 +324,11 @@ export function KasirClient({ items }: { items: Item[] }) {
             ...(splitTransfer > 0 ? [{ tipe: "TRANSFER" as const, jumlah: splitTransfer }] : []),
             ...(splitCredit > 0 ? [{ tipe: "CREDIT" as const, jumlah: splitCredit }] : []),
           ]
-        : [];
+        : isCash && cashReceived > 0
+          ? [{ tipe: "CASH" as const, jumlah: Math.min(cashReceived, grandTotalCost) }]
+          : paymentMethod === "TRANSFER"
+            ? [{ tipe: "TRANSFER" as const, jumlah: grandTotalCost }]
+            : [];
 
       const res = await createTransaction({
         tipe,
@@ -356,7 +343,7 @@ export function KasirClient({ items }: { items: Item[] }) {
         atasNama,
         payments,
         buatInvoice: isSplitActive ? (splitCredit > 0 || buatInvoice) : buatInvoice,
-        items: cart.map((l, i) => ({ itemId: l.itemId, qty: l.qty, discount: computed.lines[i].finalDiscount })),
+        items: cart.map((l) => ({ itemId: l.itemId, qty: l.qty })),
       });
 
       if (res && "error" in res && res.error) {
@@ -369,6 +356,7 @@ export function KasirClient({ items }: { items: Item[] }) {
         setNota({
           noTransaksi: res.noTransaksi,
           noInvoice: res.invoiceNo ?? null,
+          verifyUrl: res.verifyUrl ?? null,
           tanggal: new Date().toISOString(),
           namaClient,
           alamat,
@@ -384,7 +372,6 @@ export function KasirClient({ items }: { items: Item[] }) {
             subtotal: computed.lines[i].finalSubtotal,
           })),
           total: res.grandTotal,
-          diskon: totalDiscount,
           bayar: bayar ?? undefined,
           kembali: kembali ?? undefined,
           judul: "NOTA TRANSAKSI ERP",
@@ -424,9 +411,9 @@ export function KasirClient({ items }: { items: Item[] }) {
       {isHoldModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
           <div className="absolute inset-0 bg-slate-900/40 backdrop-blur-xs" onClick={() => setIsHoldModalOpen(false)} />
-          <div className="relative w-full max-w-lg rounded-[20px] bg-white p-6 shadow-[var(--shadow-modal)] border border-border anim-rise">
+          <div className="relative w-full max-w-lg rounded-[20px] bg-card p-6 shadow-[var(--shadow-modal)] border border-border anim-rise">
             <div className="flex items-center justify-between border-b border-border pb-3 mb-4">
-              <h3 className="text-base font-bold text-slate-900 flex items-center gap-2">
+              <h3 className="text-base font-bold text-foreground flex items-center gap-2">
                 <FolderOpen size={18} className="text-[var(--primary)]" /> Daftar Transaksi Ditangguhkan
               </h3>
               <button onClick={() => setIsHoldModalOpen(false)} className="text-slate-400 hover:text-slate-700 cursor-pointer">
@@ -436,9 +423,9 @@ export function KasirClient({ items }: { items: Item[] }) {
 
             <div className="max-h-72 overflow-y-auto space-y-2.5 pr-1 scrollbar-thin">
               {heldCarts.map((item) => (
-                <div key={item.id} className="rounded-xl border border-border bg-slate-50/50 p-4 flex items-center justify-between gap-4">
+                <div key={item.id} className="rounded-xl border border-border bg-slate-50/50 dark:bg-slate-800/50 p-4 flex items-center justify-between gap-4">
                   <div className="space-y-1">
-                    <p className="font-bold text-slate-800 text-sm">{item.name}</p>
+                    <p className="font-bold text-foreground text-sm">{item.name}</p>
                     <p className="text-[10px] text-slate-450 font-medium">Ditangguhkan: {item.date} • {item.cart.reduce((a, b) => a + b.qty, 0)} unit</p>
                   </div>
                   <div className="flex items-center gap-2">
@@ -447,7 +434,7 @@ export function KasirClient({ items }: { items: Item[] }) {
                     </Button>
                     <button
                       onClick={() => handleDeleteHeldCart(item.id)}
-                      className="flex h-9 w-9 items-center justify-center rounded-xl text-red-500 hover:bg-red-50 transition cursor-pointer"
+                      className="flex h-9 w-9 items-center justify-center rounded-xl text-red-500 hover:bg-red-50 dark:hover:bg-red-900/30 transition cursor-pointer"
                     >
                       <Trash2 size={15} />
                     </button>
@@ -470,13 +457,13 @@ export function KasirClient({ items }: { items: Item[] }) {
       )}
 
       {/* Premium Guided Stepper Progress Bar */}
-      <div className="bg-white rounded-[18px] border border-border p-4 shadow-[var(--shadow-card)]">
+      <div className="bg-card rounded-[18px] border border-border p-4 shadow-[var(--shadow-card)]">
         <div className="flex items-center justify-between max-w-3xl mx-auto relative px-4">
           {/* Background Connector Line */}
-          <div className="absolute left-[10%] right-[10%] top-[30%] h-[3px] bg-slate-100 -translate-y-1/2 z-0 rounded-full" />
+          <div className="absolute left-[10%] right-[10%] top-[30%] h-[3px] bg-slate-100 dark:bg-slate-800 -translate-y-1/2 z-0 rounded-full" />
           {/* Active Connector Line */}
           <div
-            className="absolute left-[10%] top-[30%] h-[3px] bg-gradient-to-r from-[var(--primary)] to-emerald-500 -translate-y-1/2 z-0 rounded-full transition-all duration-500 ease-in-out"
+            className="absolute left-[10%] top-[30%] h-[3px] bg-gradient-to-r from-[var(--primary)] to-primary-500 -translate-y-1/2 z-0 rounded-full transition-all duration-500 ease-in-out"
             style={{
               width: step === 1 ? "0%" : step === 2 ? "40%" : "80%",
             }}
@@ -493,14 +480,14 @@ export function KasirClient({ items }: { items: Item[] }) {
               step === 1
                 ? "bg-[var(--primary)] border-[var(--primary)] text-white ring-4 ring-[var(--primary)]/15 scale-110"
                 : cart.length > 0
-                  ? "bg-emerald-50 border-emerald-200 text-emerald-600 font-extrabold"
-                  : "bg-white border-slate-200 text-slate-400"
+                  ? "bg-primary-50 border-primary-200 text-primary-600 font-extrabold"
+                  : "bg-card border-border text-slate-400"
             )}>
               {cart.length > 0 && step > 1 ? "✓" : "1"}
             </div>
             <span className={cn(
               "text-[10px] sm:text-xs font-bold tracking-tight transition-colors",
-              step === 1 ? "text-slate-900 font-extrabold" : "text-slate-400 group-hover:text-slate-650"
+              step === 1 ? "text-foreground font-extrabold" : "text-slate-400 group-hover:text-slate-650"
             )}>
               Barang &amp; Keranjang
             </span>
@@ -517,14 +504,14 @@ export function KasirClient({ items }: { items: Item[] }) {
               step === 2
                 ? "bg-[var(--primary)] border-[var(--primary)] text-white ring-4 ring-[var(--primary)]/15 scale-110"
                 : step > 2
-                  ? "bg-emerald-50 border-emerald-200 text-emerald-600 font-extrabold"
-                  : "bg-white border-slate-200 text-slate-400"
+                  ? "bg-primary-50 border-primary-200 text-primary-600 font-extrabold"
+                  : "bg-card border-border text-slate-400"
             )}>
               {step > 2 ? "✓" : "2"}
             </div>
             <span className={cn(
               "text-[10px] sm:text-xs font-bold tracking-tight transition-colors",
-              step === 2 ? "text-slate-900 font-extrabold" : "text-slate-400 group-hover:text-slate-650"
+              step === 2 ? "text-foreground font-extrabold" : "text-slate-400 group-hover:text-slate-650"
             )}>
               Data Pelanggan
             </span>
@@ -539,14 +526,14 @@ export function KasirClient({ items }: { items: Item[] }) {
             <div className={cn(
               "w-8 h-8 rounded-full flex items-center justify-center font-bold text-xs transition-all duration-300 border shadow-xs",
               step === 3
-                ? "bg-emerald-500 border-emerald-500 text-white ring-4 ring-emerald-500/15 scale-110"
-                : "bg-white border-slate-200 text-slate-400"
+                ? "bg-primary-500 border-primary-500 text-white ring-4 ring-primary-500/15 scale-110"
+                : "bg-card border-border text-slate-400"
             )}>
               3
             </div>
             <span className={cn(
               "text-[10px] sm:text-xs font-bold tracking-tight transition-colors",
-              step === 3 ? "text-emerald-700 font-extrabold" : "text-slate-400 group-hover:text-slate-650"
+              step === 3 ? "text-primary-700 font-extrabold" : "text-slate-400 group-hover:text-slate-650"
             )}>
               Metode Pembayaran
             </span>
@@ -563,11 +550,11 @@ export function KasirClient({ items }: { items: Item[] }) {
               {/* Search Bar & Favorite Grid */}
               <Card className="space-y-4">
                 <div className="flex items-center justify-between border-b border-border pb-3">
-                  <h2 className="text-sm font-semibold text-slate-900 flex items-center gap-1.5 leading-none">
+                  <h2 className="text-sm font-semibold text-foreground flex items-center gap-1.5 leading-none">
                     <Search size={16} className="text-primary" /> Katalog Barang POS
                   </h2>
-                  <span className="text-[10px] font-bold text-slate-400 flex items-center gap-1">
-                    <Keyboard size={10} /> <kbd className="bg-slate-100 px-1 rounded">F2</kbd> Cari | <kbd className="bg-slate-100 px-1 rounded">F4</kbd> Bayar
+                  <span className="text-[10px] font-bold text-slate-400 hidden sm:flex items-center gap-1 shrink-0">
+                    <Keyboard size={10} /> <kbd className="bg-slate-100 dark:bg-slate-800 px-1 rounded">F2</kbd> Cari | <kbd className="bg-slate-100 dark:bg-slate-800 px-1 rounded">F4</kbd> Bayar
                   </span>
                 </div>
 
@@ -582,7 +569,7 @@ export function KasirClient({ items }: { items: Item[] }) {
                     onKeyDown={handleSearchKeyDown}
                     maxLength={FIELD_LIMITS.search}
                     placeholder="Scan barcode atau ketik nama material... (Klik item di grid)"
-                    className="h-11 w-full rounded-xl border border-border bg-slate-50/50 pl-10 pr-10 text-sm outline-none transition-all focus:border-[var(--primary)] focus:bg-white focus:ring-4 focus:ring-[var(--primary)]/10"
+                    className="h-11 w-full rounded-xl border border-border bg-slate-50/50 dark:bg-slate-800/50 pl-10 pr-10 text-sm text-foreground outline-none transition-all focus:border-[var(--primary)] focus:bg-card focus:ring-4 focus:ring-[var(--primary)]/10"
                   />
                   {q && (
                     <button
@@ -591,7 +578,7 @@ export function KasirClient({ items }: { items: Item[] }) {
                         setQ("");
                         searchInputRef.current?.focus();
                       }}
-                      className="absolute right-3.5 top-3 text-slate-400 hover:text-slate-655 cursor-pointer flex h-5 w-5 items-center justify-center rounded-full hover:bg-slate-100 transition-all duration-150"
+                      className="absolute right-3.5 top-3 text-slate-400 hover:text-slate-655 cursor-pointer flex h-5 w-5 items-center justify-center rounded-full hover:bg-slate-100 dark:hover:bg-slate-800 transition-all duration-150"
                     >
                       <X size={14} />
                     </button>
@@ -599,8 +586,22 @@ export function KasirClient({ items }: { items: Item[] }) {
                 </div>
 
                 {/* Dynamic Grid of Items */}
-                <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 max-h-[320px] md:max-h-[460px] overflow-y-auto p-2.5 pr-2 scrollbar-thin">
-                  {filtered.slice(0, 16).map((it) => (
+                {filtered.length === 0 ? (
+                  <div className="flex flex-col items-center justify-center gap-2.5 py-14 px-6 text-center select-none">
+                    <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-slate-100 dark:bg-slate-800/70 text-slate-400 dark:text-slate-500">
+                      <PackageSearch size={22} />
+                    </div>
+                    <p className="text-sm font-bold text-foreground">Maaf, barang belum tersedia di master data</p>
+                    <p className="text-xs text-muted max-w-[280px] break-words">
+                      Barang dengan kata kunci &quot;{q.length > 40 ? `${q.slice(0, 40)}…` : q}&quot; tidak ditemukan. Periksa kembali ejaan atau tambahkan barang baru di Master Barang.
+                    </p>
+                  </div>
+                ) : (
+                <div className="pos-catalog-grid grid gap-3 max-h-[320px] md:max-h-[460px] overflow-y-auto p-2.5 pr-2 scrollbar-thin">
+                  {filtered.slice(0, 16).map((it) => {
+                    const inCartQty = cart.find((l) => l.itemId === it.id)?.qty ?? 0;
+                    const isInCart = inCartQty > 0;
+                    return (
                     <button
                       key={it.id}
                       type="button"
@@ -608,27 +609,32 @@ export function KasirClient({ items }: { items: Item[] }) {
                         addToCart(it);
                         toast.success(`${it.nama} masuk keranjang`);
                       }}
-                      className="group relative flex flex-col justify-between rounded-2xl border border-slate-200/80 bg-white p-3.5 text-left transition-all duration-200 hover:border-orange-300 hover:shadow-[0_8px_30px_rgb(0,0,0,0.04)] hover:-translate-y-0.5 active:scale-[0.98] cursor-pointer"
+                      className={cn("pos-item-card group", isInCart && "pos-item-card-active")}
                     >
-                      <div className="space-y-1">
-                        <p className="line-clamp-2 text-xs font-bold text-slate-800 leading-snug group-hover:text-slate-900 transition-colors">{it.nama}</p>
-                        <p className="font-mono text-[9px] text-slate-400">{it.kode}</p>
+                      {isInCart && (
+                        <span className="pos-item-qty-badge">{inCartQty}</span>
+                      )}
+                      <div className="space-y-1.5">
+                        <p className="pos-item-name line-clamp-2 text-xs font-bold leading-snug">{it.nama}</p>
+                        <span className="pos-item-kode inline-flex items-center rounded-md px-1.5 py-0.5 font-mono text-[9px] font-bold tracking-wide">{it.kode}</span>
                       </div>
-                      <div className="mt-4 flex items-center justify-between border-t border-slate-100 pt-2.5 w-full">
-                        <span className="font-mono text-xs font-extrabold text-[var(--primary)] group-hover:text-[var(--primary-strong)] transition-colors">{formatRupiah(it.hargaJual)}</span>
+                      <div className="pos-item-divider mt-4 flex items-center justify-between border-t pt-2.5 w-full">
+                        <span className="pos-item-price font-mono text-xs font-extrabold">{formatRupiah(it.hargaJual)}</span>
                         <Badge tone={it.stok <= 0 ? "red" : it.stok < 10 ? "amber" : "green"} className="text-[8px] px-1.5 py-0.5 select-none font-bold">
                           {it.stok <= 0 ? "habis" : `stok ${it.stok}`}
                         </Badge>
                       </div>
                     </button>
-                  ))}
+                    );
+                  })}
                 </div>
+                )}
               </Card>
 
               {/* Modern Cart List */}
-              <div className="overflow-hidden rounded-[18px] border border-border bg-white shadow-[var(--shadow-card)]">
-                <div className="flex items-center justify-between border-b border-border px-6 py-4 bg-slate-50/50">
-                  <h3 className="text-sm font-bold text-slate-900 leading-none">Keranjang Belanja</h3>
+              <div className="overflow-hidden rounded-[18px] border border-border bg-card shadow-[var(--shadow-card)]">
+                <div className="flex items-center justify-between border-b border-border px-6 py-4 bg-slate-50/50 dark:bg-slate-800/50">
+                  <h3 className="text-sm font-bold text-foreground leading-none">Keranjang Belanja</h3>
                   <Badge tone="blue" className="text-xs select-none">
                     {totalQtyCount} item
                   </Badge>
@@ -656,13 +662,13 @@ export function KasirClient({ items }: { items: Item[] }) {
                               <button
                                 type="button"
                                 onClick={() => removeFromCart(l.itemId)}
-                                className="flex h-8 w-8 items-center justify-center rounded-lg text-slate-400 hover:bg-red-50 hover:text-red-655 transition cursor-pointer"
+                                className="flex h-8 w-8 items-center justify-center rounded-lg text-slate-400 hover:bg-red-50 dark:hover:bg-red-900/30 hover:text-red-655 transition cursor-pointer"
                               >
                                 <Trash2 size={15} />
                               </button>
                             </Td>
                             <Td>
-                              <div className="font-bold text-slate-800 text-xs sm:text-sm">{l.nama}</div>
+                              <div className="font-bold text-foreground text-xs sm:text-sm">{l.nama}</div>
                               <div className="font-mono text-[9px] text-slate-450 flex items-center gap-1.5 mt-1 select-none">
                                 <span>{l.kode}</span>
                                 {isOverStock && (
@@ -678,7 +684,7 @@ export function KasirClient({ items }: { items: Item[] }) {
                                 <button
                                   type="button"
                                   onClick={() => updateQty(l.itemId, l.qty - 1)}
-                                  className="flex h-8 w-8 items-center justify-center rounded-lg border border-border bg-white text-slate-650 hover:bg-slate-50 active:scale-95 transition cursor-pointer"
+                                  className="flex h-8 w-8 items-center justify-center rounded-lg border border-border bg-card text-slate-650 hover:bg-slate-50 dark:hover:bg-slate-900 active:scale-95 transition cursor-pointer"
                                 >
                                   <Minus size={13} />
                                 </button>
@@ -693,20 +699,20 @@ export function KasirClient({ items }: { items: Item[] }) {
                                 <button
                                   type="button"
                                   onClick={() => addToCart({ id: l.itemId, kode: l.kode, nama: l.nama, hargaJual: l.harga, stok: l.stok })}
-                                  className="flex h-8 w-8 items-center justify-center rounded-lg border border-border bg-white text-slate-650 hover:bg-slate-50 active:scale-95 transition cursor-pointer"
+                                  className="flex h-8 w-8 items-center justify-center rounded-lg border border-border bg-card text-slate-650 hover:bg-slate-50 dark:hover:bg-slate-900 active:scale-95 transition cursor-pointer"
                                 >
                                   <Plus size={13} />
                                 </button>
                               </div>
                             </Td>
-                            <Td className="text-right font-bold font-mono text-slate-800 text-xs">{formatRupiah(lineSubtotal)}</Td>
+                            <Td className="text-right font-bold font-mono text-foreground text-xs">{formatRupiah(lineSubtotal)}</Td>
                           </tr>
                         );
                       })}
                       {cart.length === 0 && (
                         <tr>
                           <Td colSpan={5} className="py-16 text-center text-slate-400 select-none">
-                            <ShoppingBag className="mx-auto text-slate-200 mb-2" size={32} />
+                            <ShoppingBag className="mx-auto text-slate-200 dark:text-slate-700 mb-2" size={32} />
                             <p className="font-semibold text-sm">Keranjang Belanja Kosong</p>
                             <p className="text-xs">Browse atau cari barang di katalog atas untuk transaksi.</p>
                           </Td>
@@ -717,15 +723,15 @@ export function KasirClient({ items }: { items: Item[] }) {
                 </div>
 
                 {/* Mobile Card-Based List Layout */}
-                <div className="block sm:hidden divide-y divide-slate-100">
+                <div className="block sm:hidden divide-y divide-border">
                   {cart.map((l, i) => {
                     const isOverStock = l.qty > l.stok;
                     const lineSubtotal = computed.lines[i].base;
                     return (
-                      <div key={l.itemId} className="p-4 space-y-3 bg-white">
+                      <div key={l.itemId} className="p-4 space-y-3 bg-card">
                         <div className="flex justify-between items-start">
                           <div className="space-y-1 pr-2">
-                            <div className="font-bold text-slate-800 text-xs leading-snug">{l.nama}</div>
+                            <div className="font-bold text-foreground text-xs leading-snug">{l.nama}</div>
                             <div className="font-mono text-[9px] text-slate-400 flex flex-wrap items-center gap-1.5 mt-1 select-none">
                               <span>{l.kode}</span>
                               {isOverStock && (
@@ -738,7 +744,7 @@ export function KasirClient({ items }: { items: Item[] }) {
                           <button
                             type="button"
                             onClick={() => removeFromCart(l.itemId)}
-                            className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-slate-400 hover:bg-red-50 hover:text-red-655 transition cursor-pointer"
+                            className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-slate-400 hover:bg-red-50 dark:hover:bg-red-900/30 hover:text-red-655 transition cursor-pointer"
                           >
                             <Trash2 size={15} />
                           </button>
@@ -749,11 +755,11 @@ export function KasirClient({ items }: { items: Item[] }) {
                             {formatRupiah(l.harga)}
                           </div>
                           
-                          <div className="flex items-center gap-1 bg-slate-50 p-0.5 rounded-xl border border-slate-150">
+                          <div className="flex items-center gap-1 bg-slate-50 dark:bg-slate-900 p-0.5 rounded-xl border border-slate-150">
                             <button
                               type="button"
                               onClick={() => updateQty(l.itemId, l.qty - 1)}
-                              className="flex h-7 w-7 items-center justify-center rounded-lg bg-white text-slate-650 hover:bg-slate-100 active:scale-95 transition cursor-pointer border border-border/80 shadow-xs"
+                              className="flex h-7 w-7 items-center justify-center rounded-lg bg-card text-slate-650 hover:bg-slate-100 dark:hover:bg-slate-800 active:scale-95 transition cursor-pointer border border-border/80 shadow-xs"
                             >
                               <Minus size={11} />
                             </button>
@@ -768,13 +774,13 @@ export function KasirClient({ items }: { items: Item[] }) {
                             <button
                               type="button"
                               onClick={() => addToCart({ id: l.itemId, kode: l.kode, nama: l.nama, hargaJual: l.harga, stok: l.stok })}
-                              className="flex h-7 w-7 items-center justify-center rounded-lg bg-white text-slate-650 hover:bg-slate-100 active:scale-95 transition cursor-pointer border border-border/80 shadow-xs"
+                              className="flex h-7 w-7 items-center justify-center rounded-lg bg-card text-slate-650 hover:bg-slate-100 dark:hover:bg-slate-800 active:scale-95 transition cursor-pointer border border-border/80 shadow-xs"
                             >
                               <Plus size={11} />
                             </button>
                           </div>
                           
-                          <div className="text-right font-extrabold font-mono text-slate-800 text-xs sm:text-sm">
+                          <div className="text-right font-extrabold font-mono text-foreground text-xs sm:text-sm">
                             {formatRupiah(lineSubtotal)}
                           </div>
                         </div>
@@ -783,8 +789,8 @@ export function KasirClient({ items }: { items: Item[] }) {
                   })}
                   {cart.length === 0 && (
                     <div className="py-12 text-center text-slate-455 select-none">
-                      <ShoppingBag className="mx-auto text-slate-200 mb-2.5" size={32} />
-                      <p className="font-bold text-sm text-slate-700">Keranjang Belanja Kosong</p>
+                      <ShoppingBag className="mx-auto text-slate-200 dark:text-slate-700 mb-2.5" size={32} />
+                      <p className="font-bold text-sm text-slate-700 dark:text-slate-300">Keranjang Belanja Kosong</p>
                       <p className="text-xs text-slate-400 mt-1">Browse atau cari barang di katalog atas untuk transaksi.</p>
                     </div>
                   )}
@@ -797,8 +803,8 @@ export function KasirClient({ items }: { items: Item[] }) {
             <div className="space-y-6 anim-rise">
               {/* Spacious Customer / CRM Details */}
               <Card className="p-6 space-y-6">
-                <div className="flex items-center justify-between border-b border-border pb-3.5 bg-slate-50/20 -mx-6 px-6 -mt-6 pt-5 rounded-t-[18px]">
-                  <h3 className="text-sm font-bold text-slate-900 flex items-center gap-2">
+                <div className="flex items-center justify-between border-b border-border pb-3.5 bg-slate-50/20 dark:bg-slate-800/20 -mx-6 px-6 -mt-6 pt-5 rounded-t-[18px]">
+                  <h3 className="text-sm font-bold text-foreground flex items-center gap-2">
                     <ShoppingBag size={18} className="text-[var(--primary)]" /> Langkah 2: Data Pelanggan &amp; Proyek
                   </h3>
                   <Badge tone="blue" className="text-xs">CRM &amp; Referensi</Badge>
@@ -931,9 +937,9 @@ export function KasirClient({ items }: { items: Item[] }) {
                         </div>
                       </div>
                     ) : (
-                      <div className="h-full flex flex-col justify-center items-center p-6 border border-dashed border-slate-200 rounded-[18px] bg-slate-50/40 text-slate-400 select-none text-center min-h-[220px]">
-                        <ShoppingBag size={32} className="text-slate-350 mb-2.5" />
-                        <p className="text-xs font-bold text-slate-600">Pelanggan Eceran / Non-Proyek</p>
+                      <div className="h-full flex flex-col justify-center items-center p-6 border border-dashed border-border rounded-[18px] bg-slate-50/40 dark:bg-slate-800/40 text-slate-400 select-none text-center min-h-[220px]">
+                        <ShoppingBag size={32} className="text-slate-350 dark:text-slate-600 mb-2.5" />
+                        <p className="text-xs font-bold text-slate-600 dark:text-slate-300">Pelanggan Eceran / Non-Proyek</p>
                         <p className="text-[10px] text-slate-400 mt-1 max-w-[220px] leading-relaxed">
                           Pembelian kasir umum. Form isian proyek, grup proyek, dan alamat pengiriman logistik dinonaktifkan untuk transaksi retail.
                         </p>
@@ -942,7 +948,7 @@ export function KasirClient({ items }: { items: Item[] }) {
                   </div>
                 </div>
 
-                <div className="flex flex-col-reverse gap-2.5 pt-5 border-t border-slate-100 sm:flex-row sm:items-center sm:justify-between">
+                <div className="flex flex-col-reverse gap-2.5 pt-5 border-t border-border sm:flex-row sm:items-center sm:justify-between">
                   <Button variant="outline" type="button" onClick={() => setStep(1)} className="w-full sm:w-auto h-10 px-4.5 rounded-xl gap-1.5 text-xs font-semibold">
                     &larr; Kembali ke Keranjang
                   </Button>
@@ -964,9 +970,9 @@ export function KasirClient({ items }: { items: Item[] }) {
             <div className="space-y-6 anim-rise">
               {/* Spacious Payment Details */}
               <Card className="p-6 space-y-6">
-                <div className="flex items-center justify-between border-b border-border pb-3.5 bg-slate-50/20 -mx-6 px-6 -mt-6 pt-5 rounded-t-[18px]">
-                  <h3 className="text-sm font-bold text-slate-900 flex items-center gap-2">
-                    <CreditCard size={18} className="text-emerald-600" /> Langkah 3: Selesaikan Pembayaran
+                <div className="flex items-center justify-between border-b border-border pb-3.5 bg-slate-50/20 dark:bg-slate-800/20 -mx-6 px-6 -mt-6 pt-5 rounded-t-[18px]">
+                  <h3 className="text-sm font-bold text-foreground flex items-center gap-2">
+                    <CreditCard size={18} className="text-primary-600" /> Langkah 3: Selesaikan Pembayaran
                   </h3>
                   <Badge tone="green" className="text-xs">Kasir Checkout</Badge>
                 </div>
@@ -999,7 +1005,7 @@ export function KasirClient({ items }: { items: Item[] }) {
                           <option value="CREDIT">Kredit / Piutang (Tempo)</option>
                         </Select>
                       ) : (
-                        <div className="mt-2.5 space-y-3 rounded-xl border border-dashed border-border bg-slate-50/50 p-3.5">
+                        <div className="mt-2.5 space-y-3 rounded-xl border border-dashed border-border bg-slate-50/50 dark:bg-slate-800/50 p-3.5">
                           <div className="grid grid-cols-3 gap-2">
                             <div>
                               <Label className="text-[10px] font-bold text-slate-500">Tunai</Label>
@@ -1010,7 +1016,7 @@ export function KasirClient({ items }: { items: Item[] }) {
                                 value={splitCash || ""}
                                 onChange={(e) => setSplitCash(parseInt(e.target.value) || 0)}
                                 placeholder="0"
-                                className="h-9 w-full rounded-lg border border-border bg-white text-center text-xs font-semibold font-mono outline-none"
+                                className="h-9 w-full rounded-lg border border-border bg-card text-center text-xs font-semibold font-mono outline-none"
                               />
                             </div>
                             <div>
@@ -1022,7 +1028,7 @@ export function KasirClient({ items }: { items: Item[] }) {
                                 value={splitTransfer || ""}
                                 onChange={(e) => setSplitTransfer(parseInt(e.target.value) || 0)}
                                 placeholder="0"
-                                className="h-9 w-full rounded-lg border border-border bg-white text-center text-xs font-semibold font-mono outline-none"
+                                className="h-9 w-full rounded-lg border border-border bg-card text-center text-xs font-semibold font-mono outline-none"
                               />
                             </div>
                             <div>
@@ -1034,13 +1040,13 @@ export function KasirClient({ items }: { items: Item[] }) {
                                 value={splitCredit || ""}
                                 onChange={(e) => setSplitCredit(parseInt(e.target.value) || 0)}
                                 placeholder="0"
-                                className="h-9 w-full rounded-lg border border-border bg-white text-center text-xs font-semibold font-mono outline-none"
+                                className="h-9 w-full rounded-lg border border-border bg-card text-center text-xs font-semibold font-mono outline-none"
                               />
                             </div>
                           </div>
-                          <div className="flex justify-between items-center text-[10px] font-bold border-t border-slate-100 pt-2 select-none">
+                          <div className="flex justify-between items-center text-[10px] font-bold border-t border-border pt-2 select-none">
                             <span className="text-slate-500">Jumlah Terisi:</span>
-                            <span className={isSplitValid ? "text-emerald-600" : "text-red-500 font-extrabold"}>
+                            <span className={isSplitValid ? "text-primary-600" : "text-red-500 font-extrabold"}>
                               {formatRupiah(splitTotal)} / {formatRupiah(grandTotalCost)}
                             </span>
                           </div>
@@ -1050,7 +1056,7 @@ export function KasirClient({ items }: { items: Item[] }) {
 
                     {/* Info bank opsional (muncul untuk Transfer / Kredit / Split) */}
                     {((!isSplitActive && paymentMethod !== "CASH") || isSplitActive) && (
-                      <div className="space-y-3 rounded-xl border border-dashed border-border bg-slate-50/40 p-3.5 anim-rise">
+                      <div className="space-y-3 rounded-xl border border-dashed border-border bg-slate-50/40 dark:bg-slate-800/40 p-3.5 anim-rise">
                         <p className="text-[10px] font-bold text-slate-500 uppercase tracking-wide">
                           Info Bank (opsional) — tampil di struk
                         </p>
@@ -1099,12 +1105,12 @@ export function KasirClient({ items }: { items: Item[] }) {
                     )}
 
                     {/* Auto invoice toggle */}
-                    <label className="flex items-center gap-2 text-[10px] text-slate-650 bg-slate-50 p-3 rounded-xl border border-border select-none cursor-pointer">
+                    <label className="flex items-center gap-2 text-[10px] text-slate-650 bg-slate-50 dark:bg-slate-900 p-3 rounded-xl border border-border select-none cursor-pointer">
                       <input
                         type="checkbox"
                         checked={buatInvoice}
                         onChange={(e) => setBuatInvoice(e.target.checked)}
-                        className="h-4 w-4 rounded border-slate-300 text-[var(--primary)] focus:ring-transparent cursor-pointer"
+                        className="h-4 w-4 rounded border-border text-[var(--primary)] focus:ring-transparent cursor-pointer"
                       />
                       <span className="font-semibold">Otomatis buat Faktur Tagihan (Invoice)</span>
                     </label>
@@ -1113,7 +1119,7 @@ export function KasirClient({ items }: { items: Item[] }) {
                   {/* Right: Cash received & Change due */}
                   <div className="space-y-4">
                     {(isCash || (isSplitActive && splitCash > 0)) ? (
-                      <div className="space-y-2.5 rounded-xl bg-slate-50/70 p-4 border border-border">
+                      <div className="space-y-2.5 rounded-xl bg-slate-50/70 dark:bg-slate-800/70 p-4 border border-border">
                         <Label className="text-xs font-bold text-slate-650">Uang Tunai Diterima</Label>
                         <Input
                           type="number"
@@ -1122,13 +1128,13 @@ export function KasirClient({ items }: { items: Item[] }) {
                           value={cashReceived || ""}
                           onChange={(e) => setCashReceived(parseInt(e.target.value) || 0)}
                           placeholder="Jumlah uang diterima..."
-                          className="h-10 text-right text-base font-bold font-mono rounded-xl bg-white"
+                          className="h-10 text-right text-base font-bold font-mono rounded-xl bg-card"
                         />
                         <div className="flex flex-wrap gap-1 mt-1.5 select-none">
                           <button
                             type="button"
                             onClick={() => setCashReceived(isSplitActive ? splitCash : grandTotalCost)}
-                            className="rounded border border-emerald-250 bg-emerald-50 px-2.5 py-1 text-[10px] font-bold text-emerald-700 hover:bg-emerald-100 cursor-pointer"
+                            className="rounded border border-primary-250 dark:border-primary-700 bg-primary-50 dark:bg-primary-900/50 px-2.5 py-1 text-[10px] font-bold text-primary-700 dark:text-primary-300 hover:bg-primary-100 dark:hover:bg-primary-800/50 cursor-pointer"
                           >
                             Uang Pas
                           </button>
@@ -1137,24 +1143,46 @@ export function KasirClient({ items }: { items: Item[] }) {
                               key={amt}
                               type="button"
                               onClick={() => setCashReceived(amt)}
-                              className="rounded border border-border bg-white px-2.5 py-1 text-[10px] font-semibold text-slate-650 hover:bg-slate-100 font-mono cursor-pointer"
+                              className="rounded border border-border bg-card px-2.5 py-1 text-[10px] font-semibold text-slate-650 hover:bg-slate-100 dark:hover:bg-slate-800 font-mono cursor-pointer"
                             >
                               {amt >= 1000 ? `${amt / 1000}k` : amt}
                             </button>
                           ))}
+                          <button
+                            type="button"
+                            onClick={() => setCashReceived(0)}
+                            className="rounded border border-amber-300 dark:border-amber-700 bg-amber-50 dark:bg-amber-900/40 px-2.5 py-1 text-[10px] font-bold text-amber-700 dark:text-amber-300 hover:bg-amber-100 dark:hover:bg-amber-800/50 cursor-pointer"
+                          >
+                            Belum Bayar
+                          </button>
                         </div>
                         <div className={cn(
-                          "flex items-center justify-between rounded-lg px-3.5 py-2.5 text-xs font-bold mt-3 select-none",
-                          cashShort ? "bg-red-50 text-red-750 border border-red-100" : "bg-emerald-50 text-emerald-750 border border-emerald-100"
+                          "rounded-lg px-3.5 py-2.5 text-xs mt-3 select-none space-y-1.5",
+                          cashShort ? "bg-red-50 dark:bg-red-900/30 border border-red-100 dark:border-red-800" : cashReceived === 0 ? "bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800" : "bg-primary-50 dark:bg-primary-900/30 border border-primary-100 dark:border-primary-800"
                         )}>
-                          <span>{cashShort ? "Kurang Bayar:" : "Uang Kembalian:"}</span>
-                          <span className="font-mono font-extrabold text-sm">{formatRupiah(Math.abs(kembalian))}</span>
+                          <div className="flex items-center justify-between text-[10px] text-slate-500 dark:text-slate-400">
+                            <span>Total Belanja</span>
+                            <span className="font-mono font-semibold">{formatRupiah(isSplitActive ? (grandTotalCost - splitTransfer - splitCredit) : grandTotalCost)}</span>
+                          </div>
+                          <div className="flex items-center justify-between text-[10px] text-slate-500 dark:text-slate-400">
+                            <span>Uang Diterima</span>
+                            <span className="font-mono font-semibold">{formatRupiah(cashReceived)}</span>
+                          </div>
+                          <div className="border-t border-current/15 pt-1.5">
+                            <div className={cn(
+                              "flex items-center justify-between font-bold",
+                              cashShort ? "text-red-750 dark:text-red-300" : cashReceived === 0 ? "text-amber-700 dark:text-amber-300" : "text-primary-750 dark:text-primary-300"
+                            )}>
+                              <span>{cashShort ? "Kurang Bayar:" : cashReceived === 0 ? "Belum Ada Pembayaran" : "Uang Kembalian:"}</span>
+                              <span className="font-mono font-extrabold text-sm">{cashReceived === 0 ? "" : formatRupiah(Math.abs(kembalian))}</span>
+                            </div>
+                          </div>
                         </div>
                       </div>
                     ) : (
-                      <div className="h-full flex flex-col justify-center items-center p-6 border border-dashed border-slate-200 rounded-[18px] bg-slate-50/40 text-slate-400 select-none text-center min-h-[160px]">
-                        <CreditCard size={32} className="text-slate-350 mb-2.5" />
-                        <p className="text-xs font-bold text-slate-600">Pembayaran Non-Tunai / Tempo</p>
+                      <div className="h-full flex flex-col justify-center items-center p-6 border border-dashed border-border rounded-[18px] bg-slate-50/40 dark:bg-slate-800/40 text-slate-400 select-none text-center min-h-[160px]">
+                        <CreditCard size={32} className="text-slate-350 dark:text-slate-600 mb-2.5" />
+                        <p className="text-xs font-bold text-slate-600 dark:text-slate-300">Pembayaran Non-Tunai / Tempo</p>
                         <p className="text-[10px] text-slate-400 mt-1 max-w-[220px] leading-relaxed">
                           Transaksi diproses menggunakan metode {paymentMethod === "CREDIT" ? "Tempo (Hutang Dagang)" : "Transfer Bank"}. Kalkulator uang kembalian dinonaktifkan.
                         </p>
@@ -1163,7 +1191,7 @@ export function KasirClient({ items }: { items: Item[] }) {
                   </div>
                 </div>
 
-                <div className="flex items-center justify-between pt-5 border-t border-slate-100">
+                <div className="flex items-center justify-between pt-5 border-t border-border">
                   <Button variant="outline" type="button" onClick={() => setStep(2)} className="h-10 px-4.5 rounded-xl gap-1.5 text-xs font-semibold">
                     &larr; Kembali ke Pelanggan
                   </Button>
@@ -1202,13 +1230,13 @@ export function KasirClient({ items }: { items: Item[] }) {
 
               <div className="flex items-center justify-between border-t border-slate-800 pt-4">
                 <span className="text-xs font-bold text-slate-400">TOTAL AKHIR</span>
-                <span className="text-2xl font-extrabold font-mono text-emerald-400">{formatRupiah(grandTotalCost)}</span>
+                <span className="text-2xl font-extrabold font-mono text-primary-400">{formatRupiah(grandTotalCost)}</span>
               </div>
             </Card>
 
             {/* Wizard Navigation Panel */}
             <Card className="p-5 space-y-3.5">
-              <h4 className="text-xs font-bold text-slate-600 tracking-wide uppercase border-b border-slate-100 pb-2">Aksi Alur Pembayaran</h4>
+              <h4 className="text-xs font-bold text-slate-600 dark:text-slate-400 tracking-wide uppercase border-b border-border pb-2">Aksi Alur Pembayaran</h4>
               
               {step === 1 && (
                 <div className="space-y-3 anim-rise">
@@ -1256,7 +1284,7 @@ export function KasirClient({ items }: { items: Item[] }) {
                   <Button
                     onClick={submitCheckout}
                     disabled={pending || cart.length === 0 || cashShort || (isSplitActive && !isSplitValid)}
-                    className="w-full h-11 text-xs font-bold bg-emerald-600 hover:bg-emerald-700 text-white gap-1.5 shadow-md"
+                    className="w-full h-11 text-xs font-bold bg-primary-600 hover:bg-primary-700 text-white gap-1.5 shadow-md"
                   >
                     {pending ? "Menyimpan..." : "Selesaikan & Cetak Nota (F4)"}
                   </Button>
@@ -1272,14 +1300,14 @@ export function KasirClient({ items }: { items: Item[] }) {
               )}
 
               {error && (
-                <p className="rounded-lg bg-red-50 p-2.5 text-[11px] text-red-650 font-semibold leading-relaxed border border-red-100">{error}</p>
+                <p className="rounded-lg bg-red-50 dark:bg-red-900/30 p-2.5 text-[11px] text-red-650 dark:text-red-300 font-semibold leading-relaxed border border-red-100 dark:border-red-800">{error}</p>
               )}
             </Card>
 
             {/* Hold/Pause Transactions (Only in Step 1 to keep things uncluttered) */}
             {step === 1 && (
               <Card className="p-4 space-y-3.5 anim-rise">
-                <h4 className="text-xs font-bold text-slate-600 tracking-wide uppercase border-b border-slate-100 pb-2">Penangguhan Struk</h4>
+                <h4 className="text-xs font-bold text-slate-600 dark:text-slate-400 tracking-wide uppercase border-b border-border pb-2">Penangguhan Struk</h4>
                 
                 <div className="flex gap-2">
                   <input
@@ -1288,7 +1316,7 @@ export function KasirClient({ items }: { items: Item[] }) {
                     onChange={(e) => setHoldCartName(e.target.value)}
                     maxLength={60}
                     placeholder="Label nama hold..."
-                    className="h-9 w-full rounded-xl border border-border bg-slate-50/50 px-2.5 text-xs outline-none focus:border-[var(--primary)] focus:bg-white focus:ring-4 focus:ring-[var(--primary)]/10"
+                    className="h-9 w-full rounded-xl border border-border bg-slate-50/50 dark:bg-slate-800/50 px-2.5 text-xs text-foreground outline-none focus:border-[var(--primary)] focus:bg-card focus:ring-4 focus:ring-[var(--primary)]/10"
                   />
                   <Button size="sm" variant="outline" className="h-9 shrink-0 text-xs px-3 rounded-xl gap-1" onClick={handleHoldCart} disabled={cart.length === 0}>
                     <Bookmark size={12} /> Hold
@@ -1299,7 +1327,7 @@ export function KasirClient({ items }: { items: Item[] }) {
                   <button
                     type="button"
                     onClick={() => setIsHoldModalOpen(true)}
-                    className="w-full flex justify-center items-center gap-2 rounded-xl bg-orange-50/70 border border-orange-200 py-2 text-xs font-bold text-[var(--primary)] hover:bg-orange-100 transition cursor-pointer select-none"
+                    className="w-full flex justify-center items-center gap-2 rounded-xl bg-orange-50/70 dark:bg-orange-900/20 border border-orange-200 dark:border-orange-800 py-2 text-xs font-bold text-[var(--primary)] hover:bg-orange-100 dark:hover:bg-orange-900/30 transition cursor-pointer select-none"
                   >
                     <FolderOpen size={13} /> Ada {heldCarts.length} Struk Ditangguhkan
                   </button>
@@ -1309,16 +1337,16 @@ export function KasirClient({ items }: { items: Item[] }) {
 
             {/* Shopping Cart Review (In Step 2 & Step 3) */}
             {step > 1 && (
-              <Card className="p-4 space-y-3 bg-slate-50/70 border border-border anim-rise">
-                <h4 className="text-xs font-bold text-slate-700 border-b border-slate-200 pb-1.5 select-none">Review Belanjaan ({totalQtyCount} item)</h4>
+              <Card className="p-4 space-y-3 bg-slate-50/70 dark:bg-slate-800/70 border border-border anim-rise">
+                <h4 className="text-xs font-bold text-slate-700 dark:text-slate-200 border-b border-border pb-1.5 select-none">Review Belanjaan ({totalQtyCount} item)</h4>
                 <div className="max-h-48 overflow-y-auto space-y-2.5 pr-1 scrollbar-thin">
                   {cart.map((l) => (
                     <div key={l.itemId} className="flex justify-between items-start text-[11px] gap-2">
                       <div className="min-w-0 flex-1">
-                        <p className="font-bold text-slate-800 truncate leading-snug">{l.nama}</p>
+                        <p className="font-bold text-foreground truncate leading-snug">{l.nama}</p>
                         <p className="text-[9px] text-slate-450 font-mono mt-0.5">{l.qty} unit @ {formatRupiah(l.harga)}</p>
                       </div>
-                      <span className="font-bold font-mono text-slate-700 text-right shrink-0">
+                      <span className="font-bold font-mono text-slate-700 dark:text-slate-200 text-right shrink-0">
                         {formatRupiah(l.qty * l.harga)}
                       </span>
                     </div>
@@ -1338,12 +1366,12 @@ export function KasirClient({ items }: { items: Item[] }) {
         >
           <div
             onClick={(e) => e.stopPropagation()}
-            className="max-h-[90vh] w-full max-w-md overflow-y-auto rounded-[20px] bg-white shadow-2xl border border-border"
+            className="max-h-[90vh] w-full max-w-md overflow-y-auto rounded-[20px] bg-card shadow-2xl border border-border"
           >
             <div className="print-area">
               <Nota data={nota} />
             </div>
-            <div className="no-print flex flex-col gap-2 border-t border-border p-4 bg-slate-50 rounded-b-[20px]">
+            <div className="no-print flex flex-col gap-2 border-t border-border p-4 bg-slate-50 dark:bg-slate-900 rounded-b-[20px]">
               <div className="flex flex-wrap sm:flex-nowrap justify-between gap-1.5 w-full">
                 <Button onClick={() => printArea({ thermal: true })} variant="outline" size="sm" className="flex-1 min-w-[75px] h-9">
                   <Printer size={14} /> Thermal (80mm)
@@ -1359,7 +1387,7 @@ export function KasirClient({ items }: { items: Item[] }) {
                 onClick={handleSaveToImage}
                 variant="outline"
                 size="sm"
-                className="w-full h-9 bg-orange-50 hover:bg-orange-100 border-orange-200 text-[var(--primary)] font-bold gap-1.5 rounded-xl cursor-pointer"
+                className="w-full h-9 bg-orange-50 dark:bg-orange-900/20 hover:bg-orange-100 dark:hover:bg-orange-900/30 border-orange-200 dark:border-orange-800 text-[var(--primary)] font-bold gap-1.5 rounded-xl cursor-pointer"
               >
                 <Camera size={14} /> Save to Image (PNG)
               </Button>
@@ -1370,7 +1398,7 @@ export function KasirClient({ items }: { items: Item[] }) {
 
       {/* Floating Bottom Dock for Mobile & Tablet (hidden on XL) */}
       {cart.length > 0 && (
-        <div className="xl:hidden fixed bottom-4 left-4 right-4 z-40 bg-white/90 backdrop-blur-md border border-slate-200/80 p-4 rounded-2xl shadow-[0_12px_40px_rgba(0,0,0,0.12)] flex items-center justify-between gap-4 select-none anim-rise no-print">
+        <div className="xl:hidden fixed bottom-4 left-4 right-4 z-40 bg-white/90 dark:bg-slate-900/90 backdrop-blur-md border border-border/80 p-4 rounded-2xl shadow-[0_12px_40px_rgba(0,0,0,0.12)] flex items-center justify-between gap-4 select-none anim-rise no-print">
           <div className="flex flex-col">
             <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wider">Total Belanja</span>
             <span className="text-base font-extrabold font-mono text-[var(--primary)]">{formatRupiah(grandTotalCost)}</span>
@@ -1417,7 +1445,7 @@ export function KasirClient({ items }: { items: Item[] }) {
               <Button
                 onClick={submitCheckout}
                 disabled={pending || cart.length === 0 || cashShort || (isSplitActive && !isSplitValid)}
-                className="h-10 text-xs font-bold bg-emerald-600 hover:bg-emerald-700 text-white px-4 rounded-xl shadow-sm"
+                className="h-10 text-xs font-bold bg-primary-600 hover:bg-primary-700 text-white px-4 rounded-xl shadow-sm"
               >
                 {pending ? "..." : "Selesai (F4)"}
               </Button>

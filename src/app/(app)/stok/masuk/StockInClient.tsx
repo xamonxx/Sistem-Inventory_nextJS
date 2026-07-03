@@ -208,7 +208,7 @@ export function StockInClient({ items }: { items: ItemOption[] }) {
                           className="text-right font-mono"
                         />
                       </Td>
-                      <Td className="text-right font-bold font-mono text-slate-800">
+                      <Td className="text-right font-bold font-mono text-foreground">
                         {formatRupiah(itemSubtotal)}
                       </Td>
                       <Td className="text-center">
@@ -226,13 +226,13 @@ export function StockInClient({ items }: { items: ItemOption[] }) {
                 {lines.length === 0 && (
                   <tr>
                     <Td colSpan={5} className="py-12 text-center text-muted">
-                      Batch restok kosong. Klik "Tambah Baris Barang" di bawah untuk memulai.
+                      Batch restok kosong. Klik &quot;Tambah Baris Barang&quot; di bawah untuk memulai.
                     </Td>
                   </tr>
                 )}
               </tbody>
             </Table>
-            <div className="p-4 border-t border-border bg-slate-50 flex justify-between">
+            <div className="p-4 border-t border-border bg-slate-50 dark:bg-slate-900 flex justify-between">
               <Button type="button" variant="outline" size="sm" onClick={addRow}>
                 <Plus size={14} /> Tambah Baris Barang
               </Button>
@@ -256,7 +256,7 @@ export function StockInClient({ items }: { items: ItemOption[] }) {
             </div>
             <div className="flex justify-between items-center border-t border-border pt-4">
               <span className="text-sm font-medium text-slate-500">Nilai Pembelian</span>
-              <span className="text-xl font-bold text-emerald-600 font-mono">
+              <span className="text-xl font-bold text-primary-600 font-mono">
                 {formatRupiah(grandTotal)}
               </span>
             </div>
@@ -280,9 +280,9 @@ export function StockInClient({ items }: { items: ItemOption[] }) {
       {/* Dynamic Printing Dialog */}
       {receipt && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/45 p-4 backdrop-blur-xs">
-          <div className="w-full max-w-lg rounded-2xl bg-white p-6 shadow-2xl border border-border">
+          <div className="w-full max-w-lg rounded-2xl bg-card p-6 shadow-2xl border border-border">
             <div className="border-b border-border pb-3 text-center">
-              <h2 className="text-base font-bold text-slate-900">PUTRA CORPORATION HARDWARE</h2>
+              <p className="text-base font-bold text-foreground">PUTRA CORPORATION SOFTWARE</p>
               <p className="text-xs text-slate-500">Penerimaan &amp; Restok Barang Batch</p>
             </div>
             <div className="py-3 text-xs space-y-1">
@@ -315,7 +315,7 @@ export function StockInClient({ items }: { items: ItemOption[] }) {
 
             <div className="flex justify-between items-center font-bold text-sm border-t border-border pt-3">
               <span>Total Nilai Restok</span>
-              <span className="text-emerald-600">{formatRupiah(receipt.grandTotal)}</span>
+              <span className="text-primary-600">{formatRupiah(receipt.grandTotal)}</span>
             </div>
 
             <div className="flex gap-2 mt-6 pt-4 border-t border-border">

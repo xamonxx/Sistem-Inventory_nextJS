@@ -226,7 +226,7 @@ async function main() {
     },
   });
 
-  console.log("✅ Database dibersihkan. Memulai seeding 2000+ data...\n");
+  console.log("✅ Database dibersihkan. Memulai seeding 200 data dummy...\n");
 
   // ============ USERS ============
   const seedPassword = resolveSeedPassword();
@@ -246,10 +246,10 @@ async function main() {
 
   console.log("👤 Users seeded.");
 
-  // ============ 2000 ITEMS ============
-  console.log("📦 Generating 2000 items...");
+  // ============ 200 ITEMS ============
+  console.log("📦 Generating 200 items...");
 
-  const TOTAL_ITEMS = 2000;
+  const TOTAL_ITEMS = 200;
   const itemsToCreate: any[] = [];
   const usedNames = new Set<string>();
 
@@ -287,21 +287,23 @@ async function main() {
   }
 
   // Batch insert items in chunks of 500
-  for (let chunk = 0; chunk < itemsToCreate.length; chunk += 500) {
-    const batch = itemsToCreate.slice(chunk, chunk + 500);
+  const itemChunkSize = 500;
+  const itemBatchCount = Math.ceil(itemsToCreate.length / itemChunkSize);
+  for (let chunk = 0; chunk < itemsToCreate.length; chunk += itemChunkSize) {
+    const batch = itemsToCreate.slice(chunk, chunk + itemChunkSize);
     await prisma.item.createMany({ data: batch });
-    console.log(`  📦 Items batch ${Math.floor(chunk / 500) + 1}/4 inserted (${batch.length} items)`);
+    console.log(`  ???? Items batch ${Math.floor(chunk / itemChunkSize) + 1}/${itemBatchCount} inserted (${batch.length} items)`);
   }
 
   // Fetch all items for downstream relations.
   const allItems = await prisma.item.findMany({ orderBy: { id: "asc" } });
   console.log(`  Seeded ${allItems.length} items.\n`);
 
-  // ============ 100 CLIENTS ============
-  console.log("👥 Generating 100 clients...");
+  // ============ 40 CLIENTS ============
+  console.log("👥 Generating 40 clients...");
   const clientsData: any[] = [];
   const allClientNames = [...CLIENT_NAMES, ...PERSON_NAMES];
-  for (let i = 0; i < 100; i++) {
+  for (let i = 0; i < 40; i++) {
     const nama = i < allClientNames.length
       ? allClientNames[i]
       : `${pickRandom(CLIENT_NAMES)} Cabang ${i - allClientNames.length + 1}`;
@@ -315,10 +317,10 @@ async function main() {
   const allClients = await prisma.client.findMany();
   console.log(`  ✅ ${allClients.length} clients seeded.\n`);
 
-  // ============ 20 WORKSHOPS ============
-  console.log("🏭 Generating 20 workshops...");
+  // ============ 10 WORKSHOPS ============
+  console.log("🏭 Generating 10 workshops...");
   const workshopsData: any[] = [];
-  for (let i = 0; i < 20; i++) {
+  for (let i = 0; i < 10; i++) {
     workshopsData.push({
       nama: i < WORKSHOP_NAMES.length ? WORKSHOP_NAMES[i] : `Workshop Extra ${i + 1}`,
       alamat: pickRandom(ADDRESSES),
@@ -351,8 +353,8 @@ async function main() {
   const allProjects = await prisma.project.findMany();
   console.log(`  ✅ ${allPGs.length} project groups + ${allProjects.length} projects seeded.\n`);
 
-  // ============ 500 TRANSACTIONS ============
-  console.log("💰 Generating 500 transactions with items & stock ledgers...");
+  // ============ 80 TRANSACTIONS ============
+  console.log("💰 Generating 80 transactions with items & stock ledgers...");
 
   const startDate = new Date("2026-01-15T08:00:00Z");
   const endDate = new Date("2026-06-23T23:59:00Z");
@@ -360,9 +362,9 @@ async function main() {
   let invCounter = 0;
 
   // We'll create transactions one by one since each needs items + ledgers
-  for (let batch = 0; batch < 10; batch++) {
-    const batchSize = 50;
-    const batchStart = batch * batchSize;
+  for (let batch = 0; batch < 2; batch++) {
+    const batchSize = batch === 0 ? 50 : 30;
+    const batchStart = batch * 50;
 
     for (let i = 0; i < batchSize; i++) {
       txCounter++;
@@ -456,13 +458,13 @@ async function main() {
       });
     }
 
-    console.log(`  💰 Transaction batch ${batch + 1}/10 done (${batchStart + batchSize} transactions)`);
+    console.log(`  💰 Transaction batch ${batch + 1}/2 done (${batchStart + batchSize} transactions)`);
   }
 
   console.log(`  ✅ ${txCounter} transactions + invoices seeded.\n`);
 
-  // ============ 50 RETURNS ============
-  console.log("🔄 Generating 50 returns...");
+  // ============ 20 RETURNS ============
+  console.log("🔄 Generating 20 returns...");
 
   const allTransactions = await prisma.transaction.findMany({
     take: 100,
@@ -471,7 +473,7 @@ async function main() {
   });
 
   let retCounter = 0;
-  for (let i = 0; i < 50 && i < allTransactions.length; i++) {
+  for (let i = 0; i < 20 && i < allTransactions.length; i++) {
     const tx = allTransactions[i];
     if (tx.items.length === 0) continue;
 
@@ -573,8 +575,8 @@ async function main() {
   console.log("📊 Generating extra stock movements (restock + adjustments)...");
 
   const extraLedgers: any[] = [];
-  // 200 restock entries
-  for (let i = 0; i < 200; i++) {
+  // 50 restock entries
+  for (let i = 0; i < 50; i++) {
     const item = pickRandom(allItems);
     extraLedgers.push({
       itemId: item.id,
@@ -587,8 +589,8 @@ async function main() {
     });
   }
 
-  // 100 stock corrections
-  for (let i = 0; i < 100; i++) {
+  // 25 stock corrections
+  for (let i = 0; i < 25; i++) {
     const item = pickRandom(allItems);
     const isPositive = Math.random() > 0.4;
     extraLedgers.push({
@@ -630,12 +632,12 @@ async function main() {
   const logEntities = ["User", "Transaction", "Item", "Return", "Invoice", "StockLedger"];
 
   const activityLogs: any[] = [];
-  for (let i = 0; i < 300; i++) {
+  for (let i = 0; i < 120; i++) {
     activityLogs.push({
       userId: pickRandom([userKasir.id, userGudang.id]),
       aksi: pickRandom(logActions),
       entitas: pickRandom(logEntities),
-      entitasId: String(rand(1, 2000)),
+      entitasId: String(rand(1, 200)),
       detail: `Auto-generated activity log #${i + 1}`,
       createdAt: randomDate(startDate, endDate),
     });

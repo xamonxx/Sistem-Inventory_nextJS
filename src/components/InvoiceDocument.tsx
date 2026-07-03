@@ -1,5 +1,6 @@
 import { formatRupiah, formatTanggal } from "@/lib/utils";
 import type { InvoiceRow } from "@/app/(app)/invoice/InvoiceActions";
+import { AppLogo } from "./AppLogo";
 
 const COMPANY = {
   nama: "PUTRA CORPORATION",
@@ -7,9 +8,9 @@ const COMPANY = {
   alamat:
     process.env.NEXT_PUBLIC_COMPANY_ADDRESS ??
     "Jl. Nasional III, Cipatat, Bandung Barat, Jawa Barat (40554)",
-  telepon: "0822-1234-5678",
-  email: "info@putracorp.co.id",
-  website: "www.putracorp.co.id",
+  telepon: "0822-4035-2844",
+  email: "info@menujukeindahan.id",
+  website: "menujukeindahan.id",
 };
 
 // Gambar tanda tangan untuk kolom "Disetujui".
@@ -41,7 +42,7 @@ function renderItemName(name: string) {
   if (name.startsWith("[GANTI]")) {
     return (
       <span className="leading-tight">
-        <strong className="font-extrabold text-emerald-700 font-sans mr-1">[GANTI]</strong>
+        <strong className="font-extrabold text-primary-700 font-sans mr-1">[GANTI]</strong>
         <span>{name.slice(7).trim()}</span>
       </span>
     );
@@ -52,25 +53,16 @@ function renderItemName(name: string) {
 export function InvoiceDocument({
   inv,
   qrDataUrl,
-  verifyUrl,
 }: {
   inv: InvoiceRow;
   qrDataUrl?: string;
-  verifyUrl?: string;
 }) {
   const sisa = inv.total - inv.totalDibayar;
   const lunas = sisa <= 0;
   const totalQty = inv.items.reduce((a, it) => a + it.qty, 0);
   const stat = STATUS[inv.status] ?? STATUS.PENDING;
 
-  // QR digenerate lazy: pakai qrDataUrl bila tersedia, jika tidak fallback ke
-  // QR image online dari verifyUrl. <img> hanya di-fetch saat dokumen dirender
-  // (pratinjau cetak dibuka), jadi tidak membebani load daftar invoice.
-  const qrSrc =
-    qrDataUrl ??
-    (verifyUrl
-      ? `https://api.qrserver.com/v1/create-qr-code/?size=160x160&margin=2&data=${encodeURIComponent(verifyUrl)}`
-      : undefined);
+  const qrSrc = qrDataUrl;
 
   const Label = ({ children }: { children: React.ReactNode }) => (
     <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-[#94A3B8]">{children}</p>
@@ -79,20 +71,20 @@ export function InvoiceDocument({
   return (
     <div className="invoice-doc bg-white text-[#111827]">
       {/* Thin accent bar */}
-      <div className="invoice-accent-bar h-1.5 w-full bg-[#EA580C]" />
+      <div className="invoice-accent-bar h-1.5 w-full bg-[#0284c7]" />
 
       <div className="inv-body px-9 py-7">
         {/* ============ HEADER ============ */}
         <div className="flex items-start justify-between gap-6">
           <div className="flex items-start gap-3">
-            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-md bg-[#1E293B] text-sm font-extrabold text-white">
-              PC
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-md bg-[#1E293B] text-white">
+              <AppLogo className="h-7 w-7" />
             </div>
             <div className="leading-tight">
-              <h1 className="whitespace-nowrap text-[14px] font-extrabold uppercase leading-[1.1] tracking-[0.02em] text-[#111827]">
+              <p className="whitespace-nowrap text-[14px] font-extrabold uppercase leading-[1.1] tracking-[0.02em] text-[#111827]">
                 {COMPANY.nama}
-              </h1>
-              <p className="mt-0.5 text-[9px] font-bold uppercase tracking-[0.08em] text-[#EA580C]">
+              </p>
+              <p className="mt-0.5 text-[9px] font-bold uppercase tracking-[0.08em] text-[#0284c7]">
                 {COMPANY.tagline}
               </p>
               <div className="mt-1.5 space-y-px text-[10px] leading-snug text-[#64748B]">
@@ -104,8 +96,8 @@ export function InvoiceDocument({
           </div>
 
           <div className="text-right">
-            <h2 className="text-[18px] font-bold leading-none tracking-tight text-[#1E293B]">INVOICE</h2>
-            <p className="mt-1 font-mono text-[16px] font-semibold text-[#EA580C]">{inv.noInvoice}</p>
+            <p className="text-[18px] font-bold leading-none tracking-tight text-[#1E293B]">INVOICE</p>
+            <p className="mt-1 font-mono text-[16px] font-semibold text-[#0284c7]">{inv.noInvoice}</p>
             <dl className="mt-2.5 space-y-0.5 text-[10px]">
               <div className="flex justify-end gap-2">
                 <dt className="text-[#94A3B8]">Tanggal</dt>
@@ -157,7 +149,7 @@ export function InvoiceDocument({
           )}
         </div>
 
-        {/* ============ ITEM TABLE (no discount column) ============ */}
+        {/* ============ ITEM TABLE ============ */}
         <div className="inv-table-wrap mt-6">
           <table className="inv-table w-full border-collapse text-[10px]">
             <colgroup>
@@ -181,7 +173,7 @@ export function InvoiceDocument({
             <tbody>
               {inv.items.map((it, i) => (
                 <tr key={i} className="border-b border-[#E5E7EB]">
-                  <td className="h-[28px] px-3 font-mono font-semibold text-[#EA580C]">{it.kode}</td>
+                  <td className="h-[28px] px-3 font-mono font-semibold text-[#0284c7]">{it.kode}</td>
                   <td className="h-[28px] px-3 font-medium text-[#111827]">{renderItemName(it.nama)}</td>
                   <td className="h-[28px] px-3 text-center font-semibold tabular-nums">{it.qty}</td>
                   <td className="h-[28px] px-3 text-center text-[#64748B]">{it.satuan ?? "Unit"}</td>
@@ -219,7 +211,7 @@ export function InvoiceDocument({
             )}
           </div>
 
-          {/* Right: totals (no discount line) */}
+          {/* Right: totals */}
           <div className="self-start">
             <div className="space-y-1.5 text-[11px]">
               <div className="flex justify-between text-[#475569]">
@@ -256,6 +248,7 @@ export function InvoiceDocument({
                   layout, jadi ketiga kolom tetap presisi sejajar). */}
               <div className="relative mt-16 border-t border-[#94A3B8]">
                 {role === "Disetujui" && (
+                  // eslint-disable-next-line @next/next/no-img-element
                   <img
                     src={SIGNATURE_DISETUJUI}
                     alt="Tanda tangan disetujui"
@@ -278,7 +271,7 @@ export function InvoiceDocument({
         {/* ============ FOOTER ============ */}
         <div className="mt-6 flex items-center justify-between border-t border-[#E5E7EB] pt-3 text-[9px] text-[#94A3B8]">
           <span>Invoice dibuat otomatis oleh sistem &amp; sah tanpa tanda tangan basah.</span>
-          <span className="font-semibold text-[#EA580C]">{COMPANY.website}</span>
+          <span className="font-semibold text-[#0284c7]">{COMPANY.website}</span>
         </div>
       </div>
     </div>

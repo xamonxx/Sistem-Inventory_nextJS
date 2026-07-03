@@ -1,5 +1,7 @@
 @import "tailwindcss";
 
+@custom-variant dark (&:where(.dark, .dark *));
+
 /* ============================================================
    PUTRA CORPORATION — Modern Enterprise SaaS Redesign
    Linear + Stripe + Shopify Admin inspired layout tokens
@@ -12,13 +14,25 @@
   --border: #d7e2df;
   --line-strong: #b7c9c4;
 
-  --primary: #0f766e;
-  --primary-strong: #0b5f59;
-  --primary-soft: #d8f3ee;
+  --primary-50: #f0f9ff;
+  --primary-100: #e0f2fe;
+  --primary-200: #bae6fd;
+  --primary-300: #7dd3fc;
+  --primary-400: #38bdf8;
+  --primary-500: #0ea5e9;
+  --primary-600: #0284c7;
+  --primary-700: #0369a1;
+  --primary-800: #075985;
+  --primary-900: #0c4a6e;
+  --primary-950: #082f49;
+
+  --primary: var(--primary-600);
+  --primary-strong: var(--primary-700);
+  --primary-soft: var(--primary-100);
   --accent: #f59e0b;
   --steel: #60736f;
 
-  --success: #16a34a;
+  --success: var(--primary-500);
   --warning: #f59e0b;
   --danger: #ef4444;
   --info: #2563eb;
@@ -27,7 +41,49 @@
   --shadow-card: 0 18px 45px rgba(18, 38, 34, 0.07);
   --shadow-drawer: 0 22px 60px rgba(5, 20, 17, 0.18);
   --shadow-modal: 0 28px 70px rgba(5, 20, 17, 0.22);
+  --surface-2: #f3f7fb;
+  --surface-3: #e7eff7;
+  --surface-hover: #eef5fb;
+  --text-soft: #4b5f76;
+  --text-muted-2: #7e8fa3;
+
+  --grid-line: rgba(71, 85, 105, 0.12);
+  --bg-glow-1: rgba(236, 72, 153, 0.12);
+  --bg-glow-2: rgba(168, 85, 247, 0.04);
+  --row-hover: #f8fafc;
+  --topnav-bg: rgba(251, 253, 252, 0.86);
 }
+
+.dark {
+  /* Palet gelap NAVY selaras dengan sidebar (#071b2e) — bukan hijau/teal.
+     background paling gelap; card sedikit terangkat sebagai permukaan panel. */
+  --background: #081322;
+  --foreground: #e8eef7;
+  --card: #102133;
+  --border: #27405d;
+  --line-strong: #35506e;
+
+  --primary-soft: rgba(2, 132, 199, 0.15);
+  --primary-strong: #38bdf8;
+  --steel: #93a5bd;
+  --muted: #8b9cb3;
+  --surface-2: #16304a;
+  --surface-3: #213a56;
+  --surface-hover: #1a3550;
+  --text-soft: #d6e2f1;
+  --text-muted-2: #93a7c1;
+
+  --shadow-card: 0 18px 45px rgba(0, 0, 0, 0.45);
+  --shadow-drawer: 0 22px 60px rgba(0, 0, 0, 0.55);
+  --shadow-modal: 0 28px 70px rgba(0, 0, 0, 0.7);
+
+  --grid-line: rgba(255, 255, 255, 0.03);
+  --bg-glow-1: rgba(14, 165, 233, 0.08);
+  --bg-glow-2: rgba(37, 99, 235, 0.04);
+  --row-hover: rgba(255, 255, 255, 0.03);
+  --topnav-bg: rgba(9, 20, 34, 0.86);
+}
+
 
 @theme inline {
   --color-background: var(--background);
@@ -37,6 +93,17 @@
   --color-line-strong: var(--line-strong);
   --color-primary: var(--primary);
   --color-primary-soft: var(--primary-soft);
+  --color-primary-50: var(--primary-50);
+  --color-primary-100: var(--primary-100);
+  --color-primary-200: var(--primary-200);
+  --color-primary-300: var(--primary-300);
+  --color-primary-400: var(--primary-400);
+  --color-primary-500: var(--primary-500);
+  --color-primary-600: var(--primary-600);
+  --color-primary-700: var(--primary-700);
+  --color-primary-800: var(--primary-800);
+  --color-primary-900: var(--primary-900);
+  --color-primary-950: var(--primary-950);
   --color-accent: var(--accent);
   --color-steel: var(--steel);
   --color-success: var(--success);
@@ -44,6 +111,11 @@
   --color-danger: var(--danger);
   --color-muted: var(--muted);
   --color-info: var(--info);
+  --color-surface-2: var(--surface-2);
+  --color-surface-3: var(--surface-3);
+  --color-surface-hover: var(--surface-hover);
+  --color-text-soft: var(--text-soft);
+  --color-text-muted-2: var(--text-muted-2);
 
   --font-sans: var(--font-jakarta), "Plus Jakarta Sans", system-ui, sans-serif;
   --font-mono: var(--font-jakarta), "Plus Jakarta Sans", ui-monospace, "SFMono-Regular", monospace;
@@ -62,13 +134,7 @@
 
 html,
 body {
-  background-color: #ffffff;
-  background-image:
-    linear-gradient(to right, rgba(71, 85, 105, 0.15) 1px, transparent 1px),
-    linear-gradient(to bottom, rgba(71, 85, 105, 0.15) 1px, transparent 1px),
-    radial-gradient(circle at 50% 60%, rgba(236, 72, 153, 0.15) 0%, rgba(168, 85, 247, 0.05) 40%, transparent 70%);
-  background-size: 40px 40px, 40px 40px, 100% 100%;
-  background-attachment: fixed;
+  background-color: var(--background);
   color: var(--foreground);
   font-family: var(--font-sans);
   -webkit-font-smoothing: antialiased;
@@ -77,6 +143,24 @@ body {
   font-feature-settings: "tnum" 1;
   /* Cegah scroll horizontal halaman di mobile (clip = aman utk position:sticky) */
   overflow-x: clip;
+}
+
+body {
+  min-width: 320px;
+}
+
+.app-shell-bg {
+  background-color: var(--background);
+  background-image:
+    linear-gradient(to right, var(--grid-line) 1px, transparent 1px),
+    linear-gradient(to bottom, var(--grid-line) 1px, transparent 1px);
+  background-size: 40px 40px;
+}
+
+.app-content-surface {
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.03), transparent 320px),
+    var(--background);
 }
 
 /* Headings use clean, spacious Geist typography */
@@ -106,7 +190,7 @@ h3,
 }
 
 h3 {
-  color: #0f172a;
+  color: var(--foreground);
 }
 
 h1 {
@@ -183,6 +267,135 @@ h3,
   from { background-position: 200% 0; }
   to { background-position: -200% 0; }
 }
+
+/* ===== POS Katalog Item Card =====
+   Permukaan kartu produk kasir. Light: putih bersih dengan lift halus.
+   Dark: panel navy terangkat (pakai token surface, BUKAN slate netral
+   agar tidak terlihat abu-abu kusam di atas background navy). */
+.pos-catalog-grid {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+@media (min-width: 360px) {
+  .pos-catalog-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (min-width: 640px) {
+  .pos-catalog-grid {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+}
+
+.pos-item-card {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  text-align: left;
+  cursor: pointer;
+  border-radius: 16px;
+  padding: 14px;
+  border: 1px solid var(--border);
+  background: var(--card);
+  transition: border-color 0.2s ease, box-shadow 0.2s ease, transform 0.2s ease;
+}
+.pos-item-card:hover {
+  border-color: rgba(2, 132, 199, 0.45);
+  box-shadow: 0 8px 30px rgba(2, 132, 199, 0.08);
+  transform: translateY(-2px);
+}
+.pos-item-card:active {
+  transform: scale(0.98);
+}
+.pos-item-card .pos-item-name {
+  color: var(--foreground);
+  transition: color 0.2s ease;
+}
+.pos-item-card:hover .pos-item-name {
+  color: var(--primary-strong);
+}
+.pos-item-card .pos-item-price {
+  color: var(--primary);
+  min-width: 0;
+  /* Jangan pernah memutus angka di tengah (dulu `overflow-wrap: anywhere`
+     membuat "Rp 622.000" pecah jadi "Rp 622.0\n00" di kartu sempit mobile). */
+  white-space: nowrap;
+}
+.pos-item-card .pos-item-divider {
+  border-color: var(--border);
+  gap: 0.25rem 0.5rem;
+  /* Bila harga + badge stok tak muat sebaris di layar sempit, badge turun ke
+     baris berikutnya alih-alih memaksa harga terpotong. */
+  flex-wrap: wrap;
+}
+.pos-item-card .pos-item-divider > * {
+  min-width: 0;
+}
+.pos-item-kode {
+  color: var(--primary);
+  background: rgba(2, 132, 199, 0.1);
+}
+
+.dark .pos-item-card {
+  border-color: rgba(53, 80, 110, 0.6);
+  background: linear-gradient(155deg, var(--surface-2) 0%, var(--card) 82%);
+  /* hairline highlight di tepi atas untuk kesan permukaan terangkat */
+  box-shadow:
+    inset 0 1px 0 rgba(214, 226, 241, 0.06),
+    0 4px 16px rgba(0, 0, 0, 0.25);
+}
+.dark .pos-item-card:hover {
+  border-color: rgba(56, 189, 248, 0.45);
+  box-shadow:
+    inset 0 1px 0 rgba(214, 226, 241, 0.08),
+    0 0 0 3px rgba(56, 189, 248, 0.08),
+    0 10px 34px rgba(0, 0, 0, 0.45);
+}
+.dark .pos-item-card .pos-item-price {
+  color: var(--primary-strong);
+}
+.dark .pos-item-card .pos-item-divider {
+  border-color: rgba(53, 80, 110, 0.55);
+}
+.dark .pos-item-kode {
+  color: var(--primary-strong);
+  background: rgba(56, 189, 248, 0.12);
+}
+
+/* Kartu produk yang sudah masuk keranjang: ring cyan persisten + badge qty,
+   agar kasir langsung tahu barang mana yang sudah dipilih tanpa cek keranjang. */
+.pos-item-card-active {
+  border-color: var(--primary-strong) !important;
+  box-shadow: 0 0 0 3px rgba(2, 132, 199, 0.18), 0 8px 24px rgba(2, 132, 199, 0.12) !important;
+}
+.dark .pos-item-card-active {
+  border-color: var(--primary-strong) !important;
+  box-shadow:
+    inset 0 1px 0 rgba(214, 226, 241, 0.08),
+    0 0 0 3px rgba(56, 189, 248, 0.22),
+    0 10px 30px rgba(56, 189, 248, 0.12) !important;
+}
+.pos-item-qty-badge {
+  position: absolute;
+  top: -8px;
+  right: -8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 22px;
+  height: 22px;
+  padding: 0 5px;
+  border-radius: 999px;
+  background: var(--primary-strong);
+  color: #fff;
+  font-size: 10px;
+  font-weight: 800;
+  font-family: var(--font-mono, monospace);
+  box-shadow: 0 2px 8px rgba(2, 132, 199, 0.4), 0 0 0 2px var(--card);
+  z-index: 1;
+}
 .skel {
   background: linear-gradient(90deg, #f1f5f9 25%, #fff 50%, #f1f5f9 75%);
   background-size: 200% 100%;
@@ -191,7 +404,7 @@ h3,
 }
 
 ::selection {
-  background: rgba(15, 118, 110, 0.16);
+  background: rgba(2, 132, 199, 0.16);
   color: var(--primary-strong);
 }
 
@@ -220,10 +433,47 @@ h3,
 /* Enterprise invoice document uses Inter per brand brief */
 .invoice-doc {
   font-family: var(--font-sans), ui-sans-serif, system-ui, sans-serif;
+  width: 210mm;
+  max-width: none;
+  box-sizing: border-box;
 }
 .invoice-doc * {
+  box-sizing: border-box;
   -webkit-print-color-adjust: exact;
   print-color-adjust: exact;
+}
+
+.invoice-doc img {
+  max-width: 100%;
+}
+
+.invoice-doc .inv-table {
+  table-layout: fixed;
+}
+
+.invoice-doc .inv-table th,
+.invoice-doc .inv-table td {
+  overflow-wrap: anywhere;
+  word-break: normal;
+}
+
+.invoice-doc .inv-table tr,
+.invoice-doc .inv-body > div {
+  break-inside: avoid;
+  page-break-inside: avoid;
+}
+
+.print-a4-preview {
+  width: 210mm;
+  max-width: none;
+  min-width: 210mm;
+  flex: 0 0 auto;
+}
+
+.print-preview-scroll {
+  overflow: auto;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
 }
 
 .so-sheet {
@@ -241,7 +491,7 @@ h3,
 }
 
 .so-header > p {
-  color: #0f766e;
+  color: #0284c7;
   font-weight: 700;
   letter-spacing: 0.04em;
 }
@@ -252,18 +502,18 @@ h3,
 
 .so-table {
   table-layout: fixed;
-  border: 1px solid #7fa09a;
+  border: 1px solid #7ea8c4;
 }
 
 .so-table th,
 .so-table td {
-  border: 1px solid #7fa09a;
+  border: 1px solid #7ea8c4;
   padding: 6px;
   vertical-align: middle;
 }
 
 .so-table th {
-  background: #e8f3f0;
+  background: #e0f2fe;
   color: #10201e;
   font-weight: 800;
 }
@@ -277,14 +527,14 @@ h3,
   display: block;
   width: 100%;
   height: 16px;
-  border-bottom: 1px dashed #7fa09a;
+  border-bottom: 1px dashed #7ea8c4;
 }
 
 .so-check {
   display: inline-flex;
   width: 14px;
   height: 14px;
-  border: 1px solid #7fa09a;
+  border: 1px solid #7ea8c4;
   border-radius: 4px;
   background: #ffffff;
 }
@@ -341,7 +591,7 @@ h3,
 }
 
 .laporan-pdf-page-title p {
-  color: #0f766e;
+  color: #0284c7;
   font-weight: 900;
   letter-spacing: 0.14em;
   text-transform: uppercase;
@@ -356,8 +606,8 @@ h3,
 
 .laporan-pdf-page-title strong {
   border-radius: 999px;
-  background: #ecfdf5;
-  color: #0f766e;
+  background: #f0f9ff;
+  color: #0284c7;
   padding: 2mm 4mm;
   font-size: 8px;
   text-transform: uppercase;
@@ -368,7 +618,7 @@ h3,
   justify-content: space-between;
   gap: 10mm;
   border-radius: 5mm;
-  background: linear-gradient(135deg, #06251f 0%, #0f766e 100%);
+  background: linear-gradient(135deg, #041c30 0%, #0284c7 100%);
   color: #ffffff;
   padding: 6mm;
   margin-bottom: 4mm;
@@ -485,9 +735,9 @@ h3,
 }
 
 .laporan-pdf-note {
-  border: 1px solid #bfe6da;
+  border: 1px solid #bae6fd;
   border-radius: 4mm;
-  background: #f0fdfa;
+  background: #f0f9ff;
   padding: 3mm 4mm;
   margin-bottom: 3mm;
   break-inside: avoid;
@@ -495,7 +745,7 @@ h3,
 
 .laporan-pdf-note h2 {
   margin: 0 0 2mm;
-  color: #0f766e;
+  color: #0284c7;
   font-size: 11px;
 }
 
@@ -534,8 +784,8 @@ h3,
 
 .laporan-pdf-section-head > span {
   border-radius: 999px;
-  background: #d8f3ee;
-  color: #0f766e;
+  background: #e0f2fe;
+  color: #0284c7;
   padding: 1.5mm 3mm;
   font-size: 8px;
   font-weight: 800;
@@ -566,14 +816,14 @@ h3,
   height: 4.2mm;
   overflow: hidden;
   border-radius: 999px;
-  background: #e8f3f0;
+  background: #e0f2fe;
 }
 
 .laporan-pdf-bar-row i {
   display: block;
   height: 100%;
   border-radius: 999px;
-  background: linear-gradient(90deg, #34d399, #0f766e);
+  background: linear-gradient(90deg, #38bdf8, #0284c7);
 }
 
 .laporan-pdf-bars-blue .laporan-pdf-bar-row i {
@@ -581,7 +831,7 @@ h3,
 }
 
 .laporan-pdf-bars-emerald .laporan-pdf-bar-row i {
-  background: linear-gradient(90deg, #34d399, #059669);
+  background: linear-gradient(90deg, #38bdf8, #0369a1);
 }
 
 .laporan-pdf-bar-row strong {
@@ -600,7 +850,7 @@ h3,
 }
 
 .laporan-pdf-bar-row strong em {
-  color: #0f766e;
+  color: #0284c7;
   font-size: 7px;
   font-style: normal;
   font-weight: 800;
@@ -640,7 +890,7 @@ h3,
 }
 
 .laporan-pdf-positive {
-  color: #059669;
+  color: #0369a1;
   font-weight: 900;
 }
 
@@ -761,12 +1011,17 @@ h3,
   }
 
   body.print-format-a4 .invoice-doc {
-    width: 100% !important;
+    width: 210mm !important;
+    max-width: none !important;
+    min-width: 210mm !important;
     border: none !important;
     box-shadow: none !important;
   }
 
   body.print-format-a4 .inv-body {
+    width: 210mm !important;
+    max-width: none !important;
+    box-sizing: border-box !important;
     padding: 12mm !important;
   }
 
@@ -783,16 +1038,21 @@ h3,
     display: block !important;
     height: 4px !important;
     width: 100% !important;
-    background: #EA580C !important;
+    background: #0284c7 !important;
   }
 
   /* Bersihkan chrome layar (border/shadow/sudut membulat) dari area cetak —
      ini hanya afordansi tampilan, tidak boleh ikut tercetak di PDF. */
   body.print-format-a4 .print-clone {
+    width: 210mm !important;
+    max-width: none !important;
+    min-width: 210mm !important;
+    margin: 0 auto !important;
     border: none !important;
     box-shadow: none !important;
     border-radius: 0 !important;
     padding: 0 !important;
+    overflow: visible !important;
   }
 
   /* Lembar Stock Opname: padding tepi kertas 12mm (samakan dengan invoice
@@ -853,7 +1113,7 @@ h3,
     line-height: 1.3 !important;
   }
   /* Nama perusahaan: kecilkan supaya rapi (maks 2 baris) di lebar 80mm */
-  body.print-thermal .thermal-print-layout h2 {
+  body.print-thermal .thermal-print-layout .thermal-brand-title {
     font-size: 13px !important;
     line-height: 1.12 !important;
     letter-spacing: -0.2px !important;
@@ -878,7 +1138,7 @@ tbody tr {
   transition: background-color 200ms ease;
 }
 tbody tr:hover {
-  background-color: #f8fafc !important;
+  background-color: var(--row-hover) !important;
 }
 
 /* Hide scrollbars visually while retaining scrolling functionality */
@@ -910,12 +1170,16 @@ input[type="number"] {
 }
 .a4-print-layout {
   display: none !important;
+  width: 210mm;
+  max-width: none;
 }
 body.print-format-a4 .thermal-print-layout {
   display: none !important;
 }
 body.print-format-a4 .a4-print-layout {
   display: block !important;
+  width: 210mm !important;
+  max-width: none !important;
 }
 
 /* ============================================================
@@ -924,6 +1188,10 @@ body.print-format-a4 .a4-print-layout {
    (mengecualikan dokumen invoice .inv-table)
    ============================================================ */
 @media (max-width: 640px) {
+  h1 {
+    font-size: 28px;
+  }
+
   table:not(.inv-table) th,
   table:not(.inv-table) td {
     padding-left: 0.625rem;
@@ -943,6 +1211,11 @@ body.print-format-a4 .a4-print-layout {
   textarea {
     font-size: 16px !important;
   }
+
+  [data-tooltip]::before,
+  [data-tooltip]::after {
+    display: none;
+  }
 }
 
 /* ============================================================
@@ -956,14 +1229,14 @@ body:has(#search-item) .no-print.fixed.bottom-6.right-6 {
    Desktop Fixed Sidebar Offset for Main Viewport
    ============================================================ */
 @media (min-width: 1024px) {
-  .flex.flex-1.flex-col {
-    transition: padding-left 0.2s ease-in-out;
+  .app-shell-main {
+    transition: margin-left 0.2s ease-in-out;
   }
-  aside.lg\:w-\[280px\] ~ .flex.flex-1.flex-col {
-    padding-left: 280px;
+  aside.lg\:w-\[280px\] ~ .app-shell-main {
+    margin-left: 280px;
   }
-  aside.lg\:w-\[80px\] ~ .flex.flex-1.flex-col {
-    padding-left: 80px;
+  aside.lg\:w-\[80px\] ~ .app-shell-main {
+    margin-left: 80px;
   }
 }
 

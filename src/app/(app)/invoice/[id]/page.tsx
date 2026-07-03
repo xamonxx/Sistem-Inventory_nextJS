@@ -1,6 +1,7 @@
 import { notFound } from "next/navigation";
 import { requireUser } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { createInvoiceVerifyUrl } from "@/lib/invoiceVerify";
 import { Nota, type NotaItem } from "@/components/Nota";
 import { PrintBar } from "@/components/PrintBar";
 
@@ -21,6 +22,7 @@ export default async function InvoiceDetailPage({ params }: { params: Promise<{ 
     },
   });
   if (!inv) notFound();
+  const verifyUrl = await createInvoiceVerifyUrl(inv.noInvoice);
 
   let items: NotaItem[] = [];
   let catatan: string | undefined;
@@ -55,7 +57,7 @@ export default async function InvoiceDetailPage({ params }: { params: Promise<{ 
 
   return (
     <div className="mx-auto max-w-md space-y-4">
-      <PrintBar backHref="/invoice" noInvoice={inv.noInvoice} namaClient={inv.namaClient} />
+      <PrintBar backHref="/invoice" noInvoice={inv.noInvoice} namaClient={inv.namaClient ?? undefined} />
       <div className="print-area rounded-xl border border-border bg-white shadow-sm">
         <Nota
           data={{
@@ -68,6 +70,7 @@ export default async function InvoiceDetailPage({ params }: { params: Promise<{ 
             total: Number(inv.total),
             judul: "INVOICE / TAGIHAN",
             catatan,
+            verifyUrl,
           }}
         />
       </div>

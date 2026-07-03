@@ -101,6 +101,7 @@ export function InvoiceClient({ initialInvoices, canBayar, userName }: InvoiceCl
   const [paymentMethod, setPaymentMethod] = useState<"CASH" | "TRANSFER">("CASH");
   const [isPending, startTransition] = useTransition();
   const [printFormat, setPrintFormat] = useState<"a4" | "thermal" | null>(null);
+  const a4PreviewRef = useRef<HTMLDivElement>(null);
 
   // Delete states
   const [isDeleteConfirmOpen, setIsDeleteConfirmOpen] = useState(false);
@@ -121,6 +122,30 @@ export function InvoiceClient({ initialInvoices, canBayar, userName }: InvoiceCl
         document.documentElement.style.overflow = originalHtmlOverflow;
       };
     }
+  }, [printFormat]);
+
+  useEffect(() => {
+    if (printFormat !== "a4") return;
+    const previewNode = a4PreviewRef.current;
+    const fit = () => {
+      const el = a4PreviewRef.current;
+      if (!el) return;
+      el.style.zoom = "1";
+      const parent = el.parentElement;
+      const naturalW = el.offsetWidth;
+      const naturalH = el.offsetHeight;
+      const availW = parent ? parent.clientWidth - 2 : window.innerWidth - 32;
+      const availH = parent ? parent.clientHeight - 2 : window.innerHeight * 0.82 - 56;
+      const z = Math.max(0.32, Math.min(1, availW / naturalW, availH / naturalH));
+      el.style.zoom = String(z);
+    };
+    const timer = window.setTimeout(fit, 80);
+    window.addEventListener("resize", fit);
+    return () => {
+      window.clearTimeout(timer);
+      window.removeEventListener("resize", fit);
+      if (previewNode) previewNode.style.zoom = "1";
+    };
   }, [printFormat]);
 
   // Column Visibility States
@@ -348,8 +373,16 @@ export function InvoiceClient({ initialInvoices, canBayar, userName }: InvoiceCl
       toast.error("Elemen cetak tidak ditemukan.");
       return;
     }
+    // Pratinjau A4 memakai `zoom` auto-fit agar muat di layar (di mobile bisa
+    // ~0.4). Chrome menghitung offsetWidth/scrollWidth mengikuti zoom, sehingga
+    // tanpa reset, gambar yang ditangkap ikut mengecil / terpotong di HP.
+    // Netralkan zoom ke 1 selama capture lalu kembalikan — hasil PNG jadi
+    // beresolusi penuh & identik di desktop maupun mobile.
+    const prevZoom = element.style.zoom;
     try {
       toast.info("Sedang mengambil gambar...");
+      element.style.zoom = "1";
+      void element.offsetWidth; // paksa reflow agar dimensi natural terbaca
       // Ukur tinggi penuh isi (scrollHeight) supaya struk panjang tidak
       // terpotong — wrapper memakai overflow-hidden sehingga box-nya bisa
       // lebih pendek dari konten sebenarnya.
@@ -362,7 +395,7 @@ export function InvoiceClient({ initialInvoices, canBayar, userName }: InvoiceCl
         width: fullWidth,
         height: fullHeight,
         cacheBust: true,
-        style: { margin: "0", borderRadius: "0" },
+        style: { margin: "0", borderRadius: "0", zoom: "1" },
       });
       const link = document.createElement("a");
       const safeName = (selectedInvoice?.namaClient ?? "").replace(/[\\/:*?"<>|]/g, "").trim();
@@ -374,6 +407,8 @@ export function InvoiceClient({ initialInvoices, canBayar, userName }: InvoiceCl
     } catch (err) {
       console.error(err);
       toast.error("Gagal menyimpan gambar.");
+    } finally {
+      element.style.zoom = prevZoom; // pulihkan zoom auto-fit pratinjau
     }
   }
 
@@ -385,24 +420,25 @@ export function InvoiceClient({ initialInvoices, canBayar, userName }: InvoiceCl
           { label: "Total Piutang Aktif", value: formatRupiah(stats.totalReceivable), desc: "Piutang belum terbayar", icon: Wallet, tone: "amber" },
           { label: "Total Pembayaran Diterima", value: formatRupiah(stats.totalPaid), desc: "Lunas/cicilan terkumpul", icon: CheckCircle, tone: "green" },
           { label: "Invoices Pending", value: `${stats.pendingCount} invoice`, desc: "Belum lunas sepenuhnya", icon: Clock, tone: "blue" },
-        ].map((card) => {
+        ].map((card, idx, arr) => {
           const Icon = card.icon;
           const toneColors: Record<string, string> = {
             amber: "bg-amber-50 text-amber-700 border-amber-100",
-            green: "bg-emerald-50 text-emerald-700 border-emerald-100",
+            green: "bg-primary-50 text-primary-700 border-primary-100",
             blue: "bg-blue-50 text-blue-700 border-blue-100",
           };
+          const isLastOdd = idx === arr.length - 1 && arr.length % 2 !== 0;
           return (
-            <Card key={card.label} className="flex items-center gap-3 p-4 sm:gap-4 sm:p-5 lg:gap-3 lg:p-4 xl:gap-4 xl:p-5">
+            <Card key={card.label} className={cn("flex items-center gap-3 p-4 sm:gap-4 sm:p-5 lg:gap-3 lg:p-4 xl:gap-4 xl:p-5", isLastOdd && "sm:col-span-2 lg:col-span-1")}>
               <div className={`flex h-10 w-10 sm:h-12 sm:w-12 shrink-0 items-center justify-center rounded-xl border ${toneColors[card.tone]}`}>
                 <Icon className="h-5 w-5 sm:h-6 sm:w-6" strokeWidth={2.3} />
               </div>
               <div className="leading-tight select-none min-w-0 flex-1">
-                <p className="text-[10px] lg:text-[9px] xl:text-[10px] font-bold uppercase tracking-wider text-slate-450">{card.label}</p>
+                <p className="text-[10px] lg:text-[9px] xl:text-[10px] font-bold uppercase tracking-wider text-[var(--text-muted-2)]">{card.label}</p>
                 <div data-tooltip={card.value} className="mt-1">
-                  <p className="font-extrabold text-slate-800 font-display text-sm sm:text-base lg:text-sm xl:text-base whitespace-nowrap overflow-hidden text-ellipsis">{card.value}</p>
+                  <p className="font-extrabold text-foreground font-display text-sm sm:text-base lg:text-sm xl:text-base whitespace-nowrap overflow-hidden text-ellipsis">{card.value}</p>
                 </div>
-                <p className="text-[10px] lg:text-[9px] xl:text-[10px] text-slate-450 mt-0.5 truncate" title={card.desc}>{card.desc}</p>
+                <p className="text-[10px] lg:text-[9px] xl:text-[10px] text-[var(--text-muted-2)] mt-0.5 truncate" title={card.desc}>{card.desc}</p>
               </div>
             </Card>
           );
@@ -422,11 +458,11 @@ export function InvoiceClient({ initialInvoices, canBayar, userName }: InvoiceCl
               className="pl-9 h-10 rounded-xl"
             />
           </div>
-          <div className="flex flex-wrap items-center gap-2.5">
+          <div className="grid w-full grid-cols-1 gap-2.5 sm:flex sm:w-auto sm:flex-wrap sm:items-center">
             <Select
               value={statusFilter}
               onChange={(e) => setStatusFilter(e.target.value)}
-              className="h-10 w-44 rounded-xl text-xs font-bold"
+              className="h-10 w-full rounded-xl text-xs font-bold sm:w-44"
             >
               <option value="ALL">Semua Tagihan</option>
               <option value="PENDING">Belum Lunas (Pending)</option>
@@ -434,13 +470,13 @@ export function InvoiceClient({ initialInvoices, canBayar, userName }: InvoiceCl
               <option value="DRAFT">Draft</option>
             </Select>
 
-            <PeriodFilter onChange={setDateRange} align="right" />
+            <PeriodFilter onChange={setDateRange} align="right" className="w-full sm:w-auto" />
 
             <Button
               variant="outline"
               size="sm"
               onClick={() => setShowConfig(!showConfig)}
-              className="h-10 rounded-xl px-3"
+              className="h-11 rounded-xl px-3 sm:h-10"
             >
               <SlidersHorizontal size={14} /> Kolom
             </Button>
@@ -450,7 +486,7 @@ export function InvoiceClient({ initialInvoices, canBayar, userName }: InvoiceCl
               size="sm"
               onClick={handleExportExcel}
               disabled={exporting}
-              className="h-10 rounded-xl px-3 gap-1.5 border-emerald-200 bg-emerald-50 text-emerald-700 hover:bg-emerald-100 disabled:opacity-60 disabled:cursor-not-allowed"
+              className="h-11 rounded-xl px-3 gap-1.5 border-primary-200 bg-primary-50 text-primary-700 hover:bg-primary-100 disabled:opacity-60 disabled:cursor-not-allowed sm:h-10"
             >
               <Download size={14} /> {exporting ? "Mengekspor..." : "Export Excel"}
             </Button>
@@ -460,7 +496,7 @@ export function InvoiceClient({ initialInvoices, canBayar, userName }: InvoiceCl
                 variant="danger"
                 size="sm"
                 onClick={() => setIsBulkDeleteConfirmOpen(true)}
-                className="h-10 rounded-xl px-4 gap-1.5 font-bold animate-fade-in bg-red-600 hover:bg-red-700 text-white border-transparent cursor-pointer"
+                className="h-11 rounded-xl px-4 gap-1.5 font-bold animate-fade-in bg-red-600 hover:bg-red-700 text-white border-transparent cursor-pointer sm:h-10"
               >
                 <Trash2 size={14} /> Hapus Terpilih ({selectedInvoiceIds.length})
               </Button>
@@ -484,7 +520,114 @@ export function InvoiceClient({ initialInvoices, canBayar, userName }: InvoiceCl
       </Card>
 
       {/* 3. Modern Data Grid Invoice Table */}
-      <div className="w-full">
+      <div className="w-full min-w-0 space-y-3">
+        <div className="space-y-3 lg:hidden">
+          {invoicePg.pageData.map((inv) => {
+            const sisa = inv.total - inv.totalDibayar;
+            const isChecked = selectedInvoiceIds.includes(inv.id);
+
+            return (
+              <article
+                key={inv.id}
+                className="rounded-xl border border-border bg-card p-4 shadow-[var(--shadow-card)]"
+              >
+                <div className="flex items-start justify-between gap-3">
+                  <button
+                    type="button"
+                    onClick={() => setSelectedInvoice(inv)}
+                    className="min-w-0 flex-1 text-left"
+                  >
+                    <p className="font-mono text-sm font-extrabold text-foreground break-words">{inv.noInvoice}</p>
+                    <p className="mt-1 text-xs font-semibold text-[var(--text-muted-2)]">{formatTanggal(inv.tanggal)}</p>
+                  </button>
+                  <div className="flex shrink-0 items-center gap-2">
+                    {canBayar && (
+                      <input
+                        type="checkbox"
+                        aria-label={`Pilih invoice ${inv.noInvoice}`}
+                        checked={isChecked}
+                        onChange={() => handleToggleSelect(inv.id)}
+                        className="h-5 w-5 rounded border-slate-350 text-[var(--primary)] focus:ring-transparent cursor-pointer"
+                      />
+                    )}
+                    {inv.status === "PAID" && <Badge tone="green">Lunas</Badge>}
+                    {inv.status === "PARTIAL" && <Badge tone="blue">Partial</Badge>}
+                    {inv.status === "PENDING" && <Badge tone="amber">Pending</Badge>}
+                    {inv.status === "DRAFT" && <Badge tone="slate">Draft</Badge>}
+                  </div>
+                </div>
+
+                <div className="mt-3 grid grid-cols-1 gap-2 text-xs">
+                  <div>
+                    <p className="font-bold uppercase tracking-wide text-[var(--text-muted-2)]">Klien</p>
+                    <p className="mt-0.5 font-semibold text-foreground break-words">{inv.namaClient}</p>
+                  </div>
+                  {showProject && (
+                    <div>
+                      <p className="font-bold uppercase tracking-wide text-[var(--text-muted-2)]">Proyek</p>
+                      <p className="mt-0.5 font-semibold text-[var(--text-soft)] break-words">{inv.projectName ?? "Eceran / Umum"}</p>
+                    </div>
+                  )}
+                </div>
+
+                <div className="mt-4 grid grid-cols-2 gap-2 rounded-lg border border-border bg-[var(--surface-2)] p-3 text-xs">
+                  <div>
+                    <p className="font-bold uppercase tracking-wide text-[var(--text-muted-2)]">Total</p>
+                    <p className="mt-1 font-mono font-extrabold text-foreground break-words">{formatRupiah(inv.total)}</p>
+                  </div>
+                  <div>
+                    <p className="font-bold uppercase tracking-wide text-[var(--text-muted-2)]">Sisa</p>
+                    <p className="mt-1 font-mono font-extrabold text-amber-700 break-words">
+                      {sisa > 0 ? formatRupiah(sisa) : <span className="text-green-600">Lunas</span>}
+                    </p>
+                  </div>
+                  {showPaid && (
+                    <div className="col-span-2">
+                      <p className="font-bold uppercase tracking-wide text-[var(--text-muted-2)]">Telah Dibayar</p>
+                      <p className="mt-1 font-mono font-bold text-primary-600 break-words">
+                        {inv.totalDibayar > 0 ? formatRupiah(inv.totalDibayar) : "-"}
+                      </p>
+                    </div>
+                  )}
+                </div>
+
+                <div className="mt-4 flex flex-wrap items-center gap-2">
+                  <Button variant="outline" size="sm" onClick={() => setSelectedInvoice(inv)} className="flex-1">
+                    <Eye size={14} /> Detail
+                  </Button>
+                  {canBayar && (
+                    <>
+                      <Button variant="outline" size="sm" onClick={() => router.push(`/invoice/edit/${inv.id}`)} className="flex-1">
+                        <Pencil size={14} /> Edit
+                      </Button>
+                      <Button
+                        variant="danger"
+                        size="sm"
+                        onClick={() => {
+                          setSelectedInvoice(inv);
+                          setIsDeleteConfirmOpen(true);
+                        }}
+                        className="flex-1"
+                      >
+                        <Trash2 size={14} /> Hapus
+                      </Button>
+                    </>
+                  )}
+                </div>
+              </article>
+            );
+          })}
+
+          {filteredInvoices.length === 0 && (
+            <div className="rounded-xl border border-border bg-card p-8 text-center text-slate-400 shadow-[var(--shadow-card)]">
+              <FileText className="mx-auto mb-2 text-slate-300" size={32} />
+              <p className="font-semibold text-sm">Tidak Ada Invoice Terdaftar</p>
+              <p className="text-xs">Data tagihan kosong atau tidak cocok dengan pencarian.</p>
+            </div>
+          )}
+        </div>
+
+        <div className="hidden w-full lg:block">
         <Table>
           <thead>
             <tr>
@@ -521,7 +664,7 @@ export function InvoiceClient({ initialInvoices, canBayar, userName }: InvoiceCl
                 <tr
                   key={inv.id}
                   onClick={() => setSelectedInvoice(inv)}
-                  className="hover:bg-slate-50/50 cursor-pointer transition-colors duration-150 group"
+                  className="hover:bg-[var(--surface-hover)] cursor-pointer transition-colors duration-150 group"
                 >
                   {canBayar && (
                     <Td className="text-center" onClick={(e) => e.stopPropagation()}>
@@ -534,26 +677,26 @@ export function InvoiceClient({ initialInvoices, canBayar, userName }: InvoiceCl
                     </Td>
                   )}
                   <Td className="group-hover:text-[var(--primary)]">
-                    <div className="font-mono text-xs font-bold text-slate-850">{inv.noInvoice}</div>
+                    <div className="font-mono text-xs font-bold text-foreground">{inv.noInvoice}</div>
                     {inv.noTransaksi && (
                       <div className="font-mono text-[10px] text-slate-400 mt-0.5">{inv.noTransaksi}</div>
                     )}
                   </Td>
-                  <Td className="text-xs text-slate-450">{formatTanggal(inv.tanggal)}</Td>
-                  <Td className="font-semibold text-slate-900">{inv.namaClient}</Td>
+                  <Td className="text-xs text-[var(--text-muted-2)]">{formatTanggal(inv.tanggal)}</Td>
+                  <Td className="font-semibold text-foreground max-w-[200px] truncate">{inv.namaClient}</Td>
                   {showProject && (
-                    <Td className="text-xs text-slate-650 font-medium">
+                    <Td className="text-xs text-[var(--text-soft)] font-medium">
                       {inv.projectName ?? "Eceran / Umum"}
                     </Td>
                   )}
                   <Td className="text-right font-mono text-xs font-semibold">{formatRupiah(inv.total)}</Td>
                   {showPaid && (
-                    <Td className="text-right font-mono text-xs text-emerald-600 font-semibold">
+                    <Td className="text-right font-mono text-xs text-primary-600 font-semibold">
                       {inv.totalDibayar > 0 ? formatRupiah(inv.totalDibayar) : "—"}
                     </Td>
                   )}
                   <Td className="text-right font-mono text-xs font-extrabold text-amber-700">
-                    {sisa > 0 ? formatRupiah(sisa) : <span className="text-emerald-600 font-bold">Lunas</span>}
+                    {sisa > 0 ? formatRupiah(sisa) : <span className="text-green-600 font-bold">Lunas</span>}
                   </Td>
                   <Td className="text-center select-none" onClick={(e) => e.stopPropagation()}>
                     {(inv.verifCount ?? 0) > 0 ? (
@@ -572,7 +715,7 @@ export function InvoiceClient({ initialInvoices, canBayar, userName }: InvoiceCl
                     <div className="flex items-center justify-center gap-1.5">
                       <button
                         onClick={() => setSelectedInvoice(inv)}
-                        className="flex h-9 w-9 items-center justify-center rounded-xl bg-slate-50 border border-border text-slate-500 hover:bg-[var(--primary)] hover:text-white transition cursor-pointer"
+                        className="flex h-9 w-9 items-center justify-center rounded-xl bg-[var(--surface-2)] border border-border text-[var(--text-soft)] hover:bg-[var(--primary)] hover:text-white transition cursor-pointer"
                         title="Buka detail drawer"
                       >
                         <Eye size={14} />
@@ -617,7 +760,8 @@ export function InvoiceClient({ initialInvoices, canBayar, userName }: InvoiceCl
             )}
           </tbody>
         </Table>
-        <div className="px-4 pb-3">
+        </div>
+        <div className="px-1 pb-3 sm:px-4">
           <Pagination page={invoicePg.page} perPage={invoicePg.perPage} total={invoicePg.total} onPage={invoicePg.setPage} onPerPage={invoicePg.setPerPage} />
         </div>
       </div>
@@ -636,20 +780,20 @@ export function InvoiceClient({ initialInvoices, canBayar, userName }: InvoiceCl
           <div className="space-y-6">
             {/* Document Codes Metadata Panel */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div className="bg-slate-50/40 border border-slate-200/85 p-3.5 rounded-2xl flex items-center justify-between shadow-3xs">
+              <div className="bg-[var(--surface-2)] border border-border p-3.5 rounded-2xl flex items-center justify-between shadow-3xs">
                 <div className="flex items-center gap-3">
-                  <div className="p-2 bg-slate-100 text-slate-550 rounded-xl">
+                  <div className="p-2 bg-[var(--surface-3)] text-[var(--text-soft)] rounded-xl">
                     <Hash size={15} />
                   </div>
                   <div>
-                    <span className="text-[9px] font-extrabold text-slate-400 uppercase tracking-wider">No. Invoice</span>
-                    <p className="font-mono text-xs font-bold text-slate-850 mt-0.5">{selectedInvoice.noInvoice}</p>
+                    <span className="text-[9px] font-extrabold text-[var(--text-muted-2)] uppercase tracking-wider">No. Invoice</span>
+                    <p className="font-mono text-xs font-bold text-foreground mt-0.5">{selectedInvoice.noInvoice}</p>
                   </div>
                 </div>
                 <button
                   type="button"
                   onClick={() => handleCopyText(selectedInvoice.noInvoice, "No. Invoice")}
-                  className="flex h-8 w-8 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-450 hover:bg-slate-50 hover:text-slate-800 transition shadow-3xs cursor-pointer active:scale-95 shrink-0"
+                  className="flex h-8 w-8 items-center justify-center rounded-xl border border-border bg-card text-[var(--text-muted-2)] hover:bg-[var(--surface-hover)] hover:text-foreground transition shadow-3xs cursor-pointer active:scale-95 shrink-0"
                   title="Salin No. Invoice"
                 >
                   <Copy size={12} />
@@ -657,27 +801,27 @@ export function InvoiceClient({ initialInvoices, canBayar, userName }: InvoiceCl
               </div>
 
               {selectedInvoice.noTransaksi ? (
-                <div className="bg-slate-50/40 border border-slate-200/85 p-3.5 rounded-2xl flex items-center justify-between shadow-3xs">
+                <div className="bg-[var(--surface-2)] border border-border p-3.5 rounded-2xl flex items-center justify-between shadow-3xs">
                   <div className="flex items-center gap-3">
-                    <div className="p-2 bg-slate-100 text-slate-550 rounded-xl">
+                    <div className="p-2 bg-[var(--surface-3)] text-[var(--text-soft)] rounded-xl">
                       <FileText size={15} />
                     </div>
                     <div>
-                      <span className="text-[9px] font-extrabold text-slate-400 uppercase tracking-wider">No. Transaksi Asli</span>
-                      <p className="font-mono text-xs font-bold text-slate-850 mt-0.5">{selectedInvoice.noTransaksi}</p>
+                      <span className="text-[9px] font-extrabold text-[var(--text-muted-2)] uppercase tracking-wider">No. Transaksi Asli</span>
+                      <p className="font-mono text-xs font-bold text-foreground mt-0.5">{selectedInvoice.noTransaksi}</p>
                     </div>
                   </div>
                   <button
                     type="button"
                     onClick={() => handleCopyText(selectedInvoice.noTransaksi!, "No. Transaksi")}
-                    className="flex h-8 w-8 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-450 hover:bg-slate-50 hover:text-slate-800 transition shadow-3xs cursor-pointer active:scale-95 shrink-0"
+                    className="flex h-8 w-8 items-center justify-center rounded-xl border border-border bg-card text-[var(--text-muted-2)] hover:bg-[var(--surface-hover)] hover:text-foreground transition shadow-3xs cursor-pointer active:scale-95 shrink-0"
                     title="Salin No. Transaksi"
                   >
                     <Copy size={12} />
                   </button>
                 </div>
               ) : (
-                <div className="bg-slate-50/20 border border-dashed border-slate-200/80 p-3.5 rounded-2xl flex items-center justify-center text-slate-400 text-xs shadow-3xs">
+                <div className="bg-[var(--surface-2)]/70 border border-dashed border-border/80 p-3.5 rounded-2xl flex items-center justify-center text-[var(--text-muted-2)] text-xs shadow-3xs">
                   Tidak Terikat Transaksi Asli
                 </div>
               )}
@@ -691,13 +835,20 @@ export function InvoiceClient({ initialInvoices, canBayar, userName }: InvoiceCl
                 <div className={cn(
                   "flex items-center justify-between border p-5 rounded-2xl transition-all shadow-xs",
                   isPaid 
-                    ? "bg-emerald-50/30 border-emerald-100/50 text-emerald-800"
+                    ? "bg-[color:rgba(34,197,94,0.14)] border-[color:rgba(134,239,172,0.34)]"
                     : selectedInvoice.status === "PARTIAL"
-                    ? "bg-blue-50/20 border-blue-100/50 text-blue-800"
-                    : "bg-amber-50/20 border-amber-100/50 text-amber-800"
+                    ? "bg-[color:rgba(59,130,246,0.14)] border-[color:rgba(96,165,250,0.34)]"
+                    : "bg-[color:rgba(245,158,11,0.14)] border-[color:rgba(251,191,36,0.34)]"
                 )}>
                   <div>
-                    <p className="text-[10px] font-bold text-slate-450 uppercase tracking-wide">Status Pembayaran</p>
+                    <p className={cn(
+                      "text-[10px] font-bold uppercase tracking-wide",
+                      isPaid
+                        ? "text-green-300"
+                        : selectedInvoice.status === "PARTIAL"
+                        ? "text-blue-300"
+                        : "text-amber-300"
+                    )}>Status Pembayaran</p>
                     <div className="mt-1.5">
                       {isPaid && <Badge tone="green" className="px-2.5 py-1 font-bold">Lunas</Badge>}
                       {!isPaid && selectedInvoice.status === "PARTIAL" && <Badge tone="blue" className="px-2.5 py-1 font-bold">Cicilan Aktif</Badge>}
@@ -706,10 +857,21 @@ export function InvoiceClient({ initialInvoices, canBayar, userName }: InvoiceCl
                     </div>
                   </div>
                   <div className="text-right">
-                    <p className="text-[10px] font-bold text-slate-450 uppercase tracking-wide">Sisa Tagihan</p>
+                    <p className={cn(
+                      "text-[10px] font-bold uppercase tracking-wide",
+                      isPaid
+                        ? "text-green-300"
+                        : selectedInvoice.status === "PARTIAL"
+                        ? "text-blue-300"
+                        : "text-amber-300"
+                    )}>Sisa Tagihan</p>
                     <p className={cn(
                       "text-xl font-extrabold font-mono mt-1",
-                      isPaid ? "text-emerald-700" : "text-amber-700"
+                      isPaid
+                        ? "text-green-300"
+                        : selectedInvoice.status === "PARTIAL"
+                        ? "text-blue-300"
+                        : "text-amber-300"
                     )}>
                       {formatRupiah(sisaTagihan)}
                     </p>
@@ -720,32 +882,32 @@ export function InvoiceClient({ initialInvoices, canBayar, userName }: InvoiceCl
 
             {/* Quick Actions Panel */}
             <div className="flex flex-wrap gap-2">
-              <Button size="sm" variant="outline" className="h-9 px-3 text-xs font-semibold rounded-xl flex items-center gap-1.5 shadow-xs border-slate-200" onClick={() => setPrintFormat("a4")}>
+              <Button size="sm" variant="outline" className="h-9 px-3 text-xs font-semibold rounded-xl flex items-center gap-1.5 shadow-xs border-border" onClick={() => setPrintFormat("a4")}>
                 <Printer size={14} className="stroke-[2]" /> Cetak Faktur
               </Button>
-              <Button size="sm" variant="outline" className="h-9 px-3 text-xs font-semibold rounded-xl flex items-center gap-1.5 shadow-xs border-slate-200" onClick={() => setPrintFormat("thermal")}>
+              <Button size="sm" variant="outline" className="h-9 px-3 text-xs font-semibold rounded-xl flex items-center gap-1.5 shadow-xs border-border" onClick={() => setPrintFormat("thermal")}>
                 <Printer size={14} className="stroke-[2]" /> Thermal (80mm)
               </Button>
-              <Button size="sm" variant="success" className="h-9 px-3 text-xs font-semibold rounded-xl flex items-center gap-1.5 shadow-xs bg-emerald-600 hover:bg-emerald-700 text-white border-transparent" onClick={() => handleSendWhatsApp(selectedInvoice)}>
+              <Button size="sm" variant="success" className="h-9 px-3 text-xs font-semibold rounded-xl flex items-center gap-1.5 shadow-xs bg-primary-600 hover:bg-primary-700 text-white border-transparent" onClick={() => handleSendWhatsApp(selectedInvoice)}>
                 <MessageCircle size={14} className="stroke-[2]" /> Kirim WhatsApp
               </Button>
-              <Button size="sm" variant="outline" className="h-9 px-3 text-xs font-semibold rounded-xl flex items-center gap-1.5 shadow-xs border-slate-200" onClick={() => handleCopyLink(selectedInvoice.verifyUrl ?? "")}>
+              <Button size="sm" variant="outline" className="h-9 px-3 text-xs font-semibold rounded-xl flex items-center gap-1.5 shadow-xs border-border" onClick={() => handleCopyLink(selectedInvoice.verifyUrl ?? "")}>
                 <Link2 size={14} className="stroke-[2]" /> Salin Link Verifikasi
               </Button>
             </div>
 
             {/* Instalment payment panel inside drawer */}
             {canBayar && selectedInvoice.total - selectedInvoice.totalDibayar > 0 && (
-              <div className="rounded-2xl border border-slate-200 bg-slate-50/40 p-5 space-y-4 shadow-sm">
+              <div className="rounded-2xl border border-border bg-[var(--surface-2)] p-5 space-y-4 shadow-sm">
                 <div className="flex items-center gap-2">
                   <div className="p-1.5 bg-primary/10 rounded-lg text-primary">
                     <DollarSign size={14} className="stroke-[2.5]" />
                   </div>
-                  <Label className="mb-0 text-xs font-bold text-slate-850">Input Pembayaran Cicilan / Piutang</Label>
+                  <Label className="mb-0 text-xs font-bold text-foreground">Input Pembayaran Cicilan / Piutang</Label>
                 </div>
                 <div className="flex flex-col sm:flex-row gap-3">
                   <div className="flex-1 relative">
-                    <span className="absolute left-3.5 top-1/2 -translate-y-1/2 font-bold text-xs text-slate-450 font-mono">Rp</span>
+                    <span className="absolute left-3.5 top-1/2 -translate-y-1/2 font-bold text-xs text-[var(--text-muted-2)] font-mono">Rp</span>
                     <input
                       type="number"
                       min={0}
@@ -753,14 +915,14 @@ export function InvoiceClient({ initialInvoices, canBayar, userName }: InvoiceCl
                       value={paymentAmount || ""}
                       onChange={(e) => setPaymentAmount(parseInt(e.target.value) || 0)}
                       placeholder="Ketik nominal cicilan..."
-                      className="h-10 w-full pl-9 pr-4 rounded-xl border border-slate-200 bg-white font-mono font-bold text-xs outline-none transition-all focus:border-[var(--primary)] focus:ring-4 focus:ring-[var(--primary)]/10"
+                      className="h-10 w-full pl-9 pr-4 rounded-xl border border-border bg-card font-mono font-bold text-xs outline-none transition-all focus:border-[var(--primary)] focus:ring-4 focus:ring-[var(--primary)]/10"
                     />
                   </div>
                   <div className="w-full sm:w-36 shrink-0">
                     <Select
                       value={paymentMethod}
                       onChange={(e) => setPaymentMethod(e.target.value as "CASH" | "TRANSFER")}
-                      className="h-10 text-xs bg-white border border-slate-200 rounded-xl w-full"
+                      className="h-10 text-xs bg-card border border-border rounded-xl w-full"
                     >
                       <option value="CASH">Tunai (Cash)</option>
                       <option value="TRANSFER">Transfer Bank</option>
@@ -775,25 +937,25 @@ export function InvoiceClient({ initialInvoices, canBayar, userName }: InvoiceCl
                   </Button>
                 </div>
                 <div className="flex gap-2 flex-wrap items-center">
-                  <span className="text-[10px] font-semibold text-slate-450">Pintas:</span>
+                  <span className="text-[10px] font-semibold text-[var(--text-muted-2)]">Pintas:</span>
                   <button
                     type="button"
                     onClick={() => setPaymentAmount(selectedInvoice.total - selectedInvoice.totalDibayar)}
-                    className="rounded-lg border border-emerald-200 bg-emerald-50 px-2.5 py-1 text-[10px] font-bold text-emerald-700 hover:bg-emerald-100 transition-all cursor-pointer shadow-2xs"
+                    className="rounded-lg border border-primary-200 bg-primary-50 px-2.5 py-1 text-[10px] font-bold text-primary-700 hover:bg-primary-100 transition-all cursor-pointer shadow-2xs"
                   >
                     Bayar Lunas
                   </button>
                   <button
                     type="button"
                     onClick={() => setPaymentAmount(1000000)}
-                    className="rounded-lg border border-slate-200 bg-white px-2.5 py-1 text-[10px] font-semibold text-slate-650 hover:bg-slate-50 transition-all font-mono cursor-pointer shadow-2xs"
+                    className="rounded-lg border border-border bg-card px-2.5 py-1 text-[10px] font-semibold text-[var(--text-soft)] hover:bg-[var(--surface-hover)] transition-all font-mono cursor-pointer shadow-2xs"
                   >
                     1jt
                   </button>
                   <button
                     type="button"
                     onClick={() => setPaymentAmount(5000000)}
-                    className="rounded-lg border border-slate-200 bg-white px-2.5 py-1 text-[10px] font-semibold text-slate-650 hover:bg-slate-50 transition-all font-mono cursor-pointer shadow-2xs"
+                    className="rounded-lg border border-border bg-card px-2.5 py-1 text-[10px] font-semibold text-[var(--text-soft)] hover:bg-[var(--surface-hover)] transition-all font-mono cursor-pointer shadow-2xs"
                   >
                     5jt
                   </button>
@@ -805,26 +967,26 @@ export function InvoiceClient({ initialInvoices, canBayar, userName }: InvoiceCl
             {selectedInvoice.payments && selectedInvoice.payments.length > 0 && (
               <div className="space-y-2.5">
                 <div className="flex justify-between items-center px-1">
-                  <p className="text-[10px] font-extrabold text-slate-450 uppercase tracking-wider">Riwayat Pembayaran / Cicilan</p>
+                  <p className="text-[10px] font-extrabold text-[var(--text-muted-2)] uppercase tracking-wider">Riwayat Pembayaran / Cicilan</p>
                   <Badge tone="green" className="text-[9px] px-2 py-0.5 font-bold">{selectedInvoice.payments.length}x Pembayaran</Badge>
                 </div>
-                <div className="rounded-2xl border border-slate-200 bg-white shadow-sm overflow-hidden divide-y divide-slate-100">
+                <div className="rounded-2xl border border-border bg-card shadow-sm overflow-hidden divide-y divide-border">
                   {selectedInvoice.payments.map((pay) => (
-                    <div key={pay.id} className="flex justify-between items-center p-3.5 hover:bg-slate-50/55 transition-colors text-xs">
+                    <div key={pay.id} className="flex justify-between items-center p-3.5 hover:bg-[var(--surface-hover)] transition-colors text-xs">
                       <div className="space-y-1">
-                        <p className="font-bold text-slate-700">{formatTanggal(pay.tanggal)}</p>
-                        <p className="text-[10px] text-slate-400 font-semibold font-mono">ID: #{pay.id}</p>
+                        <p className="font-bold text-foreground">{formatTanggal(pay.tanggal)}</p>
+                        <p className="text-[10px] text-[var(--text-muted-2)] font-semibold font-mono">ID: #{pay.id}</p>
                       </div>
                       <div className="flex items-center gap-3">
                         <span className={cn(
                           "inline-flex items-center px-2 py-0.5 rounded-full text-[9px] font-bold border shadow-3xs",
                           pay.tipe === "TRANSFER"
                             ? "bg-blue-50 text-blue-700 border-blue-100"
-                            : "bg-emerald-50 text-emerald-700 border-emerald-100"
+                            : "bg-primary-50 text-primary-700 border-primary-100"
                         )}>
                           {pay.tipe}
                         </span>
-                        <p className="font-mono font-extrabold text-slate-800 text-xs">
+                        <p className="font-mono font-extrabold text-foreground text-xs">
                           {formatRupiah(pay.jumlah)}
                         </p>
                       </div>
@@ -835,9 +997,9 @@ export function InvoiceClient({ initialInvoices, canBayar, userName }: InvoiceCl
             )}
 
             {/* Verification Status */}
-            <div className="rounded-2xl border border-slate-200 p-5 bg-white shadow-sm space-y-3">
+            <div className="rounded-2xl border border-border p-5 bg-card shadow-sm space-y-3">
               <div className="flex items-center justify-between">
-                <p className="text-[10px] font-extrabold text-slate-450 uppercase tracking-wider">Verifikasi Invoice</p>
+                <p className="text-[10px] font-extrabold text-[var(--text-muted-2)] uppercase tracking-wider">Verifikasi Invoice</p>
                 {(selectedInvoice.verifCount ?? 0) > 0 ? (
                   <Badge tone="green" className="text-[9px] px-2 py-0.5 font-bold">{selectedInvoice.verifCount}x Diverifikasi</Badge>
                 ) : (
@@ -848,15 +1010,15 @@ export function InvoiceClient({ initialInvoices, canBayar, userName }: InvoiceCl
                 Scan QR code pada faktur untuk verifikasi. Hasil verifikasi tercatat otomatis di audit trail.
               </p>
               {selectedInvoice.verifyUrl && (
-                <div className="flex items-center justify-between gap-2 text-xs text-slate-500 bg-slate-50 rounded-xl p-3 border border-slate-200 break-all font-mono shadow-3xs">
+                <div className="flex items-center justify-between gap-2 text-xs text-[var(--text-soft)] bg-[var(--surface-2)] rounded-xl p-3 border border-border break-all font-mono shadow-3xs">
                   <div className="flex items-center gap-2 min-w-0">
-                    <Link2 size={13} className="shrink-0 text-slate-455" />
+                    <Link2 size={13} className="shrink-0 text-[var(--text-muted-2)]" />
                     <span className="truncate">{selectedInvoice.verifyUrl}</span>
                   </div>
                   <button
                     type="button"
                     onClick={() => handleCopyLink(selectedInvoice.verifyUrl ?? "")}
-                    className="flex h-7 w-7 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-455 hover:bg-slate-100 hover:text-slate-700 transition cursor-pointer shrink-0 shadow-3xs active:scale-95"
+                    className="flex h-7 w-7 items-center justify-center rounded-lg border border-border bg-card text-[var(--text-muted-2)] hover:bg-[var(--surface-hover)] hover:text-foreground transition cursor-pointer shrink-0 shadow-3xs active:scale-95"
                     title="Salin Link Verifikasi"
                   >
                     <Copy size={12} />
@@ -867,28 +1029,28 @@ export function InvoiceClient({ initialInvoices, canBayar, userName }: InvoiceCl
 
             {/* Customer info card */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div className="rounded-2xl border border-slate-200 p-5 bg-white shadow-sm space-y-2">
-                <div className="flex items-center gap-1.5 text-slate-450">
+              <div className="rounded-2xl border border-border p-5 bg-card shadow-sm space-y-2">
+                <div className="flex items-center gap-1.5 text-[var(--text-muted-2)]">
                   <User size={13} className="stroke-[2.5]" />
                   <p className="text-[10px] font-extrabold uppercase tracking-wider">Informasi Klien</p>
                 </div>
                 <div className="space-y-1">
-                  <p className="text-sm font-extrabold text-slate-850">{selectedInvoice.namaClient}</p>
+                  <p className="text-sm font-extrabold text-foreground">{selectedInvoice.namaClient}</p>
                   <p className="text-xs text-slate-500 leading-relaxed">{selectedInvoice.alamat ?? "Tidak ada alamat tercatat."}</p>
                 </div>
               </div>
-              <div className="rounded-2xl border border-slate-200 p-5 bg-white shadow-sm space-y-2">
-                <div className="flex items-center gap-1.5 text-slate-455">
+              <div className="rounded-2xl border border-border p-5 bg-card shadow-sm space-y-2">
+                <div className="flex items-center gap-1.5 text-[var(--text-muted-2)]">
                   <Building2 size={13} className="stroke-[2.5]" />
                   <p className="text-[10px] font-extrabold uppercase tracking-wider">Informasi Proyek &amp; WS</p>
                 </div>
                 <div className="space-y-1">
-                  <p className="text-sm font-extrabold text-slate-800">{selectedInvoice.projectName ?? "Eceran / Umum"}</p>
+                  <p className="text-sm font-extrabold text-foreground">{selectedInvoice.projectName ?? "Eceran / Umum"}</p>
                   <p className="text-xs text-slate-500">WS: {selectedInvoice.namaWs ?? "—"}</p>
                   {selectedInvoice.noTransaksi && (
-                    <div className="text-[11px] font-semibold text-slate-650 mt-3 pt-3 border-t border-dashed border-slate-200/80 flex justify-between items-center">
+                    <div className="text-[11px] font-semibold text-[var(--text-soft)] mt-3 pt-3 border-t border-dashed border-border/80 flex justify-between items-center">
                       <span>No. Transaksi Asli:</span>
-                      <span className="font-mono text-slate-800 font-extrabold bg-slate-50 px-2 py-0.5 rounded-lg border border-slate-200/80 shadow-3xs">{selectedInvoice.noTransaksi}</span>
+                      <span className="font-mono text-foreground font-extrabold bg-[var(--surface-2)] px-2 py-0.5 rounded-lg border border-border/80 shadow-3xs">{selectedInvoice.noTransaksi}</span>
                     </div>
                   )}
                 </div>
@@ -901,7 +1063,7 @@ export function InvoiceClient({ initialInvoices, canBayar, userName }: InvoiceCl
                 <div className="p-1.5 bg-primary/10 rounded-lg text-primary">
                   <ShoppingBag size={14} className="stroke-[2.5]" />
                 </div>
-                <Label className="mb-0 text-xs font-bold text-slate-800">Daftar Barang Terbeli</Label>
+                <Label className="mb-0 text-xs font-bold text-foreground">Daftar Barang Terbeli</Label>
               </div>
               <Table>
                 <thead>
@@ -912,29 +1074,29 @@ export function InvoiceClient({ initialInvoices, canBayar, userName }: InvoiceCl
                     <Th className="h-10 text-[10px] text-right px-4">Subtotal</Th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-slate-100">
+                <tbody className="divide-y divide-border">
                   {selectedInvoice.items.map((line, idx) => {
                     const isRetur = line.nama.startsWith("[RETUR]");
                     const isGanti = line.nama.startsWith("[GANTI]");
                     const cleanNama = line.nama.replace(/^\[(RETUR|GANTI)\]\s*/, "");
 
                     return (
-                      <tr key={idx} className={cn("hover:bg-slate-50/20 transition-colors", isRetur && "bg-red-50/5")}>
+                      <tr key={idx} className={cn("hover:bg-[var(--surface-hover)] transition-colors", isRetur && "bg-red-50/8")}>
                         <Td className="h-14 px-4 py-2 align-middle">
                           <div className="flex flex-col gap-0.5">
                             <div className="flex items-center gap-1.5 flex-wrap">
                               {isRetur && <Badge tone="red" className="text-[8px] px-1.5 py-0.25 font-bold">Retur</Badge>}
                               {isGanti && <Badge tone="green" className="text-[8px] px-1.5 py-0.25 font-bold">Pengganti</Badge>}
-                              <span className="font-bold text-slate-800 text-xs">{cleanNama}</span>
+                              <span className="font-bold text-foreground text-xs">{cleanNama}</span>
                             </div>
-                            <span className="font-mono text-[9px] text-slate-400 bg-slate-50 px-1.5 py-0.5 rounded border border-slate-150/40 w-fit mt-1">{line.kode}</span>
+                            <span className="font-mono text-[9px] text-[var(--text-muted-2)] bg-[var(--surface-2)] px-1.5 py-0.5 rounded border border-border/80 w-fit mt-1">{line.kode}</span>
                           </div>
                         </Td>
                         <Td className="h-14 px-4 text-center font-mono text-xs text-slate-600 align-middle">{line.qty} unit</Td>
                         <Td className="h-14 px-4 text-right font-mono text-xs text-slate-650 align-middle">{formatRupiah(line.harga)}</Td>
                         <Td className={cn(
                           "h-14 px-4 text-right font-mono text-xs font-extrabold align-middle",
-                          isRetur ? "text-red-650" : "text-slate-800"
+                          isRetur ? "text-red-650" : "text-foreground"
                         )}>
                           {isRetur ? "-" : ""}{formatRupiah(Math.abs(line.subtotal))}
                         </Td>
@@ -950,23 +1112,30 @@ export function InvoiceClient({ initialInvoices, canBayar, userName }: InvoiceCl
 
       {/* Print Document Modal view (portal ke body agar tampil di atas Drawer) */}
       {printFormat && selectedInvoice && typeof document !== "undefined" && createPortal(
-        <div className="fixed inset-0 flex items-start justify-center overflow-y-auto overscroll-contain bg-black/55 p-4 backdrop-blur-xs no-print" style={{ zIndex: 2147483001 }} onClick={() => setPrintFormat(null)}>
-          <div onClick={(e) => e.stopPropagation()} className={cn("my-4 w-full overflow-hidden rounded-2xl bg-white shadow-2xl border border-border", printFormat === "a4" ? "max-w-3xl" : "max-w-md")}>
-            <div className="flex items-center justify-between gap-2 border-b border-border px-4 py-3">
-              <p className="text-sm font-semibold text-foreground">
-                {printFormat === "a4" ? "Pratinjau Invoice" : "Pratinjau Struk Thermal"} <span className="font-mono text-[var(--primary)]">{selectedInvoice.noInvoice}</span>
-              </p>
-              <button onClick={() => setPrintFormat(null)} className="flex h-8 w-8 items-center justify-center rounded-lg text-slate-450 hover:bg-slate-100 hover:text-slate-700 transition cursor-pointer">
+        <div className="fixed inset-0 flex items-center justify-center overscroll-contain bg-black/60 p-3 sm:p-5 backdrop-blur-sm no-print" style={{ zIndex: 2147483001 }} onClick={() => setPrintFormat(null)}>
+          <div onClick={(e) => e.stopPropagation()} className={cn("flex max-h-[94vh] w-full flex-col overflow-hidden rounded-2xl bg-card shadow-[var(--shadow-modal)] border border-border anim-rise", printFormat === "a4" ? "max-w-[880px]" : "max-w-md")}>
+            <div className="flex shrink-0 items-center justify-between gap-3 border-b border-border px-5 py-3.5 bg-[var(--surface-2)]">
+              <div className="flex items-center gap-2.5 min-w-0">
+                <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-[var(--primary)]/15 text-[var(--primary-strong)]">
+                  <FileText size={15} />
+                </div>
+                <div className="min-w-0 leading-tight">
+                  <p className="text-sm font-bold text-foreground truncate">
+                    {printFormat === "a4" ? "Pratinjau Invoice" : "Pratinjau Struk Thermal"}
+                  </p>
+                  <p className="font-mono text-[11px] font-semibold text-[var(--primary-strong)]">{selectedInvoice.noInvoice}</p>
+                </div>
+              </div>
+              <button onClick={() => setPrintFormat(null)} className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-[var(--text-muted-2)] hover:bg-[var(--surface-hover)] hover:text-foreground transition cursor-pointer">
                 <X size={16} />
               </button>
             </div>
-            <div className="overflow-auto bg-[var(--paper-2)] p-4 sm:p-5" style={{ maxHeight: "calc(100vh - 120px)" }}>
+            <div className="print-preview-scroll min-h-0 flex-1 bg-[var(--paper-2)] p-4 sm:p-6 scrollbar-thin">
               {printFormat === "a4" ? (
-                <div className="print-area mx-auto w-[800px] max-w-full origin-top overflow-hidden border border-border bg-white shadow-[0_4px_24px_-8px_rgba(15,23,42,0.18)]">
+                <div ref={a4PreviewRef} className="print-area print-a4-preview mx-auto origin-top overflow-visible border border-border bg-white shadow-[0_4px_24px_-8px_rgba(15,23,42,0.18)]">
                   <InvoiceDocument
                     inv={selectedInvoice}
                     qrDataUrl={selectedInvoice.qrDataUrl}
-                    verifyUrl={selectedInvoice.verifyUrl}
                   />
                 </div>
               ) : (
@@ -990,21 +1159,23 @@ export function InvoiceClient({ initialInvoices, canBayar, userName }: InvoiceCl
                       })),
                       total: selectedInvoice.total,
                       judul: "INVOICE / TAGIHAN",
-                      catatan: selectedInvoice.noTransaksi ? `Dari transaksi: ${selectedInvoice.noTransaksi}` : undefined,
+                      verifyUrl: selectedInvoice.verifyUrl,
+                      qrDataUrl: selectedInvoice.qrDataUrl,
                     }}
                   />
                 </div>
               )}
             </div>
-            <div className="flex flex-col sm:flex-row justify-end gap-2.5 border-t border-border px-4 py-3 bg-slate-50">
+            <div className="flex shrink-0 flex-col sm:flex-row sm:items-center sm:justify-between gap-2.5 border-t border-border px-5 py-3.5 bg-[var(--surface-2)]">
               <Button
                 onClick={handleSaveToImage}
                 variant="outline"
                 size="sm"
-                className="bg-orange-50 hover:bg-orange-100 border-orange-200 text-[var(--primary)] font-bold gap-1.5 rounded-xl cursor-pointer"
+                className="bg-orange-50 dark:bg-orange-900/20 hover:bg-orange-100 dark:hover:bg-orange-900/30 border-orange-200 dark:border-orange-800 text-[var(--primary)] font-bold gap-1.5 rounded-xl cursor-pointer"
               >
                 <Camera size={14} /> Save to Image (PNG)
               </Button>
+              <div className="flex flex-col sm:flex-row gap-2.5">
               <Button variant="outline" size="sm" onClick={() => setPrintFormat(null)}>Tutup</Button>
               {printFormat === "a4" ? (
                 <Button size="sm" onClick={() => {
@@ -1029,6 +1200,7 @@ export function InvoiceClient({ initialInvoices, canBayar, userName }: InvoiceCl
                   printArea({ thermal: true });
                 }}>Cetak Thermal (80mm)</Button>
               )}
+              </div>
             </div>
           </div>
         </div>,

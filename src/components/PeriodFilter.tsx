@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { Select } from "@/components/ui";
 import { DatePicker } from "@/components/DatePicker";
+import { cn } from "@/lib/utils";
 
 export type PeriodPreset = "all" | "week" | "month" | "year" | "custom";
 
@@ -113,12 +114,12 @@ export function PeriodFilter({
   }
 
   return (
-    <div className={className}>
-      <div className="flex flex-wrap items-center gap-2.5">
+    <div className={cn("min-w-0", className)}>
+      <div className="flex min-w-0 flex-wrap items-center gap-2.5">
         <Select
           value={preset}
           onChange={(e) => handlePresetChange(e.target.value as PeriodPreset)}
-          className="h-10 w-40 rounded-xl text-xs font-bold"
+          className="h-10 w-full rounded-xl text-xs font-bold sm:w-40"
           aria-label="Filter periode"
         >
           <option value="all">Semua Waktu</option>
@@ -129,21 +130,21 @@ export function PeriodFilter({
         </Select>
 
         {preset === "custom" && (
-          <div className="flex flex-wrap items-center gap-2">
+          <div className="grid w-full grid-cols-1 gap-2 sm:flex sm:w-auto sm:flex-wrap sm:items-center">
             <DatePicker
               value={customFrom}
               onChange={handleCustomFrom}
               placeholder="Tanggal awal"
               align={align}
-              className="h-10 w-40 rounded-xl"
+              className="h-10 w-full rounded-xl sm:w-40"
             />
-            <span className="text-xs font-semibold text-slate-400">s/d</span>
+            <span className="hidden text-xs font-semibold text-slate-400 sm:inline">s/d</span>
             <DatePicker
               value={customTo}
               onChange={handleCustomTo}
               placeholder="Tanggal akhir"
               align={align}
-              className="h-10 w-40 rounded-xl"
+              className="h-10 w-full rounded-xl sm:w-40"
             />
           </div>
         )}

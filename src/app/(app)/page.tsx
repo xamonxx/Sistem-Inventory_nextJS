@@ -253,11 +253,11 @@ export default async function DashboardPage({
       ];
 
   const toneColors: Record<string, string> = {
-    success: "#16a34a",
+    success: "#0ea5e9",
     blue: "#2563eb",
     amber: "#f59e0b",
     red: "#ef4444",
-    primary: "#0f766e",
+    primary: "#0284c7",
     slate: "#60736f",
   };
 
@@ -271,11 +271,11 @@ export default async function DashboardPage({
             <span className="inline-block h-[2px] w-6 bg-[var(--primary)]" />
             Sistem ERP Putra Corp
           </p>
-          <h1 className="mt-2 font-extrabold text-slate-950">
+          <h1 className="mt-2 font-extrabold text-slate-950 dark:text-white">
             {isOwnerMode ? "Owner Business Dashboard" : "Operational Workspace"}
           </h1>
           <p className="mt-2 text-sm font-semibold text-slate-500">
-            Selamat datang kembali, <span className="text-slate-800 font-bold">{user.nama}</span>.
+            Selamat datang kembali, <span className="text-foreground dark:text-slate-200 font-bold">{user.nama}</span>.
           </p>
         </div>
 
@@ -283,13 +283,13 @@ export default async function DashboardPage({
         <div className="flex w-full flex-col gap-3 xl:w-auto xl:items-end">
           {/* Mode Switcher capsule */}
           {user.role !== "ADMIN_KASIR" && (
-            <div className="flex w-full rounded-lg border border-border bg-[#e7efec] p-1 sm:w-auto">
+            <div className="flex w-full rounded-lg border border-border bg-[#e7efec] dark:bg-slate-950 p-1 sm:w-auto">
               <Link
                 href={`/?mode=operational${params.from ? `&from=${params.from}` : ""}${params.to ? `&to=${params.to}` : ""}`}
                 className={`flex-1 rounded-md px-4 py-2 text-center text-xs font-bold transition-all duration-150 sm:flex-none ${
                   !isOwnerMode
-                    ? "bg-white text-[var(--primary-strong)] shadow-sm"
-                    : "text-slate-500 hover:text-slate-950"
+                    ? "bg-card dark:bg-slate-900 text-[var(--primary-strong)] dark:text-white shadow-sm"
+                    : "text-slate-500 dark:text-slate-400 hover:text-slate-950 dark:hover:text-white"
                 }`}
               >
                 Operasional
@@ -298,8 +298,8 @@ export default async function DashboardPage({
                 href={`/?mode=owner${params.from ? `&from=${params.from}` : ""}${params.to ? `&to=${params.to}` : ""}`}
                 className={`flex-1 rounded-md px-4 py-2 text-center text-xs font-bold transition-all duration-150 sm:flex-none ${
                   isOwnerMode
-                    ? "bg-white text-[var(--primary-strong)] shadow-sm"
-                    : "text-slate-500 hover:text-slate-950"
+                    ? "bg-card dark:bg-slate-900 text-[var(--primary-strong)] dark:text-white shadow-sm"
+                    : "text-slate-500 dark:text-slate-400 hover:text-slate-950 dark:hover:text-white"
                 }`}
               >
                 Owner
@@ -321,11 +321,11 @@ export default async function DashboardPage({
               className="h-11 min-w-[145px] flex-1 text-xs font-semibold sm:flex-none sm:w-40"
             />
             {params.mode && <input type="hidden" name="mode" value={params.mode} />}
-            <button className="h-11 flex-1 rounded-lg bg-[var(--primary)] px-5 text-xs font-bold text-white shadow-md shadow-emerald-900/10 transition hover:bg-[var(--primary-strong)] cursor-pointer sm:flex-none">
+            <button className="h-11 flex-1 rounded-lg bg-[var(--primary)] px-5 text-xs font-bold text-white shadow-md shadow-primary-900/10 transition hover:bg-[var(--primary-strong)] cursor-pointer sm:flex-none">
               Saring
             </button>
             {params.from || params.to ? (
-              <Link href={isOwnerMode ? "/?mode=owner" : "/"} className="flex h-11 flex-1 items-center justify-center rounded-lg border border-border bg-white px-3 text-xs font-bold text-slate-600 shadow-xs hover:bg-slate-50 sm:flex-none">
+              <Link href={isOwnerMode ? "/?mode=owner" : "/"} className="flex h-11 flex-1 items-center justify-center rounded-lg border border-border bg-card dark:bg-card px-3 text-xs font-bold text-slate-600 dark:text-slate-400 shadow-xs hover:bg-slate-50 dark:hover:bg-slate-900 sm:flex-none">
                 Reset
               </Link>
             ) : null}
@@ -334,53 +334,100 @@ export default async function DashboardPage({
         </div>
       </header>
 
-      {/* Alert Center (Moved to the top) */}
+      {/* ===== Alert Center — redesain ===== */}
       {(negativeStockItems.length > 0 || lowStockItems.length > 0) && (
-        <Card className="anim-rise space-y-5 border-amber-200/70 bg-[#fffdf7]">
-          <div className="flex flex-wrap items-start justify-between gap-3">
-            <div>
-            <h3 className="font-display text-sm font-bold text-slate-900 flex items-center gap-2">
-              <AlertTriangle size={16} className="text-amber-500" /> Alert Center
-            </h3>
-            <p className="text-xs text-slate-500 mt-1">Peringatan stok gudang kritis.</p>
+        <Card className="anim-rise space-y-5 p-5">
+          {/* Header */}
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div className="flex items-center gap-3">
+              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-amber-100 dark:bg-amber-500/15 text-amber-600 dark:text-amber-400 ring-1 ring-amber-200/60 dark:ring-amber-500/20">
+                <AlertTriangle size={18} strokeWidth={2.4} />
+              </div>
+              <div>
+                <h3 className="font-display text-sm font-bold text-foreground leading-tight">Alert Center</h3>
+                <p className="text-xs text-muted mt-0.5">Peringatan stok gudang yang perlu ditindaklanjuti.</p>
+              </div>
             </div>
-            <span className="rounded-full border border-amber-200 bg-amber-50 px-3 py-1 text-[10px] font-bold uppercase tracking-wider text-amber-700">
-              Butuh tindakan
+            <span className="inline-flex items-center gap-1.5 rounded-full border border-amber-200 dark:border-amber-500/25 bg-amber-50 dark:bg-amber-500/10 px-3 py-1 text-[10px] font-bold uppercase tracking-wider text-amber-700 dark:text-amber-400">
+              <span className="relative flex h-1.5 w-1.5">
+                <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-amber-500 opacity-60" />
+                <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-amber-500" />
+              </span>
+              {negativeStockItems.length + lowStockItems.length} butuh tindakan
             </span>
           </div>
 
           <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-            {/* Stok Minus alert card */}
+            {/* Stok Minus Gudang — merah */}
             {negativeStockItems.length > 0 && (
-              <div className="rounded-lg border border-red-100 bg-red-50/70 p-4 text-xs text-red-800">
-                <p className="font-bold flex items-center gap-1.5 mb-1.5">
-                  <CircleAlert size={14} className="text-red-500" /> Stok Minus Gudang ({negativeStockItems.length})
-                </p>
-                <ul className="space-y-1">
-                  {negativeStockItems.slice(0, 3).map((it) => (
-                    <li key={it.id} className="flex items-center justify-between text-[11px] font-semibold text-red-700">
-                      <span className="truncate pr-2">{it.nama}</span>
-                      <span className="rounded bg-red-100 px-1.5 py-0.5 font-mono text-red-700">{it.stok} unit</span>
+              <div className="overflow-hidden rounded-xl border border-red-200/70 dark:border-red-500/20 bg-red-50/50 dark:bg-red-500/[0.06]">
+                <div className="flex items-center gap-3 border-b border-red-200/60 dark:border-red-500/15 px-4 py-3">
+                  <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-red-100 dark:bg-red-500/15 text-red-600 dark:text-red-400">
+                    <CircleAlert size={17} strokeWidth={2.4} />
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <p className="text-[11px] font-bold uppercase tracking-wide text-red-700 dark:text-red-400">Stok Minus Gudang</p>
+                    <p className="text-[10px] text-red-600/70 dark:text-red-400/60">Perlu koreksi fisik segera</p>
+                  </div>
+                  <span className="text-2xl font-extrabold tabular-nums text-red-600 dark:text-red-400 leading-none">{negativeStockItems.length}</span>
+                </div>
+                <ul className="divide-y divide-red-200/40 dark:divide-red-500/10">
+                  {negativeStockItems.slice(0, 4).map((it) => (
+                    <li key={it.id} className="flex items-center justify-between gap-3 px-4 py-2.5">
+                      <div className="min-w-0">
+                        <p className="truncate text-xs font-semibold text-foreground">{it.nama}</p>
+                        <p className="font-mono text-[10px] text-muted">{it.kode}</p>
+                      </div>
+                      <span className="shrink-0 rounded-md bg-red-100 dark:bg-red-500/15 px-2 py-1 font-mono text-[11px] font-bold text-red-700 dark:text-red-300 tabular-nums">
+                        {it.stok} unit
+                      </span>
                     </li>
                   ))}
                 </ul>
+                {negativeStockItems.length > 4 && (
+                  <Link href="/stok" className="flex items-center justify-center gap-1 border-t border-red-200/50 dark:border-red-500/15 px-4 py-2 text-[11px] font-bold text-red-700 dark:text-red-400 transition hover:bg-red-100/50 dark:hover:bg-red-500/10">
+                    +{negativeStockItems.length - 4} barang lainnya →
+                  </Link>
+                )}
               </div>
             )}
 
-            {/* Stok Menipis alert card */}
+            {/* Stok Kritis — amber */}
             {lowStockItems.length > 0 && (
-              <div className="rounded-lg border border-amber-100 bg-amber-50/70 p-4 text-xs text-amber-800">
-                <p className="font-bold flex items-center gap-1.5 mb-1.5">
-                  <AlertTriangle size={14} className="text-amber-500" /> Stok Kritis ({lowStockItems.length})
-                </p>
-                <ul className="space-y-1">
-                  {lowStockItems.slice(0, 3).map((it) => (
-                    <li key={it.id} className="flex items-center justify-between text-[11px] font-semibold text-amber-800">
-                      <span className="truncate pr-2">{it.nama}</span>
-                      <span>tersisa {it.stok} (min {it.minStok})</span>
-                    </li>
-                  ))}
+              <div className="overflow-hidden rounded-xl border border-amber-200/70 dark:border-amber-500/20 bg-amber-50/50 dark:bg-amber-500/[0.06]">
+                <div className="flex items-center gap-3 border-b border-amber-200/60 dark:border-amber-500/15 px-4 py-3">
+                  <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-amber-100 dark:bg-amber-500/15 text-amber-600 dark:text-amber-400">
+                    <AlertTriangle size={17} strokeWidth={2.4} />
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <p className="text-[11px] font-bold uppercase tracking-wide text-amber-700 dark:text-amber-400">Stok Kritis</p>
+                    <p className="text-[10px] text-amber-600/70 dark:text-amber-400/60">Di bawah batas aman (safety)</p>
+                  </div>
+                  <span className="text-2xl font-extrabold tabular-nums text-amber-600 dark:text-amber-400 leading-none">{lowStockItems.length}</span>
+                </div>
+                <ul className="divide-y divide-amber-200/40 dark:divide-amber-500/10">
+                  {lowStockItems.slice(0, 4).map((it) => {
+                    const pct = Math.min(100, Math.round((it.stok / Math.max(1, it.minStok)) * 100));
+                    return (
+                      <li key={it.id} className="px-4 py-2.5">
+                        <div className="flex items-center justify-between gap-3">
+                          <p className="truncate text-xs font-semibold text-foreground">{it.nama}</p>
+                          <span className="shrink-0 font-mono text-[11px] font-bold text-amber-700 dark:text-amber-300 tabular-nums">
+                            {it.stok}<span className="text-muted font-medium"> / {it.minStok}</span>
+                          </span>
+                        </div>
+                        <div className="mt-1.5 h-1 w-full overflow-hidden rounded-full bg-amber-200/50 dark:bg-amber-500/15">
+                          <div className="h-full rounded-full bg-amber-500 dark:bg-amber-400" style={{ width: `${pct}%` }} />
+                        </div>
+                      </li>
+                    );
+                  })}
                 </ul>
+                {lowStockItems.length > 4 && (
+                  <Link href="/stok/masuk" className="flex items-center justify-center gap-1 border-t border-amber-200/50 dark:border-amber-500/15 px-4 py-2 text-[11px] font-bold text-amber-700 dark:text-amber-400 transition hover:bg-amber-100/50 dark:hover:bg-amber-500/10">
+                    +{lowStockItems.length - 4} barang lainnya →
+                  </Link>
+                )}
               </div>
             )}
           </div>
@@ -399,18 +446,18 @@ export default async function DashboardPage({
             >
               <span className="absolute inset-y-4 left-0 w-[4px] rounded-r-full" style={{ background: toneColors[kpi.tone] }} />
               <div className="flex items-start justify-between gap-3">
-                <p className="pl-2 text-[10px] font-bold uppercase tracking-wider text-slate-500 leading-tight">{kpi.label}</p>
-                <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-slate-100 bg-white">
+                <p className="pl-2 text-[10px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 leading-tight">{kpi.label}</p>
+                <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-border dark:border-slate-800 bg-card dark:bg-slate-900">
                   <Icon size={13} style={{ color: toneColors[kpi.tone] }} strokeWidth={2.5} />
                 </div>
               </div>
               <div className="mt-3 min-w-0 pl-2">
                 <div data-tooltip={kpi.value}>
-                  <h3 className="tnum overflow-hidden text-ellipsis whitespace-nowrap font-display text-[17px] font-extrabold leading-none text-slate-950">
+                  <h3 className="tnum overflow-hidden text-ellipsis whitespace-nowrap font-display text-[17px] font-extrabold leading-none text-slate-950 dark:text-slate-100">
                     {kpi.value}
                   </h3>
                 </div>
-                <p className="mt-1 text-[11px] font-semibold text-slate-500 leading-tight truncate" title={kpi.desc}>{kpi.desc}</p>
+                <p className="mt-1 text-[11px] font-semibold text-slate-500 dark:text-slate-400 leading-tight truncate" title={kpi.desc}>{kpi.desc}</p>
               </div>
             </div>
           );
@@ -433,25 +480,25 @@ export default async function DashboardPage({
           {/* Activity Timeline (Linear-style list) */}
           <Card className="space-y-5">
             <div>
-              <h3 className="font-display text-sm font-bold text-slate-900 flex items-center gap-2">
+              <h3 className="font-display text-sm font-bold text-foreground dark:text-slate-100 flex items-center gap-2">
                 <Clock size={16} className="text-[var(--primary)]" /> Riwayat Audit Operasional
               </h3>
-              <p className="text-xs text-slate-400 mt-1">Log audit aktivitas staf kasir dan gudang terbaru.</p>
+              <p className="text-xs text-slate-400 dark:text-slate-500 mt-1">Log audit aktivitas staf kasir dan gudang terbaru.</p>
             </div>
 
-            <div className="relative border-l border-slate-100 pl-4 ml-2 space-y-5">
+            <div className="relative border-l border-border dark:border-slate-800 pl-4 ml-2 space-y-5">
               {recentLogs.map((log) => (
                 <div key={log.id} className="relative text-xs">
                   {/* Bullet point indicator */}
-                  <span className="absolute -left-[21px] top-1 flex h-2 w-2 rounded-full bg-slate-350 ring-4 ring-white" />
+                  <span className="absolute -left-[21px] top-1 flex h-2 w-2 rounded-full bg-slate-350 dark:bg-slate-700 ring-4 ring-white dark:ring-card" />
                   <div className="flex items-start justify-between gap-4">
                     <div>
-                      <p className="font-semibold text-slate-800">
-                        {log.user?.nama ?? "System"} melakukan <span className="font-bold text-slate-950">{log.aksi}</span>
+                      <p className="font-semibold text-foreground dark:text-slate-300">
+                        {log.user?.nama ?? "System"} melakukan <span className="font-bold text-slate-950 dark:text-white">{log.aksi}</span>
                       </p>
-                      <p className="text-[10px] text-slate-500 mt-0.5">Target: {log.entitas} (ID: {log.entitasId ?? "—"})</p>
+                      <p className="text-[10px] text-slate-500 dark:text-slate-400 mt-0.5">Target: {log.entitas} (ID: {log.entitasId ?? "—"})</p>
                     </div>
-                    <span className="text-[10px] font-bold text-slate-400 font-mono">
+                    <span className="text-[10px] font-bold text-slate-400 dark:text-slate-500 font-mono">
                       {new Date(log.createdAt).toLocaleTimeString("id-ID", { hour: "2-digit", minute: "2-digit" })}
                     </span>
                   </div>

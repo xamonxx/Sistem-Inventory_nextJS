@@ -1,6 +1,7 @@
 "use client";
 
 import { useActionState, useEffect, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
 import { saveItem, suggestItemCode } from "./actions";
 import { Button, Input, Label, CharCounter } from "@/components/ui";
 import { FIELD_LIMITS } from "@/lib/fieldLimits";
@@ -18,6 +19,7 @@ export type ItemRow = {
 };
 
 export function BarangForm({ canEdit }: { canEdit: boolean }) {
+  const router = useRouter();
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState<ItemRow | null>(null);
   const [kode, setKode] = useState("");
@@ -56,8 +58,9 @@ export function BarangForm({ canEdit }: { canEdit: boolean }) {
       setOpen(false);
       setEditing(null);
       formRef.current?.reset();
+      router.refresh();
     }
-  }, [state]);
+  }, [state, router]);
 
   // Handle edit event from window dispatch
   useEffect(() => {
@@ -84,7 +87,7 @@ export function BarangForm({ canEdit }: { canEdit: boolean }) {
 
   if (!canEdit) {
     return (
-      <p className="rounded-md bg-blue-50 px-3 py-2 text-sm text-blue-700">
+      <p className="rounded-md bg-blue-50 dark:bg-blue-950/40 px-3 py-2 text-sm text-blue-700 dark:text-blue-300">
         Mode lihat saja. Hanya <b>Admin Gudang</b> yang bisa menambah/ubah harga &amp; stok barang.
       </p>
     );
@@ -98,12 +101,12 @@ export function BarangForm({ canEdit }: { canEdit: boolean }) {
 
       {open && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 p-4 backdrop-blur-xs animate-fade-in" onClick={() => { setOpen(false); setEditing(null); }}>
-          <div onClick={(e) => e.stopPropagation()} className="w-full max-w-lg bg-white rounded-2xl overflow-y-auto max-h-[90vh] p-6 shadow-2xl border border-border anim-rise">
+          <div onClick={(e) => e.stopPropagation()} className="w-full max-w-lg bg-card rounded-2xl overflow-y-auto max-h-[90vh] p-6 shadow-2xl border border-border anim-rise">
             <div className="flex items-center justify-between border-b border-border pb-3.5 mb-4">
-              <h3 className="font-bold text-slate-900 text-lg">
+              <h3 className="font-bold text-foreground text-lg">
                 {editing ? "Ubah Detail Barang" : "Tambah Barang Baru"}
               </h3>
-              <button type="button" onClick={() => { setOpen(false); setEditing(null); }} className="text-slate-400 hover:text-slate-700 transition cursor-pointer">
+              <button type="button" onClick={() => { setOpen(false); setEditing(null); }} className="text-muted hover:text-foreground transition cursor-pointer">
                 <X size={18} />
               </button>
             </div>
@@ -149,7 +152,7 @@ export function BarangForm({ canEdit }: { canEdit: boolean }) {
                       <Wand2 size={16} />
                     </Button>
                   </div>
-                  <p className="mt-1 text-[11px] text-slate-500">
+                  <p className="mt-1 text-[11px] text-muted">
                     Kosongkan untuk dibuat otomatis (mis. PC-BBM-001).
                   </p>
                 </div>
@@ -184,15 +187,15 @@ export function BarangForm({ canEdit }: { canEdit: boolean }) {
                   name="aktif"
                   defaultChecked={editing ? editing.aktif : true}
                   value="true"
-                  className="rounded border-slate-300 text-[var(--primary)] focus:ring-[var(--primary)] h-4.5 w-4.5 cursor-pointer"
+                  className="rounded border-border text-[var(--primary)] focus:ring-[var(--primary)] h-4.5 w-4.5 cursor-pointer"
                 />
-                <label htmlFor="aktif-checkbox" className="text-sm font-semibold text-slate-750 cursor-pointer select-none">
+                <label htmlFor="aktif-checkbox" className="text-sm font-semibold text-foreground cursor-pointer select-none">
                   Barang aktif (dapat dijual)
                 </label>
               </div>
 
               {state?.error && (
-                <div className="rounded-xl bg-red-50 p-3 border border-red-200 text-xs text-red-700">
+                <div className="rounded-xl bg-red-50 dark:bg-red-950/40 p-3 border border-red-200 dark:border-red-900/50 text-xs text-red-700 dark:text-red-300">
                   {state.error}
                 </div>
               )}

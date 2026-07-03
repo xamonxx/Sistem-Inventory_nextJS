@@ -1,4 +1,4 @@
-# Sistem Inventory & Kasir — PUTRA CORPORATION HARDWARE
+# Sistem Inventory & Kasir — PUTRA CORPORATION SOFTWARE
 
 Aplikasi inventory + kasir + retur/tukar + invoice/piutang + laporan, dibangun dari data
 `KASIR MEI 2026.xlsm`. Stack: **Next.js 15 + TypeScript + Prisma + MySQL + Tailwind**.

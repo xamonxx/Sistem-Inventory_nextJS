@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useTransition } from "react";
+import { useCallback, useEffect, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { Bell, AlertTriangle, Info, BellRing, Sparkles, ChevronRight, ChevronDown, ChevronUp, X, RotateCw } from "lucide-react";
 import { Drawer } from "./Drawer";
@@ -54,7 +54,7 @@ export function NotificationCenter({ role }: NotificationCenterProps) {
 
   const visibleNotifications = notifications.filter(n => !dismissedIds.includes(n.id));
 
-  function loadNotifications() {
+  const loadNotifications = useCallback(() => {
     startTransition(async () => {
       try {
         const data = await fetchSystemNotifications(role);
@@ -63,7 +63,7 @@ export function NotificationCenter({ role }: NotificationCenterProps) {
         console.error("Failed to load notifications:", err);
       }
     });
-  }
+  }, [role]);
 
   // Load notifications initially
   useEffect(() => {
@@ -71,7 +71,7 @@ export function NotificationCenter({ role }: NotificationCenterProps) {
     // Poll notifications every 60 seconds
     const interval = setInterval(loadNotifications, 60000);
     return () => clearInterval(interval);
-  }, [role]);
+  }, [loadNotifications]);
 
   // Filter out danger/warning alerts to count badges
   const alertCount = visibleNotifications.filter(
@@ -79,9 +79,9 @@ export function NotificationCenter({ role }: NotificationCenterProps) {
   ).length;
 
   const severityStyles = {
-    danger: "border-red-100 bg-red-50/50 text-red-800 hover:bg-red-50 hover:border-red-200",
-    warning: "border-amber-100 bg-amber-50/50 text-amber-800 hover:bg-amber-50 hover:border-amber-200",
-    info: "border-blue-100 bg-blue-50/50 text-blue-800 hover:bg-blue-50 hover:border-blue-200",
+    danger: "border-red-100 dark:border-red-950/40 bg-red-50/50 dark:bg-red-950/25 text-red-800 dark:text-red-200 hover:bg-red-50 dark:hover:bg-red-950/35 hover:border-red-200 dark:hover:border-red-900/50",
+    warning: "border-amber-100 dark:border-amber-950/40 bg-amber-50/50 dark:bg-amber-950/25 text-amber-800 dark:text-amber-200 hover:bg-amber-50 dark:hover:bg-amber-950/35 hover:border-amber-200 dark:hover:border-amber-900/50",
+    info: "border-blue-100 dark:border-blue-950/40 bg-blue-50/50 dark:bg-blue-950/25 text-blue-800 dark:text-blue-200 hover:bg-blue-50 dark:hover:bg-blue-950/35 hover:border-blue-200 dark:hover:border-blue-900/50",
   };
 
   const icons = {
@@ -97,9 +97,9 @@ export function NotificationCenter({ role }: NotificationCenterProps) {
   };
 
   const toggleColors = {
-    danger: "text-red-600 hover:text-red-800 hover:bg-red-100/60",
-    warning: "text-amber-600 hover:text-amber-800 hover:bg-amber-100/60",
-    info: "text-blue-600 hover:text-blue-800 hover:bg-blue-100/60",
+    danger: "text-red-600 dark:text-red-400 hover:text-red-800 dark:hover:text-red-300 hover:bg-red-100/60 dark:hover:bg-red-950/45",
+    warning: "text-amber-600 dark:text-amber-400 hover:text-amber-800 dark:hover:text-amber-300 hover:bg-amber-100/60 dark:hover:bg-amber-950/45",
+    info: "text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 hover:bg-blue-100/60 dark:hover:bg-blue-950/45",
   };
 
   function handleNotifClick(notif: SystemNotification) {
@@ -115,7 +115,7 @@ export function NotificationCenter({ role }: NotificationCenterProps) {
           setIsOpen(true);
           loadNotifications();
         }}
-        className="relative flex h-11 w-11 items-center justify-center rounded-xl border border-border bg-white text-slate-500 hover:bg-slate-50 hover:text-slate-800 transition cursor-pointer"
+        className="relative flex h-11 w-11 items-center justify-center rounded-xl border border-border bg-card dark:bg-card text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-900 hover:text-foreground dark:hover:text-slate-200 transition cursor-pointer"
         title="Pusat Notifikasi"
       >
         {alertCount > 0 ? (
@@ -140,13 +140,13 @@ export function NotificationCenter({ role }: NotificationCenterProps) {
             <div className="flex items-center gap-3">
               {visibleNotifications.length > 0 && (
                 <button
-                  onClick={handleClearAll}
-                  className="text-xs font-bold text-red-650 hover:text-red-800 transition cursor-pointer"
+                   onClick={handleClearAll}
+                   className="text-xs font-bold text-red-650 dark:text-red-400 hover:text-red-800 dark:hover:text-red-300 transition cursor-pointer"
                 >
                   Hapus Semua
                 </button>
               )}
-              {visibleNotifications.length > 0 && <span className="text-slate-200">|</span>}
+              {visibleNotifications.length > 0 && <span className="text-slate-200 dark:text-foreground">|</span>}
               <button
                 onClick={loadNotifications}
                 className="text-xs font-bold text-[var(--primary)] hover:underline cursor-pointer flex items-center gap-1.5"
@@ -178,12 +178,12 @@ export function NotificationCenter({ role }: NotificationCenterProps) {
                   {icons[notif.severity]}
                   <div className="space-y-1.5 flex-1 min-w-0 pr-2">
                     <div className="flex items-center justify-between gap-2">
-                      <span className="font-bold text-slate-900">{notif.title}</span>
-                      <span className="text-[10px] text-slate-455 font-medium font-mono shrink-0">
+                      <span className="font-bold text-foreground dark:text-slate-100">{notif.title}</span>
+                      <span className="text-[10px] text-slate-455 dark:text-slate-500 font-medium font-mono shrink-0">
                         {notif.time}
                       </span>
                     </div>
-                    <p className="text-slate-650 whitespace-pre-line">{displayText}</p>
+                    <p className="text-slate-650 dark:text-slate-350 whitespace-pre-line">{displayText}</p>
                     {hasExpanded && (
                       <button
                         type="button"
@@ -222,7 +222,7 @@ export function NotificationCenter({ role }: NotificationCenterProps) {
                         e.stopPropagation();
                         handleDismiss(notif.id);
                       }}
-                      className="text-slate-400 hover:text-slate-755 p-1.5 rounded-lg transition hover:bg-slate-200/40 shrink-0 cursor-pointer"
+                      className="text-slate-400 hover:text-slate-755 dark:hover:text-slate-200 p-1.5 rounded-lg transition hover:bg-slate-200/40 dark:hover:bg-slate-800/40 shrink-0 cursor-pointer"
                       title="Hapus notifikasi ini"
                     >
                       <X size={13} />

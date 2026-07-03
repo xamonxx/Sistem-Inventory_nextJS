@@ -126,25 +126,25 @@ export function PenggunaClient({
                     <div className={`flex h-11 w-11 items-center justify-center rounded-full font-bold text-sm border shadow-xs ${avatarColor}`}>
                       {initials}
                     </div>
-                    <div className={`absolute bottom-0 right-0 w-3 h-3 rounded-full border-2 border-white ${u.aktif ? "bg-emerald-500" : "bg-slate-350"}`} />
+                    <div className={`absolute bottom-0 right-0 w-3 h-3 rounded-full border-2 border-white ${u.aktif ? "bg-primary-500" : "bg-slate-350"}`} />
                   </div>
                   <div>
-                    <h3 className="font-bold text-slate-800 text-sm leading-none">{u.nama}</h3>
+                    <h3 className="font-bold text-foreground text-sm leading-none">{u.nama}</h3>
                     <p className="font-mono text-xs text-slate-400 mt-1">@{u.username}</p>
                   </div>
                 </div>
 
-                <div className="flex items-center justify-between text-[10px] text-slate-450 pt-3 border-t border-slate-100">
+                <div className="flex items-center justify-between text-[10px] text-slate-450 pt-3 border-t border-border">
                   <span>Terdaftar: {formatTanggal(u.createdAt)}</span>
                   <span className="font-semibold text-slate-400 flex items-center gap-1">
-                    <span className={`w-1.5 h-1.5 rounded-full ${u.aktif ? "bg-emerald-500" : "bg-slate-400"}`} />
+                    <span className={`w-1.5 h-1.5 rounded-full ${u.aktif ? "bg-primary-500" : "bg-slate-400"}`} />
                     {u.aktif ? "Aktif" : "Nonaktif"}
                   </span>
                 </div>
               </div>
 
               {/* Action buttons */}
-              <div className="mt-6 flex flex-wrap gap-2 pt-3 border-t border-slate-100">
+              <div className="mt-6 flex flex-wrap gap-2 pt-3 border-t border-border">
                 {canEdit ? (
                   <Button
                     size="sm"
@@ -163,7 +163,7 @@ export function PenggunaClient({
                 {/* Audit Monitor link */}
                 <Link
                   href={`/log-aktivitas?q=${u.nama}`}
-                  className="inline-flex h-8 items-center justify-center gap-1.5 rounded-lg border border-slate-200 bg-white px-2.5 text-xs font-semibold text-slate-650 hover:bg-slate-50 transition ml-auto shadow-xs active:scale-95"
+                  className="inline-flex h-8 items-center justify-center gap-1.5 rounded-lg border border-border bg-card px-2.5 text-xs font-semibold text-slate-650 hover:bg-slate-50 dark:hover:bg-slate-900 transition ml-auto shadow-xs active:scale-95"
                 >
                   <Activity size={12} /> Log Aktivitas
                 </Link>
@@ -187,26 +187,26 @@ export function PenggunaClient({
         {selectedUser && (
           <div className="space-y-6">
             {/* User Profile Summary */}
-            <div className="relative overflow-hidden rounded-[20px] border border-slate-100 bg-[#f8fafc] p-5">
+            <div className="relative overflow-hidden rounded-[20px] border border-border bg-[#f8fafc] dark:bg-slate-800/50 p-5">
               {/* Background decorative gradient circle */}
               <div className="absolute -right-8 -top-8 h-24 w-24 rounded-full bg-[var(--primary)]/5 blur-xl pointer-events-none" />
-              
+
               <div className="flex items-center gap-4">
                 <div className="relative">
                   <div className={`flex h-14 w-14 items-center justify-center rounded-2xl font-bold text-base border shadow-xs transition-transform hover:scale-105 ${
-                    selectedUser.role === "ADMIN_GUDANG" 
-                      ? "bg-gradient-to-br from-amber-50 to-amber-100/50 text-amber-700 border-amber-200/60" 
-                      : "bg-gradient-to-br from-blue-50 to-blue-100/50 text-blue-700 border-blue-200/60"
+                    selectedUser.role === "ADMIN_GUDANG"
+                      ? "bg-gradient-to-br from-amber-50 to-amber-100/50 dark:from-amber-900/40 dark:to-amber-900/20 text-amber-700 dark:text-amber-300 border-amber-200/60 dark:border-amber-800/60"
+                      : "bg-gradient-to-br from-blue-50 to-blue-100/50 dark:from-blue-900/40 dark:to-blue-900/20 text-blue-700 dark:text-blue-300 border-blue-200/60 dark:border-blue-800/60"
                   }`}>
                     {getInitials(selectedUser.nama)}
                   </div>
-                  <div className={`absolute -bottom-1 -right-1 w-4 h-4 rounded-full border-2 border-white flex items-center justify-center ${selectedUser.aktif ? "bg-emerald-500" : "bg-slate-400"}`}>
-                    <div className="w-1.5 h-1.5 rounded-full bg-white animate-pulse" />
+                  <div className={`absolute -bottom-1 -right-1 w-4 h-4 rounded-full border-2 border-white dark:border-slate-900 flex items-center justify-center ${selectedUser.aktif ? "bg-primary-500" : "bg-slate-400"}`}>
+                    <div className="w-1.5 h-1.5 rounded-full bg-card animate-pulse" />
                   </div>
                 </div>
                 <div className="space-y-1.5">
-                  <h4 className="text-base font-extrabold text-slate-900 leading-none">{selectedUser.nama}</h4>
-                  <p className="font-mono text-xs text-slate-400">@{selectedUser.username}</p>
+                  <h4 className="text-base font-extrabold text-foreground leading-none">{selectedUser.nama}</h4>
+                  <p className="font-mono text-xs text-slate-400 dark:text-slate-500">@{selectedUser.username}</p>
                   <div className="flex items-center gap-2">
                     <Badge tone={selectedUser.role === "ADMIN_GUDANG" ? "amber" : "blue"} className="text-[10px] px-2 py-0.5">
                       {selectedUser.role === "ADMIN_GUDANG" ? "Admin Gudang" : "Admin Kasir"}
@@ -222,11 +222,11 @@ export function PenggunaClient({
             {/* Toggle Status Keaktifan */}
             {canEdit && (
               <div className="space-y-2">
-                <Label className="text-slate-400 uppercase tracking-wider text-[10px]">Status Keaktifan Akun</Label>
-                <div className="flex items-center justify-between p-4 rounded-[20px] border border-slate-100 bg-white shadow-xs">
+                <Label className="text-slate-400 dark:text-slate-500 uppercase tracking-wider text-[10px]">Status Keaktifan Akun</Label>
+                <div className="flex items-center justify-between p-4 rounded-[20px] border border-border bg-card shadow-xs">
                   <div className="space-y-1">
-                    <span className="text-sm font-bold text-slate-800">Status Akses</span>
-                    <p className="text-[11px] text-slate-400 pr-4">Izinkan akun ini untuk melakukan login dan mengelola sistem.</p>
+                    <span className="text-sm font-bold text-foreground">Status Akses</span>
+                    <p className="text-[11px] text-slate-400 dark:text-slate-500 pr-4">Izinkan akun ini untuk melakukan login dan mengelola sistem.</p>
                   </div>
                   <button
                     type="button"
@@ -234,12 +234,12 @@ export function PenggunaClient({
                     onClick={() => handleToggleStatus(selectedUser.id, selectedUser.aktif)}
                     className={cn(
                       "relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none disabled:opacity-50 disabled:cursor-not-allowed",
-                      selectedUser.aktif ? "bg-emerald-500" : "bg-slate-200"
+                      selectedUser.aktif ? "bg-primary-500" : "bg-slate-200"
                     )}
                   >
                     <span
                       className={cn(
-                        "pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow-xs ring-0 transition duration-200 ease-in-out",
+                        "pointer-events-none inline-block h-5 w-5 transform rounded-full bg-card shadow-xs ring-0 transition duration-200 ease-in-out",
                         selectedUser.aktif ? "translate-x-5" : "translate-x-0"
                       )}
                     />
@@ -250,10 +250,10 @@ export function PenggunaClient({
 
             {/* Permission Checklist Summary */}
             <div className="space-y-2">
-              <Label className="text-slate-400 uppercase tracking-wider text-[10px]">Hak Akses (Permissions)</Label>
-              <div className="rounded-[20px] border border-slate-100 bg-[#f8fafc]/50 p-5 space-y-4">
-                <p className="text-xs text-slate-450 leading-relaxed">
-                  Berikut hak akses otomatis yang diberikan berdasarkan peran <strong className="text-slate-700">{selectedUser.role === "ADMIN_GUDANG" ? "Admin Gudang" : "Admin Kasir"}</strong>:
+              <Label className="text-slate-400 dark:text-slate-500 uppercase tracking-wider text-[10px]">Hak Akses (Permissions)</Label>
+              <div className="rounded-[20px] border border-border bg-[#f8fafc]/50 dark:bg-slate-800/40 p-5 space-y-4">
+                <p className="text-xs text-slate-450 dark:text-slate-400 leading-relaxed">
+                  Berikut hak akses otomatis yang diberikan berdasarkan peran <strong className="text-slate-700 dark:text-slate-200">{selectedUser.role === "ADMIN_GUDANG" ? "Admin Gudang" : "Admin Kasir"}</strong>:
                 </p>
                 <div className="grid grid-cols-1 gap-3">
                   {[
@@ -287,16 +287,16 @@ export function PenggunaClient({
                       className={cn(
                         "flex items-center gap-3 p-3 rounded-xl border transition-all duration-200",
                         perm.allowed
-                          ? "bg-emerald-50/30 border-emerald-100/40 text-slate-700"
-                          : "bg-slate-50/50 border-slate-100/40 text-slate-400"
+                          ? "bg-primary-50/30 dark:bg-primary-900/20 border-primary-100/40 dark:border-primary-800/40 text-slate-700 dark:text-slate-200"
+                          : "bg-slate-50/50 dark:bg-slate-800/30 border-border/40 text-slate-400 dark:text-slate-500"
                       )}
                     >
                       {perm.allowed ? (
-                        <div className="flex items-center justify-center w-5 h-5 rounded-lg bg-emerald-100 text-emerald-600 border border-emerald-250 shrink-0">
+                        <div className="flex items-center justify-center w-5 h-5 rounded-lg bg-primary-100 dark:bg-primary-900/50 text-primary-600 dark:text-primary-300 border border-primary-250 dark:border-primary-700 shrink-0">
                           <Check size={12} strokeWidth={3} />
                         </div>
                       ) : (
-                        <div className="flex items-center justify-center w-5 h-5 rounded-lg bg-slate-150 text-slate-400 border border-slate-250 shrink-0">
+                        <div className="flex items-center justify-center w-5 h-5 rounded-lg bg-slate-150 dark:bg-slate-800 text-slate-400 dark:text-slate-500 border border-slate-250 dark:border-slate-700 shrink-0">
                           <Lock size={11} />
                         </div>
                       )}
@@ -311,9 +311,9 @@ export function PenggunaClient({
 
             {/* Reset Password Form */}
             {canEdit && (
-              <div className="space-y-3 pt-5 border-t border-slate-100">
+              <div className="space-y-3 pt-5 border-t border-border">
                 <div className="flex items-center justify-between gap-2">
-                  <Label className="text-slate-400 uppercase tracking-wider text-[10px] mb-0">Reset Password Keamanan</Label>
+                  <Label className="text-slate-400 dark:text-slate-500 uppercase tracking-wider text-[10px] mb-0">Reset Password Keamanan</Label>
                   <CharCounter value={newPasswordVal} max={FIELD_LIMITS.passwordMax} />
                 </div>
                 <div className="space-y-3.5">
@@ -325,7 +325,7 @@ export function PenggunaClient({
                       minLength={FIELD_LIMITS.passwordMin}
                       maxLength={FIELD_LIMITS.passwordMax}
                       placeholder={`Masukkan password baru (min ${FIELD_LIMITS.passwordMin} karakter)...`}
-                      className="pr-12 bg-white rounded-xl shadow-xs"
+                      className="pr-12 bg-card rounded-xl shadow-xs"
                     />
                     <button
                       type="button"
@@ -349,7 +349,7 @@ export function PenggunaClient({
                         setNewPasswordVal("");
                         setShowPassword(false);
                       }} 
-                      className="text-xs h-10 border-slate-200 rounded-xl hover:bg-slate-50"
+                      className="text-xs h-10 border-border rounded-xl hover:bg-slate-50 dark:hover:bg-slate-900"
                     >
                       Batal
                     </Button>

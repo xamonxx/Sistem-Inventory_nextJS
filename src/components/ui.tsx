@@ -16,15 +16,15 @@ export function Button({
   const variants = {
     primary:
       "bg-[var(--primary)] text-white hover:bg-[var(--primary-strong)] shadow-sm transition-transform active:scale-[0.98]",
-    outline: "border border-border bg-white hover:bg-slate-50 text-foreground shadow-xs active:scale-[0.98]",
-    ghost: "hover:bg-slate-150/50 text-slate-700 hover:text-slate-900",
+    outline: "border border-border bg-card hover:bg-[var(--surface-hover)] text-foreground shadow-xs active:scale-[0.98]",
+    ghost: "hover:bg-[var(--surface-hover)] text-[var(--text-soft)] hover:text-foreground",
     danger: "bg-[var(--danger)] text-white hover:brightness-105 shadow-sm active:scale-[0.98]",
     success: "bg-[var(--success)] text-white hover:brightness-105 shadow-sm active:scale-[0.98]",
     warning: "bg-[var(--warning)] text-white hover:brightness-105 shadow-sm active:scale-[0.98]",
   };
-  const sizes = { 
-    sm: "h-9 px-4 text-xs font-medium rounded-[10px]", 
-    md: "h-11 px-5 text-sm font-semibold rounded-[12px]" 
+  const sizes = {
+    sm: "h-11 min-h-11 px-4 text-xs font-medium rounded-[10px] sm:h-9 sm:min-h-9",
+    md: "h-11 px-5 text-sm font-semibold rounded-[12px]",
   };
   return (
     <button
@@ -46,9 +46,9 @@ export const Input = React.forwardRef<HTMLInputElement, React.InputHTMLAttribute
       <input
         ref={ref}
         className={cn(
-          "h-11 w-full rounded-[12px] border border-border bg-white px-4 text-sm outline-none transition-all",
+          "h-11 w-full rounded-[12px] border border-border bg-card px-4 text-sm text-foreground outline-none transition-all",
           "focus:border-[var(--primary)] focus:ring-4 focus:ring-[var(--primary)]/10",
-          "disabled:bg-slate-50 disabled:text-slate-400 placeholder:text-slate-400/80",
+          "disabled:bg-[var(--surface-2)] disabled:text-[var(--text-muted-2)] placeholder:text-[var(--text-muted-2)]",
           className
         )}
         {...props}
@@ -64,9 +64,9 @@ export const Textarea = React.forwardRef<HTMLTextAreaElement, React.TextareaHTML
       <textarea
         ref={ref}
         className={cn(
-          "w-full rounded-[12px] border border-border bg-white px-4 py-2.5 text-sm outline-none transition-all resize-y",
+          "w-full rounded-[12px] border border-border bg-card px-4 py-2.5 text-sm text-foreground outline-none transition-all resize-y",
           "focus:border-[var(--primary)] focus:ring-4 focus:ring-[var(--primary)]/10",
-          "disabled:bg-slate-50 disabled:text-slate-400 placeholder:text-slate-400/80",
+          "disabled:bg-[var(--surface-2)] disabled:text-[var(--text-muted-2)] placeholder:text-[var(--text-muted-2)]",
           className
         )}
         {...props}
@@ -308,19 +308,19 @@ export function Select({
         onClick={() => setIsOpen(!isOpen)}
         className={cn(
           "flex w-full items-center justify-between px-4 text-sm font-medium text-left outline-none transition-all cursor-pointer shadow-[0_1px_2px_rgba(0,0,0,0.05)] select-none",
-          !hasBorder && "border border-border hover:border-slate-300",
-          !hasBg && "bg-white hover:bg-slate-50/50",
+          !hasBorder && "border border-border hover:border-[var(--line-strong)]",
+          !hasBg && "bg-card hover:bg-[var(--surface-hover)]",
           "focus:border-[var(--primary)] focus:ring-4 focus:ring-[var(--primary)]/10",
           isOpen && "border-[var(--primary)] ring-4 ring-[var(--primary)]/10",
           buttonClasses
         )}
       >
-        <span className={cn("truncate", !hasText && "text-slate-800")}>{displayLabel}</span>
-        <ChevronDown size={16} className={cn("text-slate-500 transition-transform duration-200 ml-2 flex-shrink-0", isOpen && "rotate-180")} />
+        <span className={cn("truncate", !hasText && "text-foreground")}>{displayLabel}</span>
+        <ChevronDown size={16} className={cn("text-[var(--text-muted-2)] transition-transform duration-200 ml-2 flex-shrink-0", isOpen && "rotate-180")} />
       </button>
 
       {isOpen && (
-        <div className="absolute left-0 right-0 z-[9999] mt-2 max-h-60 overflow-y-auto rounded-[12px] border border-border bg-white p-1.5 shadow-[0_10px_25px_-5px_rgba(0,0,0,0.1),0_8px_10px_-6px_rgba(0,0,0,0.1)] animate-in fade-in duration-100 ease-out">
+        <div className="absolute left-0 right-0 z-[9999] mt-2 max-h-60 overflow-y-auto rounded-[12px] border border-border bg-card p-1.5 shadow-[0_10px_25px_-5px_rgba(0,0,0,0.1),0_8px_10px_-6px_rgba(0,0,0,0.1)] animate-in fade-in duration-100 ease-out">
           {options.length === 0 ? (
             <div className="px-3 py-2 text-xs text-slate-400 text-center">Tidak ada pilihan</div>
           ) : (
@@ -333,7 +333,7 @@ export function Select({
                   onClick={() => handleSelect(opt.value)}
                   disabled={opt.disabled}
                   className={cn(
-                    "flex w-full items-center justify-between rounded-[8px] px-3 py-2 text-left text-xs font-semibold text-slate-700 transition-all select-none hover:bg-slate-50 hover:text-slate-900 cursor-pointer disabled:opacity-50 disabled:pointer-events-none",
+                    "flex w-full items-center justify-between rounded-[8px] px-3 py-2 text-left text-xs font-semibold text-[var(--text-soft)] transition-all select-none hover:bg-[var(--surface-hover)] hover:text-foreground cursor-pointer disabled:opacity-50 disabled:pointer-events-none",
                     isSelected && "bg-[var(--primary)]/10 text-[var(--primary)] hover:bg-[var(--primary)]/15 hover:text-[var(--primary)]"
                   )}
                 >
@@ -352,7 +352,7 @@ export function Select({
 export function Label({ className, ...props }: React.LabelHTMLAttributes<HTMLLabelElement>) {
   return (
     <label
-      className={cn("mb-1.5 block text-xs font-medium text-slate-500", className)}
+      className={cn("mb-1.5 block text-xs font-medium text-[var(--text-muted-2)]", className)}
       {...props}
     />
   );
@@ -379,12 +379,12 @@ export function Badge({
 }) {
   // Pill SaaS premium — solid soft fill, no border (Stripe/Linear style)
   const tones = {
-    slate: "bg-slate-100 text-slate-700",
-    green: "bg-[#DCFCE7] text-[#166534]",
-    red: "bg-[#FEE2E2] text-[#991B1B]",
-    amber: "bg-[#FEF3C7] text-[#92400E]",
-    blue: "bg-[#DBEAFE] text-[#1E40AF]",
-    indigo: "bg-[#E0E7FF] text-[#3730A3]",
+    slate: "bg-[var(--surface-2)] text-[var(--text-soft)]",
+    green: "bg-[#DCFCE7] dark:bg-[#166534]/20 text-[#166534] dark:text-[#86efac]",
+    red: "bg-[#FEE2E2] dark:bg-[#991B1B]/20 text-[#991B1B] dark:text-[#f87171]",
+    amber: "bg-[#FEF3C7] dark:bg-[#92400E]/20 text-[#92400E] dark:text-[#fbbf24]",
+    blue: "bg-[#DBEAFE] dark:bg-[#1E40AF]/20 text-[#1E40AF] dark:text-[#60a5fa]",
+    indigo: "bg-[#E0E7FF] dark:bg-[#3730A3]/20 text-[#3730A3] dark:text-[#818cf8]",
   };
   return (
     <span
@@ -400,9 +400,9 @@ export function Badge({
 
 export function Table({ children, className }: { children: React.ReactNode; className?: string }) {
   return (
-    <div className={cn("overflow-hidden rounded-lg border border-border bg-[var(--card)] shadow-[var(--shadow-card)]", className)}>
-      <div className="overflow-x-auto">
-        <table className="w-full border-collapse text-sm [&_thead_th]:sticky [&_thead_th]:top-0 [&_thead_th]:z-10">
+    <div className={cn("max-w-full overflow-hidden rounded-lg border border-border bg-[var(--card)] shadow-[var(--shadow-card)]", className)}>
+      <div className="w-full overflow-x-auto overscroll-x-contain">
+        <table className="min-w-max w-full border-collapse text-sm [&_thead_th]:sticky [&_thead_th]:top-0 [&_thead_th]:z-10">
           {children}
         </table>
       </div>
@@ -414,7 +414,7 @@ export function Th({ className, ...props }: React.ThHTMLAttributes<HTMLTableCell
   return (
     <th
       className={cn(
-        "h-[52px] border-b border-border bg-[#f4f8f6] px-5 text-left text-xs font-semibold uppercase tracking-[0.05em] text-[#60736f] font-sans",
+        "h-[52px] border-b border-border bg-[var(--surface-2)] px-5 text-left text-xs font-semibold uppercase tracking-[0.05em] text-[var(--text-muted-2)] font-sans",
         className
       )}
       {...props}
@@ -426,7 +426,7 @@ export function Td({ className, ...props }: React.TdHTMLAttributes<HTMLTableCell
   return (
     <td
       className={cn(
-        "h-16 border-b border-slate-100 px-5 align-middle text-sm font-medium text-slate-900 font-sans",
+        "h-16 border-b border-border dark:border-border px-5 align-middle text-sm font-medium text-foreground dark:text-slate-200 font-sans",
         className
       )}
       {...props}

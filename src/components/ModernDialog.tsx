@@ -45,7 +45,7 @@ export function ModernDialog({
   const icons = {
     primary: <Info size={24} className="text-blue-500" />,
     danger: <AlertTriangle size={24} className="text-red-500" />,
-    success: <CheckCircle size={24} className="text-emerald-500" />,
+    success: <CheckCircle size={24} className="text-primary-500" />,
     warning: <AlertTriangle size={24} className="text-amber-500" />,
   };
 
@@ -59,7 +59,7 @@ export function ModernDialog({
   return createPortal(
     // zIndex sedikit di atas Drawer (2147483000) supaya dialog konfirmasi yang
     // dibuka dari dalam drawer tidak tertutup panel drawer.
-    <div className="fixed inset-0 flex items-center justify-center p-4" style={{ zIndex: 2147483002 }}>
+    <div className="fixed inset-0 flex items-end justify-center p-0 sm:items-center sm:p-4" style={{ zIndex: 2147483002 }}>
       {/* Backdrop overlay */}
       <div
         className="absolute inset-0 bg-slate-900/40 backdrop-blur-xs transition-opacity duration-300 opacity-100"
@@ -67,28 +67,28 @@ export function ModernDialog({
       />
 
       {/* Dialog Box */}
-      <div className="relative w-full max-w-md transform rounded-[20px] bg-white p-6 shadow-[var(--shadow-modal)] border border-border transition-all duration-300 scale-100 anim-rise">
+      <div className="relative max-h-[90dvh] w-full max-w-md transform overflow-y-auto rounded-t-[20px] border border-border bg-card p-5 shadow-[var(--shadow-modal)] transition-all duration-300 scale-100 anim-rise sm:rounded-[20px] sm:p-6 dark:bg-card">
         {/* Close Button */}
         <button
           onClick={onClose}
-          className="absolute right-4 top-4 flex h-8 w-8 items-center justify-center rounded-xl text-slate-400 hover:bg-slate-100 hover:text-slate-700 transition cursor-pointer"
+          className="absolute right-4 top-4 flex h-8 w-8 items-center justify-center rounded-xl text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 hover:text-slate-700 dark:hover:text-slate-200 transition cursor-pointer"
         >
           <X size={18} />
         </button>
 
         {/* Dialog Header */}
         <div className="flex gap-4">
-          <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-slate-50 border border-border">
+          <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-slate-50 dark:bg-slate-900 border border-border">
             {icons[variant]}
           </div>
           <div className="space-y-1.5 pr-6">
-            <h4 className="text-base font-bold text-slate-900 leading-tight">{title}</h4>
-            <p className="text-sm text-slate-500 leading-relaxed">{description}</p>
+            <h4 className="text-base font-bold text-foreground dark:text-slate-100 leading-tight">{title}</h4>
+            <p className="text-sm text-slate-500 dark:text-slate-400 leading-relaxed">{description}</p>
           </div>
         </div>
 
         {/* Dialog Actions */}
-        <div className="mt-6 flex justify-end gap-2.5">
+        <div className="mt-6 flex flex-col-reverse gap-2.5 sm:flex-row sm:justify-end">
           <Button variant="outline" onClick={onClose}>
             {cancelText}
           </Button>

@@ -2,6 +2,7 @@
 
 import { prisma } from "@/lib/prisma";
 import { getStokAkhirMap } from "@/lib/stock";
+import { requireUser } from "@/lib/auth";
 
 export type SystemNotification = {
   id: string;
@@ -14,7 +15,10 @@ export type SystemNotification = {
   link: string;
 };
 
-export async function fetchSystemNotifications(role?: string): Promise<SystemNotification[]> {
+export async function fetchSystemNotifications(_role?: string): Promise<SystemNotification[]> {
+  const user = await requireUser();
+  const role = user.role;
+
   try {
     const notifications: SystemNotification[] = [];
     const now = new Date();
@@ -109,7 +113,6 @@ export async function fetchSystemNotifications(role?: string): Promise<SystemNot
 /* ================================================================
    Helper: Parse detail JSON safely
    ================================================================ */
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
 function parseDetail(raw: string | null): Record<string, any> {
   if (!raw) return {};
   try {
@@ -123,7 +126,6 @@ function parseDetail(raw: string | null): Record<string, any> {
 /* ================================================================
    Helper: Format activity log into human-readable notification
    ================================================================ */
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
 function formatActivityLog(aksi: string, operator: string, detail: Record<string, any>): {
   title: string;
   description: string;

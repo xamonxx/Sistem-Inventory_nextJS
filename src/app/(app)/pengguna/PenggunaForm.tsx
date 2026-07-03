@@ -62,14 +62,14 @@ export function PenggunaForm() {
           />
 
           {/* Modal Card Box */}
-          <div className="relative w-full max-w-lg transform rounded-[24px] bg-white p-6 md:p-8 shadow-[var(--shadow-modal)] border border-slate-100/80 transition-all duration-300 scale-100 anim-rise z-10">
+          <div className="relative w-full max-w-lg transform rounded-[24px] bg-card p-6 md:p-8 shadow-[var(--shadow-modal)] border border-border/80 transition-all duration-300 scale-100 anim-rise z-10">
             {/* Close Button */}
             <button
               onClick={() => {
                 setOpen(false);
                 setShowPassword(false);
               }}
-              className="absolute right-5 top-5 flex h-9 w-9 items-center justify-center rounded-xl text-slate-400 hover:bg-slate-50 hover:text-slate-700 transition cursor-pointer"
+              className="absolute right-5 top-5 flex h-9 w-9 items-center justify-center rounded-xl text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-900 hover:text-slate-700 transition cursor-pointer"
             >
               <X size={20} />
             </button>
@@ -80,7 +80,7 @@ export function PenggunaForm() {
                 <UserPlus size={22} />
               </div>
               <div className="space-y-0.5">
-                <h2 className="text-lg font-bold text-slate-900 tracking-tight leading-none">Tambah Pengguna</h2>
+                <h2 className="text-lg font-bold text-foreground tracking-tight leading-none">Tambah Pengguna</h2>
                 <p className="text-xs text-slate-400 mt-1">Buat akun kasir atau gudang baru dengan hak akses spesifik.</p>
               </div>
             </div>
@@ -164,7 +164,7 @@ export function PenggunaForm() {
               )}
 
               {/* Actions */}
-              <div className="pt-4 flex justify-end gap-3 border-t border-slate-100 mt-6">
+              <div className="pt-4 flex justify-end gap-3 border-t border-border mt-6">
                 <Button
                   type="button"
                   variant="outline"

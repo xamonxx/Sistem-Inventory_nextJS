@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Geist_Mono, Plus_Jakarta_Sans } from "next/font/google";
+import { cookies } from "next/headers";
 import { Toaster } from "sonner";
 import "./globals.css";
 
@@ -21,11 +22,15 @@ export const metadata: Metadata = {
   description: "Inventory, kasir, retur/tukar, invoice & laporan bahan bangunan",
 };
 
-export default function RootLayout({ children }: { children: React.ReactNode }) {
+export default async function RootLayout({ children }: { children: React.ReactNode }) {
+  const cookieStore = await cookies();
+  const theme = cookieStore.get("theme")?.value || "light";
+
   return (
     <html
       lang="id"
-      className={`${plusJakartaSans.variable} ${geistMono.variable}`}
+      className={`${plusJakartaSans.variable} ${geistMono.variable} ${theme === "dark" ? "dark" : ""}`}
+      style={{ colorScheme: theme }}
     >
       <body>
         {children}
@@ -36,6 +41,8 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
               fontFamily: "var(--font-jakarta)",
               borderRadius: "12px",
               border: "1px solid var(--border)",
+              backgroundColor: "var(--card)",
+              color: "var(--foreground)",
             },
           }}
         />

@@ -95,7 +95,7 @@ export function LogAktivitasClient({ initialLogs }: { initialLogs: LogRow[] }) {
   return (
     <div className="space-y-6">
       {/* Search and Filters bar */}
-      <Card className="flex flex-col gap-4 sm:flex-row sm:items-center p-5">
+      <Card className="flex flex-col gap-4 p-4 sm:flex-row sm:items-center sm:p-5">
         <div className="flex-1 relative">
           <Search size={16} className="absolute left-3 top-3.5 text-muted" />
           <Input
@@ -106,8 +106,8 @@ export function LogAktivitasClient({ initialLogs }: { initialLogs: LogRow[] }) {
             className="pl-9 h-11"
           />
         </div>
-        <div className="flex gap-3 w-full sm:w-auto">
-          <div className="w-56">
+        <div className="grid w-full grid-cols-1 gap-3 sm:flex sm:w-auto">
+          <div className="w-full sm:w-56">
             <Select value={actionFilter} onChange={(e) => setActionFilter(e.target.value)}>
               <option value="ALL">Semua Jenis Aksi</option>
               {uniqueActions.map((act) => (
@@ -121,7 +121,7 @@ export function LogAktivitasClient({ initialLogs }: { initialLogs: LogRow[] }) {
             variant="danger"
             onClick={() => setIsConfirmOpen(true)}
             disabled={isPending}
-            className="flex items-center gap-2 shrink-0"
+            className="flex shrink-0 items-center gap-2"
           >
             <Trash2 size={16} />
             Bersihkan Log
@@ -149,7 +149,7 @@ export function LogAktivitasClient({ initialLogs }: { initialLogs: LogRow[] }) {
                   {formatTanggal(log.createdAt)}
                 </Td>
                 <Td>
-                  <div className="font-semibold text-slate-800">{log.userName}</div>
+                  <div className="font-semibold text-foreground">{log.userName}</div>
                   <div className="text-[10px] text-muted">{log.userRole}</div>
                 </Td>
                 <Td>
@@ -189,9 +189,9 @@ export function LogAktivitasClient({ initialLogs }: { initialLogs: LogRow[] }) {
       {/* JSON Inspector / Diff Dialog */}
       {selectedLog && parsedDetails && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/45 p-4 backdrop-blur-xs" onClick={() => setSelectedLog(null)}>
-          <div onClick={(e) => e.stopPropagation()} className="w-full max-w-md bg-white rounded-2xl overflow-y-auto max-h-[85vh] p-6 shadow-2xl border border-border">
+          <div onClick={(e) => e.stopPropagation()} className="w-full max-w-md bg-card rounded-2xl overflow-y-auto max-h-[85vh] p-6 shadow-2xl border border-border">
             <div className="flex items-center justify-between border-b border-border pb-3 mb-4">
-              <h3 className="font-bold text-slate-900 flex items-center gap-1.5">
+              <h3 className="font-bold text-foreground flex items-center gap-1.5">
                 <History size={16} className="text-primary" /> Detail Riwayat Audit
               </h3>
               <button onClick={() => setSelectedLog(null)} className="text-muted hover:text-foreground">
@@ -201,7 +201,7 @@ export function LogAktivitasClient({ initialLogs }: { initialLogs: LogRow[] }) {
 
             <div className="space-y-4">
               {/* Meta details */}
-              <div className="text-xs space-y-1 bg-slate-50 p-3 rounded-lg border border-border">
+              <div className="text-xs space-y-1 bg-slate-50 dark:bg-slate-900 p-3 rounded-lg border border-border">
                 <p><strong>Aksi:</strong> {selectedLog.aksi}</p>
                 <p><strong>Operator:</strong> {selectedLog.userName} ({selectedLog.userRole})</p>
                 <p><strong>Tanggal Log:</strong> {new Date(selectedLog.createdAt).toLocaleString("id-ID")}</p>
@@ -210,7 +210,7 @@ export function LogAktivitasClient({ initialLogs }: { initialLogs: LogRow[] }) {
               {/* Parsed Diff representation */}
               <div>
                 <Label>Metadata Perubahan (Format JSON)</Label>
-                <div className="rounded-lg bg-slate-900 p-4 overflow-x-auto text-[11px] font-mono text-emerald-400 max-h-72">
+                <div className="rounded-lg bg-slate-900 p-4 overflow-x-auto text-[11px] font-mono text-primary-400 max-h-72">
                   <pre>{JSON.stringify(parsedDetails, null, 2)}</pre>
                 </div>
               </div>

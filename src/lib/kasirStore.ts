@@ -1,5 +1,4 @@
 import { create } from "zustand";
-import type { DiscType } from "@/lib/cart";
 
 export interface CartLine {
   itemId: number;
@@ -8,8 +7,6 @@ export interface CartLine {
   harga: number;
   qty: number;
   stok: number;
-  discount: number; // nilai mentah: nominal Rp atau persen (0-100)
-  discountType: DiscType; // "RP" | "PERCENT"
 }
 
 export interface KasirState {
@@ -25,8 +22,6 @@ export interface KasirState {
   noRekening: string; // opsional, untuk transfer/kredit
   atasNama: string; // opsional, untuk transfer/kredit
   buatInvoice: boolean;
-  globalDiscount: number; // nilai mentah diskon total transaksi
-  globalDiscountType: DiscType;
 
   // Actions
   setTipe: (tipe: "RETAIL" | "PROJECT") => void;
@@ -40,14 +35,10 @@ export interface KasirState {
   setNoRekening: (val: string) => void;
   setAtasNama: (val: string) => void;
   setBuatInvoice: (val: boolean) => void;
-  setGlobalDiscount: (val: number) => void;
-  setGlobalDiscountType: (type: DiscType) => void;
 
   addToCart: (item: { id: number; kode: string; nama: string; hargaJual: number; stok: number }) => void;
   removeFromCart: (itemId: number) => void;
   updateQty: (itemId: number, qty: number) => void;
-  updateDiscount: (itemId: number, discount: number) => void;
-  updateDiscountType: (itemId: number, discountType: DiscType) => void;
   clearCart: () => void;
 }
 
@@ -64,8 +55,6 @@ export const useKasirStore = create<KasirState>((set) => ({
   noRekening: "",
   atasNama: "",
   buatInvoice: true,
-  globalDiscount: 0,
-  globalDiscountType: "RP",
 
   setTipe: (tipe) => set({ tipe }),
   setNamaClient: (namaClient) => set({ namaClient }),
@@ -78,8 +67,6 @@ export const useKasirStore = create<KasirState>((set) => ({
   setNoRekening: (noRekening) => set({ noRekening }),
   setAtasNama: (atasNama) => set({ atasNama }),
   setBuatInvoice: (buatInvoice) => set({ buatInvoice }),
-  setGlobalDiscount: (globalDiscount) => set({ globalDiscount: Math.max(0, globalDiscount) }),
-  setGlobalDiscountType: (globalDiscountType) => set({ globalDiscountType }),
 
   addToCart: (item) =>
     set((state) => {
@@ -99,8 +86,6 @@ export const useKasirStore = create<KasirState>((set) => ({
             harga: item.hargaJual,
             qty: 1,
             stok: item.stok,
-            discount: 0,
-            discountType: "RP",
           },
         ],
       };
@@ -116,16 +101,6 @@ export const useKasirStore = create<KasirState>((set) => ({
       cart: state.cart.map((x) => (x.itemId === itemId ? { ...x, qty: Math.max(1, qty) } : x)),
     })),
 
-  updateDiscount: (itemId, discount) =>
-    set((state) => ({
-      cart: state.cart.map((x) => (x.itemId === itemId ? { ...x, discount: Math.max(0, discount) } : x)),
-    })),
-
-  updateDiscountType: (itemId, discountType) =>
-    set((state) => ({
-      cart: state.cart.map((x) => (x.itemId === itemId ? { ...x, discountType, discount: 0 } : x)),
-    })),
-
   clearCart: () =>
     set({
       cart: [],
@@ -139,7 +114,5 @@ export const useKasirStore = create<KasirState>((set) => ({
       noRekening: "",
       atasNama: "",
       buatInvoice: true,
-      globalDiscount: 0,
-      globalDiscountType: "RP",
     }),
 }));

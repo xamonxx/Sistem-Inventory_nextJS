@@ -38,6 +38,7 @@ import {
 // ===================== TIPE DATA INPUT (sesuai props halaman) =====================
 
 export interface MarginRow {
+  kode: string;
   nama: string;
   qtyTerjual: number;
   omset: number;
@@ -45,6 +46,7 @@ export interface MarginRow {
 }
 
 export interface TerlarisRow {
+  kode: string;
   nama: string;
   qtyTerjual: number;
   omset: number;
@@ -233,7 +235,7 @@ function addRingkasanSheet(wb: Workbook, payload: ExportAnalyticPayload, meta: M
 
 function addPenjualanSheet(wb: Workbook, payload: ExportAnalyticPayload, meta: MetaInfo) {
   const ws = wb.addWorksheet("Penjualan");
-  const lastCol = 7;
+  const lastCol = 8;
   const startRow = writeSheetHeader(ws, lastCol, meta);
 
   const rows = [...payload.marginData].sort((a, b) => safeNumber(b.omset) - safeNumber(a.omset));
@@ -246,7 +248,7 @@ function addPenjualanSheet(wb: Workbook, payload: ExportAnalyticPayload, meta: M
   row += 1;
 
   const headerRow = row;
-  ["No. / Tgl Transaksi", "Nama Barang", "Qty Terjual", "Total Penjualan", "Kontribusi Omset", "Status", "Keterangan"].forEach(
+  ["No. / Tgl Transaksi", "Kode Barang", "Nama Barang", "Qty Terjual", "Total Penjualan", "Kontribusi Omset", "Status", "Keterangan"].forEach(
     (h, i) => (ws.getCell(headerRow, i + 1).value = h)
   );
   applyHeaderStyle(ws, headerRow, lastCol);
@@ -260,12 +262,13 @@ function addPenjualanSheet(wb: Workbook, payload: ExportAnalyticPayload, meta: M
       const omset = safeNumber(it.omset);
       const pct = safePercent(omset, totalOmset);
       ws.getCell(row, 1).value = TEXT_NA; // data agregat per-barang: tanpa no/tgl transaksi
-      ws.getCell(row, 2).value = safeText(it.nama);
-      ws.getCell(row, 3).value = safeNumber(it.qtyTerjual);
-      ws.getCell(row, 3).numFmt = FMT_INT;
-      ws.getCell(row, 4).value = omset;
-      ws.getCell(row, 4).numFmt = FMT_RUPIAH;
-      const pctCell = ws.getCell(row, 5);
+      ws.getCell(row, 2).value = safeText(it.kode);
+      ws.getCell(row, 3).value = safeText(it.nama);
+      ws.getCell(row, 4).value = safeNumber(it.qtyTerjual);
+      ws.getCell(row, 4).numFmt = FMT_INT;
+      ws.getCell(row, 5).value = omset;
+      ws.getCell(row, 5).numFmt = FMT_RUPIAH;
+      const pctCell = ws.getCell(row, 6);
       if (pct === null) pctCell.value = PERCENT_NA;
       else {
         pctCell.value = pct;
@@ -281,17 +284,17 @@ function addPenjualanSheet(wb: Workbook, payload: ExportAnalyticPayload, meta: M
         st = "Produk Potensial";
         note = "Kontribusi 10% - 19% omset";
       }
-      ws.getCell(row, 6).value = st;
-      ws.getCell(row, 6).alignment = { horizontal: "center" };
-      ws.getCell(row, 7).value = note;
+      ws.getCell(row, 7).value = st;
+      ws.getCell(row, 7).alignment = { horizontal: "center" };
+      ws.getCell(row, 8).value = note;
       row++;
     }
     // baris total
-    ws.getCell(row, 2).value = "TOTAL PENJUALAN";
-    ws.getCell(row, 2).font = { bold: true };
-    ws.getCell(row, 4).value = totalOmset;
-    ws.getCell(row, 4).numFmt = FMT_RUPIAH;
-    ws.getCell(row, 4).font = { bold: true };
+    ws.getCell(row, 3).value = "TOTAL PENJUALAN";
+    ws.getCell(row, 3).font = { bold: true };
+    ws.getCell(row, 5).value = totalOmset;
+    ws.getCell(row, 5).numFmt = FMT_RUPIAH;
+    ws.getCell(row, 5).font = { bold: true };
     fillRow(ws, row, 1, lastCol, COLOR.totalBg);
     row++;
   }
@@ -305,15 +308,15 @@ function addPenjualanSheet(wb: Workbook, payload: ExportAnalyticPayload, meta: M
   row += 1;
 
   const topHeaderRow = row;
-  ["Ranking", "Nama Barang", "Total Qty", "Total Omset", "Kontribusi Omset", "Keterangan Analisis"].forEach(
+  ["Ranking", "Kode Barang", "Nama Barang", "Total Qty", "Total Omset", "Kontribusi Omset", "Keterangan Analisis"].forEach(
     (h, i) => (ws.getCell(topHeaderRow, i + 1).value = h)
   );
-  applyHeaderStyle(ws, topHeaderRow, 6);
+  applyHeaderStyle(ws, topHeaderRow, 7);
 
   row = topHeaderRow + 1;
   const top = [...payload.terlaris].slice(0, 10);
   if (top.length === 0) {
-    writeEmptyNotice(ws, row, 6);
+    writeEmptyNotice(ws, row, 7);
     row += 1;
   } else {
     top.forEach((t, i) => {
@@ -321,12 +324,13 @@ function addPenjualanSheet(wb: Workbook, payload: ExportAnalyticPayload, meta: M
       const pct = safePercent(omset, totalOmset);
       ws.getCell(row, 1).value = i + 1;
       ws.getCell(row, 1).alignment = { horizontal: "center" };
-      ws.getCell(row, 2).value = safeText(t.nama);
-      ws.getCell(row, 3).value = safeNumber(t.qtyTerjual);
-      ws.getCell(row, 3).numFmt = FMT_INT;
-      ws.getCell(row, 4).value = omset;
-      ws.getCell(row, 4).numFmt = FMT_RUPIAH;
-      const pctCell = ws.getCell(row, 5);
+      ws.getCell(row, 2).value = safeText(t.kode);
+      ws.getCell(row, 3).value = safeText(t.nama);
+      ws.getCell(row, 4).value = safeNumber(t.qtyTerjual);
+      ws.getCell(row, 4).numFmt = FMT_INT;
+      ws.getCell(row, 5).value = omset;
+      ws.getCell(row, 5).numFmt = FMT_RUPIAH;
+      const pctCell = ws.getCell(row, 6);
       if (pct === null) pctCell.value = PERCENT_NA;
       else {
         pctCell.value = pct;
@@ -335,11 +339,11 @@ function addPenjualanSheet(wb: Workbook, payload: ExportAnalyticPayload, meta: M
       let note = "Produk pendukung (kontribusi < 10%)";
       if (pct !== null && pct >= 0.2) note = "Produk utama (kontribusi >= 20%)";
       else if (pct !== null && pct >= 0.1) note = "Produk potensial (kontribusi 10% - 19%)";
-      ws.getCell(row, 6).value = note;
+      ws.getCell(row, 7).value = note;
       row++;
     });
   }
-  applyBorder(ws, topHeaderRow, row - 1, 6);
+  applyBorder(ws, topHeaderRow, row - 1, 7);
 
   autoFitColumns(ws, lastCol);
   ws.getColumn(7).width = 30;
@@ -352,7 +356,7 @@ function addPenjualanSheet(wb: Workbook, payload: ExportAnalyticPayload, meta: M
 function addMarginSheet(wb: Workbook, payload: ExportAnalyticPayload, meta: MetaInfo) {
   const ws = wb.addWorksheet("Margin");
   const isGudang = payload.role === "ADMIN_GUDANG";
-  const lastCol = 8;
+  const lastCol = 9;
   const startRow = writeSheetHeader(ws, lastCol, meta);
 
   if (!isGudang) {
@@ -366,7 +370,7 @@ function addMarginSheet(wb: Workbook, payload: ExportAnalyticPayload, meta: Meta
   const rows = [...payload.marginData].sort((a, b) => safeNumber(b.omset) - safeNumber(a.omset));
 
   const headerRow = startRow;
-  ["Nama Barang", "Qty Terjual", "Omset", "Modal / HPP", "Laba Kotor", "Persentase Margin", "Status Margin", "Keterangan"].forEach(
+  ["Kode Barang", "Nama Barang", "Qty Terjual", "Omset", "Modal / HPP", "Laba Kotor", "Persentase Margin", "Status Margin", "Keterangan"].forEach(
     (h, i) => (ws.getCell(headerRow, i + 1).value = h)
   );
   applyHeaderStyle(ws, headerRow, lastCol);
@@ -403,24 +407,25 @@ function addMarginSheet(wb: Workbook, payload: ExportAnalyticPayload, meta: Meta
         else if (pct >= THRESHOLDS.margin.bagus) cntBagus++;
       }
 
-      ws.getCell(row, 1).value = safeText(it.nama);
-      ws.getCell(row, 2).value = safeNumber(it.qtyTerjual);
-      ws.getCell(row, 2).numFmt = FMT_INT;
-      ws.getCell(row, 3).value = omset;
-      ws.getCell(row, 3).numFmt = FMT_RUPIAH;
-      ws.getCell(row, 4).value = hpp;
+      ws.getCell(row, 1).value = safeText(it.kode);
+      ws.getCell(row, 2).value = safeText(it.nama);
+      ws.getCell(row, 3).value = safeNumber(it.qtyTerjual);
+      ws.getCell(row, 3).numFmt = FMT_INT;
+      ws.getCell(row, 4).value = omset;
       ws.getCell(row, 4).numFmt = FMT_RUPIAH;
-      ws.getCell(row, 5).value = laba;
+      ws.getCell(row, 5).value = hpp;
       ws.getCell(row, 5).numFmt = FMT_RUPIAH;
-      const pctCell = ws.getCell(row, 6);
+      ws.getCell(row, 6).value = laba;
+      ws.getCell(row, 6).numFmt = FMT_RUPIAH;
+      const pctCell = ws.getCell(row, 7);
       if (pct === null) pctCell.value = PERCENT_NA;
       else {
         pctCell.value = pct;
         pctCell.numFmt = FMT_PERCENT;
       }
-      ws.getCell(row, 7).value = s.status;
-      ws.getCell(row, 7).alignment = { horizontal: "center" };
-      ws.getCell(row, 8).value =
+      ws.getCell(row, 8).value = s.status;
+      ws.getCell(row, 8).alignment = { horizontal: "center" };
+      ws.getCell(row, 9).value =
         s.status === "Bagus"
           ? "Margin >= 30%"
           : s.status === "Cukup"
@@ -435,15 +440,15 @@ function addMarginSheet(wb: Workbook, payload: ExportAnalyticPayload, meta: Meta
       row++;
     }
     // baris total
-    ws.getCell(row, 1).value = "TOTAL";
-    ws.getCell(row, 1).font = { bold: true };
-    ws.getCell(row, 3).value = totOmset;
-    ws.getCell(row, 3).numFmt = FMT_RUPIAH;
-    ws.getCell(row, 4).value = totHpp;
+    ws.getCell(row, 2).value = "TOTAL";
+    ws.getCell(row, 2).font = { bold: true };
+    ws.getCell(row, 4).value = totOmset;
     ws.getCell(row, 4).numFmt = FMT_RUPIAH;
-    ws.getCell(row, 5).value = totLaba;
+    ws.getCell(row, 5).value = totHpp;
     ws.getCell(row, 5).numFmt = FMT_RUPIAH;
-    [1, 3, 4, 5].forEach((c) => (ws.getCell(row, c).font = { bold: true }));
+    ws.getCell(row, 6).value = totLaba;
+    ws.getCell(row, 6).numFmt = FMT_RUPIAH;
+    [2, 4, 5, 6].forEach((c) => (ws.getCell(row, c).font = { bold: true }));
     fillRow(ws, row, 1, lastCol, COLOR.totalBg);
     row++;
   }
@@ -482,7 +487,7 @@ function addMarginSheet(wb: Workbook, payload: ExportAnalyticPayload, meta: Meta
   applyBorder(ws, sumStart, row - 1, 2);
 
   autoFitColumns(ws, lastCol);
-  ws.getColumn(8).width = 22;
+  ws.getColumn(9).width = 22;
   ws.views = [{ state: "frozen", ySplit: headerRow }];
   ws.autoFilter = { from: { row: headerRow, column: 1 }, to: { row: tableLastRow, column: lastCol } };
 }

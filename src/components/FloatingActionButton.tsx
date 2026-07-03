@@ -22,10 +22,10 @@ export function FloatingActionButton({ role }: { role?: string }) {
   }, []);
 
   const allActions = [
-    { label: "POS Transaksi Baru", icon: ShoppingCart, color: "text-teal-700 bg-teal-50", link: "/kasir", roles: ["ADMIN_KASIR"] },
-    { label: "Tambah Barang Baru", icon: Boxes, color: "text-emerald-600 bg-emerald-50", link: "/barang?new=true", roles: ["ADMIN_GUDANG"] },
-    { label: "Buat Invoice Baru", icon: FileText, color: "text-blue-600 bg-blue-50", link: "/kasir?type=PROJECT", roles: ["ADMIN_KASIR"] },
-    { label: "Proses Retur / Tukar", icon: RotateCcw, color: "text-indigo-600 bg-indigo-50", link: "/retur", roles: ["ADMIN_KASIR", "ADMIN_GUDANG"] },
+    { label: "POS Transaksi Baru", icon: ShoppingCart, color: "text-primary-700 dark:text-primary-300 bg-primary-50 dark:bg-primary-950/40", link: "/kasir", roles: ["ADMIN_KASIR"] },
+    { label: "Tambah Barang Baru", icon: Boxes, color: "text-primary-600 dark:text-primary-400 bg-primary-50 dark:bg-primary-950/40", link: "/barang?new=true", roles: ["ADMIN_GUDANG"] },
+    { label: "Buat Invoice Baru", icon: FileText, color: "text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-950/40", link: "/kasir?type=PROJECT", roles: ["ADMIN_KASIR"] },
+    { label: "Proses Retur / Tukar", icon: RotateCcw, color: "text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-950/40", link: "/retur", roles: ["ADMIN_KASIR", "ADMIN_GUDANG"] },
   ];
 
   const actions = allActions.filter(act => !role || act.roles.includes(role));
@@ -39,7 +39,7 @@ export function FloatingActionButton({ role }: { role?: string }) {
   if (actions.length === 0) return null;
 
   return (
-    <div ref={menuRef} className="no-print pointer-events-none fixed bottom-6 right-6 z-40 flex flex-col items-end">
+    <div ref={menuRef} className="no-print pointer-events-none fixed bottom-6 right-6 z-40 hidden flex-col items-end md:flex">
       {/* Floating Menu list */}
       <div
         className={cn(
@@ -53,9 +53,9 @@ export function FloatingActionButton({ role }: { role?: string }) {
             <button
               key={act.label}
               onClick={() => handleAction(act.link)}
-              className="flex items-center gap-3 rounded-full bg-white px-4 py-2.5 shadow-lg border border-border hover:bg-[#f6faf8] transition cursor-pointer"
+              className="flex items-center gap-3 rounded-full bg-card dark:bg-slate-900 px-4 py-2.5 shadow-lg border border-border hover:bg-[#f6faf8] dark:hover:bg-slate-800 transition cursor-pointer"
             >
-              <span className="text-xs font-bold text-slate-700">{act.label}</span>
+              <span className="text-xs font-bold text-slate-700 dark:text-slate-200">{act.label}</span>
               <span className={cn("flex h-7 w-7 items-center justify-center rounded-full border border-current/10", act.color)}>
                 <Icon size={14} />
               </span>
@@ -68,7 +68,7 @@ export function FloatingActionButton({ role }: { role?: string }) {
       <button
         onClick={() => setIsOpen((prev) => !prev)}
         className={cn(
-          "pointer-events-auto flex h-14 w-14 items-center justify-center rounded-full bg-[var(--primary)] text-white shadow-lg shadow-emerald-950/20 transition-all duration-300 hover:bg-[var(--primary-strong)] active:scale-95 cursor-pointer",
+          "pointer-events-auto flex h-14 w-14 items-center justify-center rounded-full bg-[var(--primary)] text-white shadow-lg shadow-primary-950/20 transition-all duration-300 hover:bg-[var(--primary-strong)] active:scale-95 cursor-pointer",
           isOpen ? "rotate-45" : ""
         )}
         title="Aksi Cepat Baru"

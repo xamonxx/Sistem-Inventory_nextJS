@@ -106,17 +106,17 @@ export default async function EditInvoicePage({ params }: { params: Promise<{ id
 
   return (
     <div className="space-y-6 max-w-6xl mx-auto animate-fade-in px-4 sm:px-6 py-4">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-slate-100">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-border">
         <div className="space-y-1">
           <div className="flex items-center gap-3">
             <Link
               href="/invoice"
-              className="inline-flex h-9 items-center justify-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3.5 text-xs font-bold text-slate-600 hover:bg-slate-50 hover:text-slate-900 transition-all shadow-xs cursor-pointer active:scale-95"
+              className="inline-flex h-9 items-center justify-center gap-1.5 rounded-xl border border-border bg-card px-3.5 text-xs font-bold text-slate-600 hover:bg-slate-50 dark:hover:bg-slate-900 hover:text-foreground transition-all shadow-xs cursor-pointer active:scale-95"
             >
               <ArrowLeft size={14} className="stroke-[2.5]" />
               Kembali
             </Link>
-            <h1 className="text-2xl font-extrabold tracking-tight text-slate-900">Koreksi &amp; Edit Invoice</h1>
+            <h1 className="text-2xl font-extrabold tracking-tight text-foreground">Koreksi &amp; Edit Invoice</h1>
           </div>
           <p className="text-xs font-semibold text-slate-500 sm:pl-[92px]">
             Ganti barang yang salah co, tambah barang baru, atau kurangi qty. Stok barang yang dibatalkan otomatis kembali ke sistem.

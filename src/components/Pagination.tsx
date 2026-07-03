@@ -58,22 +58,22 @@ export function Pagination({
   const go = (p: number) => onPage(Math.min(totalPages, Math.max(1, p)));
 
   const btn =
-    "flex h-8 min-w-8 items-center justify-center rounded-lg border border-border bg-white px-2 text-xs font-semibold text-slate-600 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-40 cursor-pointer";
+    "flex h-8 min-w-8 items-center justify-center rounded-lg border border-border bg-card px-2 text-xs font-semibold text-muted transition hover:bg-[var(--row-hover)] disabled:cursor-not-allowed disabled:opacity-40 cursor-pointer";
 
   return (
     <div className={cn("flex flex-col items-center justify-between gap-3 px-1 pt-3 text-xs sm:flex-row", className)}>
       <div className="flex items-center gap-3">
-        <p className="text-slate-500">
-          Menampilkan <span className="font-semibold text-slate-700">{start}–{end}</span> dari{" "}
-          <span className="font-semibold text-slate-700">{total}</span> data
+        <p className="text-muted">
+          Menampilkan <span className="font-semibold text-foreground">{start}–{end}</span> dari{" "}
+          <span className="font-semibold text-foreground">{total}</span> data
         </p>
         {onPerPage && (
-          <label className="flex items-center gap-1.5 text-slate-500">
+          <label className="flex items-center gap-1.5 text-muted">
             <span className="hidden sm:inline">Baris</span>
             <select
               value={perPage}
               onChange={(e) => onPerPage(Number(e.target.value))}
-              className="h-8 rounded-lg border border-border bg-white px-2 text-xs font-semibold text-slate-700 outline-none cursor-pointer"
+              className="h-8 rounded-lg border border-border bg-card px-2 text-xs font-semibold text-foreground outline-none cursor-pointer"
             >
               {perPageOptions.map((n) => (
                 <option key={n} value={n}>
@@ -91,7 +91,7 @@ export function Pagination({
         <button className={btn} onClick={() => go(page - 1)} disabled={page === 1} title="Sebelumnya">
           <ChevronLeft size={14} />
         </button>
-        <span className="px-2 font-semibold text-slate-700">
+        <span className="px-2 font-semibold text-foreground">
           Hal {page} / {totalPages}
         </span>
         <button className={btn} onClick={() => go(page + 1)} disabled={page === totalPages} title="Berikutnya">

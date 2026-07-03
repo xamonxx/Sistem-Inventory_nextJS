@@ -1,6 +1,9 @@
 "use client";
 
+/* eslint-disable @next/next/no-img-element */
+
 import { useState, useTransition, useMemo, useEffect, useRef } from "react";
+import { createPortal } from "react-dom";
 import { getItemHistory, toggleAktif, logBarcodePrint, deleteItems } from "./actions";
 import QRCode from "qrcode";
 import { Button, Card, Input, Label, Select, Table, Th, Td, Badge } from "@/components/ui";
@@ -77,6 +80,10 @@ export function BarangClient({
   const [deleting, startDeleteTransition] = useTransition();
 
   const soOptionsRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    setItems(initialItems);
+  }, [initialItems]);
 
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
@@ -293,7 +300,7 @@ export function BarangClient({
           const toneColors: Record<string, string> = {
             blue: "bg-blue-50 text-blue-700 border-blue-100",
             indigo: "bg-indigo-50 text-indigo-700 border-indigo-100",
-            green: "bg-emerald-50 text-emerald-700 border-emerald-100",
+            green: "bg-primary-50 text-primary-700 border-primary-100",
             amber: "bg-amber-50 text-amber-700 border-amber-100",
             red: "bg-rose-50 text-rose-700 border-rose-100",
           };
@@ -303,13 +310,13 @@ export function BarangClient({
                 <Icon className="h-5 w-5 sm:h-6 sm:w-6" strokeWidth={2.3} />
               </div>
               <div className="leading-tight select-none min-w-0 flex-1">
-                <p className="text-[10px] lg:text-[9px] xl:text-[10px] font-bold uppercase tracking-wider text-slate-450">{card.label}</p>
+                <p className="text-[10px] lg:text-[9px] xl:text-[10px] font-bold uppercase tracking-wider text-[var(--text-muted-2)]">{card.label}</p>
                 <div data-tooltip={card.value} className="mt-1">
-                  <p className="font-extrabold text-slate-800 font-display text-xs sm:text-sm lg:text-[11px] xl:text-xs 2xl:text-sm whitespace-nowrap overflow-hidden text-ellipsis">
+                  <p className="font-extrabold text-foreground font-display text-xs sm:text-sm lg:text-[11px] xl:text-xs 2xl:text-sm whitespace-nowrap overflow-hidden text-ellipsis">
                     {card.value}
                   </p>
                 </div>
-                <p className="text-[10px] lg:text-[9px] xl:text-[10px] text-slate-450 mt-0.5 truncate" title={card.desc}>
+                <p className="text-[10px] lg:text-[9px] xl:text-[10px] text-[var(--text-muted-2)] mt-0.5 truncate" title={card.desc}>
                   {card.desc}
                 </p>
               </div>
@@ -371,14 +378,14 @@ export function BarangClient({
                   <SlidersHorizontal size={14} />
                 </Button>
                 {showSOOptions && (
-                  <div className="absolute right-0 z-30 mt-2 w-56 rounded-xl border border-border bg-white p-3.5 shadow-lg animate-in fade-in slide-in-from-top-1 duration-150">
-                    <p className="text-[10px] font-bold uppercase tracking-wider text-slate-450 mb-2">Opsi Lembar SO</p>
-                    <label className="flex items-center gap-2 text-xs font-semibold text-slate-700 cursor-pointer select-none">
+                  <div className="absolute right-0 z-30 mt-2 w-56 rounded-xl border border-border bg-card p-3.5 shadow-lg animate-in fade-in slide-in-from-top-1 duration-150">
+                    <p className="text-[10px] font-bold uppercase tracking-wider text-[var(--text-muted-2)] mb-2">Opsi Lembar SO</p>
+                    <label className="flex items-center gap-2 text-xs font-semibold text-[var(--text-soft)] cursor-pointer select-none">
                       <input
                         type="checkbox"
                         checked={showSystemStock}
                         onChange={(e) => setShowSystemStock(e.target.checked)}
-                        className="h-4 w-4 rounded border-slate-300 text-[var(--primary)] focus:ring-transparent cursor-pointer"
+                        className="h-4 w-4 rounded border-border text-[var(--primary)] focus:ring-transparent cursor-pointer"
                       />
                       Tampilkan Stok Sistem
                     </label>
@@ -417,7 +424,7 @@ export function BarangClient({
                     checked={allPageSelected}
                     onChange={toggleSelectAllPage}
                     aria-label="Pilih semua di halaman ini"
-                    className="h-4 w-4 rounded border-slate-300 text-[var(--primary)] focus:ring-[var(--primary)] cursor-pointer align-middle"
+                    className="h-4 w-4 rounded border-border text-[var(--primary)] focus:ring-[var(--primary)] cursor-pointer align-middle"
                   />
                 </Th>
               )}
@@ -425,7 +432,8 @@ export function BarangClient({
               <Th>Nama Barang</Th>
               <Th className="text-right">Harga Beli</Th>
               <Th className="text-right">Harga Jual</Th>
-              <Th className="text-right w-32">Stok</Th>
+              <Th className="text-right w-28">Stok Awal</Th>
+              <Th className="text-right w-32">Sisa Stok</Th>
               <Th className="text-right w-40">Total Aset</Th>
               <Th className="text-center w-28">Status</Th>
               <Th className="text-center w-28">Aksi</Th>
@@ -441,7 +449,7 @@ export function BarangClient({
                   onClick={() => openItemDetails(it)}
                   className={cn(
                     "cursor-pointer transition-colors duration-150 group",
-                    selectedIds.has(it.id) ? "bg-rose-50/70 hover:bg-rose-50" : "hover:bg-slate-50/50"
+                    selectedIds.has(it.id) ? "bg-rose-50/70 hover:bg-rose-50" : "hover:bg-[var(--surface-hover)]"
                   )}
                 >
                   {canEdit && (
@@ -451,19 +459,22 @@ export function BarangClient({
                         checked={selectedIds.has(it.id)}
                         onChange={() => toggleSelect(it.id)}
                         aria-label={`Pilih ${it.nama}`}
-                        className="h-4 w-4 rounded border-slate-300 text-[var(--primary)] focus:ring-[var(--primary)] cursor-pointer align-middle"
+                        className="h-4 w-4 rounded border-border text-[var(--primary)] focus:ring-[var(--primary)] cursor-pointer align-middle"
                       />
                     </Td>
                   )}
-                  <Td className="font-mono text-xs font-bold text-slate-800 group-hover:text-[var(--primary)]">
+                  <Td className="font-mono text-xs font-bold text-foreground group-hover:text-[var(--primary)]">
                     {it.kode}
                   </Td>
-                  <Td className="font-semibold text-slate-900">{it.nama}</Td>
+                  <Td className="font-semibold text-foreground">{it.nama}</Td>
                   <Td className="text-right font-mono text-xs">
                     {canEdit ? formatRupiah(it.hargaBeli) : "🔒 Dibatasi"}
                   </Td>
                   <Td className="text-right font-mono text-xs font-bold text-[var(--primary)]">
                     {formatRupiah(it.hargaJual)}
+                  </Td>
+                  <Td className="text-right font-mono text-xs text-[var(--text-soft)]">
+                    {it.stokAwal} unit
                   </Td>
                   <Td className="text-right">
                     <div className="flex items-center justify-end gap-1.5 font-mono text-xs font-bold">
@@ -473,7 +484,7 @@ export function BarangClient({
                       ) : isLow ? (
                         <span className="h-1.5 w-1.5 rounded-full bg-amber-500" />
                       ) : (
-                        <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
+                        <span className="h-1.5 w-1.5 rounded-full bg-primary-500" />
                       )}
                     </div>
                   </Td>
@@ -491,7 +502,7 @@ export function BarangClient({
                   <Td className="text-center" onClick={(e) => e.stopPropagation()}>
                     <button
                       onClick={() => openItemDetails(it)}
-                      className="flex h-9 w-9 items-center justify-center rounded-xl bg-slate-50 border border-border text-slate-500 hover:bg-[var(--primary)] hover:text-white transition mx-auto cursor-pointer"
+                      className="flex h-9 w-9 items-center justify-center rounded-xl bg-[var(--surface-2)] border border-border text-[var(--text-soft)] hover:bg-[var(--primary)] hover:text-white transition mx-auto cursor-pointer"
                     >
                       <Eye size={14} />
                     </button>
@@ -502,7 +513,7 @@ export function BarangClient({
 
             {paginatedItems.length === 0 && (
               <tr>
-                <Td colSpan={canEdit ? 9 : 8} className="py-16 text-center text-slate-400 select-none">
+                <Td colSpan={canEdit ? 10 : 9} className="py-16 text-center text-slate-400 select-none">
                   <Boxes className="mx-auto text-slate-200 mb-2" size={32} />
                   <p className="font-semibold text-sm">Barang Tidak Ditemukan</p>
                   <p className="text-xs">Katalog kosong atau pencarian tidak cocok.</p>
@@ -511,14 +522,14 @@ export function BarangClient({
             )}
           </tbody>
           {filteredItems.length > 0 && canEdit && (
-            <tfoot>
-              <tr className="bg-slate-50/80 font-bold">
-                <Td colSpan={6} className="text-right text-xs uppercase tracking-wider text-slate-500">
+          <tfoot>
+              <tr className="bg-[var(--surface-2)] font-bold">
+                <Td colSpan={7} className="text-right text-xs uppercase tracking-wider text-[var(--text-soft)]">
                   Total Nilai Aset Persediaan ({filteredItems.length} item)
                 </Td>
                 <Td className={cn(
                   "text-right font-mono text-sm font-extrabold",
-                  totalAset < 0 ? "text-rose-600" : "text-slate-900"
+                  totalAset < 0 ? "text-rose-600" : "text-foreground"
                 )}>
                   {formatRupiah(totalAset)}
                 </Td>
@@ -530,7 +541,7 @@ export function BarangClient({
 
       {/* Pagination controls */}
       {totalPages > 1 && (
-        <div className="flex justify-between items-center bg-white p-4.5 rounded-[18px] border border-border select-none">
+        <div className="flex justify-between items-center bg-card p-4.5 rounded-[18px] border border-border select-none">
           <p className="text-xs text-slate-500 font-semibold">
             Menampilkan halaman {currentPage} dari {totalPages} ({filteredItems.length} total item)
           </p>
@@ -565,7 +576,7 @@ export function BarangClient({
         {selectedItem && (
           <div className="space-y-6">
             {/* Quick Actions Panel */}
-            <div className="flex flex-wrap gap-2 border-b border-slate-100 pb-4">
+            <div className="flex flex-wrap gap-2 border-b border-border pb-4">
               {canEdit && (
                 <Button size="sm" variant="outline" onClick={() => handleEditProduct(selectedItem)}>
                   <Pencil size={13} className="text-slate-500" /> Ubah Detail
@@ -593,12 +604,12 @@ export function BarangClient({
 
             {/* General pricing & SKU info */}
             <div className="grid grid-cols-2 gap-4">
-              <div className="rounded-xl border border-border p-4 bg-slate-50/40">
-                <p className="text-[10px] font-bold text-slate-450 uppercase mb-1">Kode SKU Barang</p>
-                <p className="font-mono font-bold text-slate-800 text-sm">{selectedItem.kode}</p>
+              <div className="rounded-xl border border-border p-4 bg-[var(--surface-2)]">
+                <p className="text-[10px] font-bold text-[var(--text-muted-2)] uppercase mb-1">Kode SKU Barang</p>
+                <p className="font-mono font-bold text-foreground text-sm">{selectedItem.kode}</p>
               </div>
-              <div className="rounded-xl border border-border p-4 bg-slate-50/40">
-                <p className="text-[10px] font-bold text-slate-450 uppercase mb-1">Status Penjualan POS</p>
+              <div className="rounded-xl border border-border p-4 bg-[var(--surface-2)]">
+                <p className="text-[10px] font-bold text-[var(--text-muted-2)] uppercase mb-1">Status Penjualan POS</p>
                 <div className="mt-0.5">
                   <Badge tone={selectedItem.aktif ? "green" : "slate"}>
                     {selectedItem.aktif ? "Aktif" : "Diarsipkan"}
@@ -612,13 +623,13 @@ export function BarangClient({
               <Label>Struktur Harga</Label>
               <div className="grid grid-cols-2 gap-4 border border-border p-4 rounded-xl">
                 <div>
-                  <span className="text-[10px] font-bold text-slate-450 uppercase">Harga Modal (COGS)</span>
-                  <p className="font-bold font-mono text-slate-800 text-sm mt-1">
+                  <span className="text-[10px] font-bold text-[var(--text-muted-2)] uppercase">Harga Modal (COGS)</span>
+                  <p className="font-bold font-mono text-foreground text-sm mt-1">
                     {canEdit ? formatRupiah(selectedItem.hargaBeli) : "🔒 Dibatasi"}
                   </p>
                 </div>
                 <div>
-                  <span className="text-[10px] font-bold text-slate-450 uppercase">Harga Jual POS</span>
+                  <span className="text-[10px] font-bold text-[var(--text-muted-2)] uppercase">Harga Jual POS</span>
                   <p className="font-bold font-mono text-[var(--primary)] text-sm mt-1">
                     {formatRupiah(selectedItem.hargaJual)}
                   </p>
@@ -631,21 +642,21 @@ export function BarangClient({
               <Label>Informasi Ketersediaan Stok</Label>
               <div className="grid grid-cols-3 gap-3 border border-border p-4 rounded-xl text-xs font-semibold">
                 <div>
-                  <span className="text-slate-450 block mb-1">Stok Awal</span>
-                  <span className="text-slate-800 text-sm font-bold font-mono">{selectedItem.stokAwal} unit</span>
+                  <span className="text-[var(--text-muted-2)] block mb-1">Stok Awal</span>
+                  <span className="text-foreground text-sm font-bold font-mono">{selectedItem.stokAwal} unit</span>
                 </div>
                 <div>
-                  <span className="text-slate-450 block mb-1">Stok Saat Ini</span>
+                  <span className="text-[var(--text-muted-2)] block mb-1">Sisa Stok</span>
                   <span className={cn(
                     "text-sm font-bold font-mono",
-                    selectedItem.stok < 0 ? "text-red-650" : selectedItem.stok < selectedItem.minStok ? "text-amber-600" : "text-slate-800"
+                    selectedItem.stok < 0 ? "text-red-650" : selectedItem.stok < selectedItem.minStok ? "text-amber-600" : "text-foreground"
                   )}>
                     {selectedItem.stok} unit
                   </span>
                 </div>
                 <div>
-                  <span className="text-slate-450 block mb-1">Safety Stock (Min)</span>
-                  <span className="text-slate-800 text-sm font-bold font-mono">{selectedItem.minStok} unit</span>
+                  <span className="text-[var(--text-muted-2)] block mb-1">Safety Stock (Min)</span>
+                  <span className="text-foreground text-sm font-bold font-mono">{selectedItem.minStok} unit</span>
                 </div>
               </div>
             </div>
@@ -660,7 +671,7 @@ export function BarangClient({
               <div className="w-full">
                 <Table className="text-xs shadow-none">
                   <thead>
-                    <tr className="bg-slate-50 text-[10px] text-muted">
+                    <tr className="bg-[var(--surface-2)] text-[10px] text-muted">
                       <Th className="py-2.5">Tanggal</Th>
                       <Th className="py-2.5">Tipe</Th>
                       <Th className="py-2.5 text-right">Kuantitas</Th>
@@ -679,7 +690,7 @@ export function BarangClient({
                       </tr>
                     ) : (
                       itemHistory.map((h) => (
-                        <tr key={h.id} className="hover:bg-slate-50/50">
+                        <tr key={h.id} className="hover:bg-[var(--surface-hover)]">
                           <Td className="py-2">{formatTanggal(h.tanggal)}</Td>
                           <Td className="py-2 select-none">
                             {h.tipe === "MASUK" && <Badge tone="green" className="text-[8px]">IN</Badge>}
@@ -689,7 +700,7 @@ export function BarangClient({
                           </Td>
                           <Td className={cn(
                             "py-2 text-right font-bold font-mono",
-                            h.qty > 0 ? "text-emerald-600" : "text-red-500"
+                            h.qty > 0 ? "text-primary-600" : "text-red-500"
                           )}>
                             {h.qty > 0 ? `+${h.qty}` : h.qty}
                           </Td>
@@ -711,28 +722,28 @@ export function BarangClient({
       {/* 5. Stock Opname (SO) Print Preview Modal */}
       {canEdit && openSOPreview && (
         <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto overscroll-contain bg-black/55 p-4 backdrop-blur-xs no-print" onClick={() => setOpenSOPreview(false)}>
-          <div onClick={(e) => e.stopPropagation()} className="my-4 w-full overflow-hidden rounded-2xl bg-white shadow-2xl border border-border max-w-4xl">
+          <div onClick={(e) => e.stopPropagation()} className="my-4 w-full overflow-hidden rounded-2xl bg-card shadow-2xl border border-border max-w-4xl">
             <div className="flex items-center justify-between gap-2 border-b border-border px-4 py-3">
-              <p className="text-sm font-semibold text-slate-800">
+              <p className="text-sm font-semibold text-foreground">
                 Pratinjau Lembar Stock Opname (SO)
               </p>
               <div className="flex items-center gap-2">
                 <Button size="sm" onClick={() => printArea({ className: "print-format-a4" })}>
                   <Printer size={13} /> Cetak Sekarang (PDF)
                 </Button>
-                <button onClick={() => setOpenSOPreview(false)} className="flex h-8 w-8 items-center justify-center rounded-lg text-slate-450 hover:bg-slate-100 hover:text-slate-700 transition cursor-pointer">
+                <button onClick={() => setOpenSOPreview(false)} className="flex h-8 w-8 items-center justify-center rounded-lg text-[var(--text-muted-2)] hover:bg-[var(--surface-hover)] hover:text-foreground transition cursor-pointer">
                   <X size={16} />
                 </button>
               </div>
             </div>
             <div className="overflow-auto bg-[var(--paper-2)] p-6" style={{ maxHeight: "calc(100vh - 120px)" }}>
               {/* Document print area */}
-              <div className="so-sheet print-area mx-auto w-[800px] max-w-full origin-top overflow-hidden rounded-xl border border-border bg-white p-8 shadow-[0_4px_24px_-8px_rgba(15,23,42,0.18)]">
-                <div className="space-y-6 text-slate-900 font-sans">
+              <div className="so-sheet print-area print-a4-preview mx-auto origin-top overflow-visible rounded-xl border border-border bg-white p-8 shadow-[0_4px_24px_-8px_rgba(15,23,42,0.18)]">
+                <div className="space-y-6 text-[#10201e] font-sans">
                   {/* Header */}
                   <div className="so-header border-b-2 pb-4">
                     <h1 className="text-center text-xl font-bold uppercase tracking-wide">Lembar Stock Opname Gudang</h1>
-                    <p className="text-center text-xs mt-1">PUTRA CORPORATION HARDWARE</p>
+                    <p className="text-center text-xs mt-1">PUTRA CORPORATION SOFTWARE</p>
                     <div className="mt-4 grid grid-cols-2 text-xs">
                       <div>
                         <p>Tanggal Cetak: <span className="font-semibold">{formatTanggal(new Date().toISOString())}</span></p>
@@ -784,14 +795,14 @@ export function BarangClient({
                   </table>
 
                   {/* Signatures */}
-                  <div className="pt-8 grid grid-cols-2 text-center text-xs">
+                  <div className="pt-8 grid grid-cols-2 text-center text-xs text-[#60736f]">
                     <div>
-                      <p className="text-slate-500 mb-14">Petugas Gudang (Checker)</p>
-                      <div className="w-36 mx-auto border-b border-slate-400"></div>
+                      <p className="mb-14">Petugas Gudang (Checker)</p>
+                      <div className="w-36 mx-auto border-b border-[#94a3b8]"></div>
                     </div>
                     <div>
-                      <p className="text-slate-500 mb-14">Supervisor / Owner</p>
-                      <div className="w-36 mx-auto border-b border-slate-400"></div>
+                      <p className="mb-14">Supervisor / Owner</p>
+                      <div className="w-36 mx-auto border-b border-[#94a3b8]"></div>
                     </div>
                   </div>
                 </div>
@@ -801,24 +812,26 @@ export function BarangClient({
         </div>
       )}
       {/* 6. Barcode Label Print Preview Modal */}
-      {canEdit && openBarcodePreview && selectedItem && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 p-4 backdrop-blur-xs no-print" onClick={() => setOpenBarcodePreview(false)}>
-          <div onClick={(e) => e.stopPropagation()} className="w-full max-w-sm overflow-hidden rounded-2xl bg-white shadow-2xl border border-border anim-rise">
+      {canEdit && openBarcodePreview && selectedItem && typeof document !== "undefined" && createPortal(
+        <div
+          className="fixed inset-0 flex items-center justify-center bg-slate-900/40 p-4 backdrop-blur-xs no-print"
+          style={{ zIndex: 2147483001 }}
+          onClick={() => setOpenBarcodePreview(false)}
+        >
+          <div onClick={(e) => e.stopPropagation()} className="w-full max-w-sm overflow-hidden rounded-2xl bg-card shadow-2xl border border-border anim-rise">
             <div className="flex items-center justify-between border-b border-border px-4 py-3.5">
-              <h3 className="font-bold text-slate-900 text-sm">
+              <h3 className="font-bold text-foreground text-sm">
                 Pratinjau Label Barcode / QR
               </h3>
               <button onClick={() => setOpenBarcodePreview(false)} className="text-slate-400 hover:text-slate-700 transition cursor-pointer">
                 <X size={18} />
               </button>
             </div>
-            
-            {/* Preview Box */}
-            <div className="p-6 bg-slate-50 flex flex-col items-center justify-center min-h-[220px]">
-              <p className="text-xs text-slate-450 font-bold mb-3 uppercase">Tampilan Label (Stiker 50x30mm)</p>
-              
-              {/* This is the printable area */}
-              <div 
+
+            <div className="p-6 bg-[var(--surface-2)] flex flex-col items-center justify-center min-h-[220px]">
+              <p className="text-xs text-[var(--text-muted-2)] font-bold mb-3 uppercase">Tampilan Label (Stiker 50x30mm)</p>
+
+              <div
                 className="print-area"
                 style={{
                   backgroundColor: "#ffffff",
@@ -827,8 +840,8 @@ export function BarangClient({
                   margin: "0"
                 }}
               >
-                <table 
-                  className="font-sans" 
+                <table
+                  className="font-sans"
                   style={{
                     width: "250px",
                     height: "130px",
@@ -842,8 +855,7 @@ export function BarangClient({
                 >
                   <tbody>
                     <tr>
-                      {/* Left Column: QR Code + SKU */}
-                      <td 
+                      <td
                         style={{
                           width: "95px",
                           textAlign: "center",
@@ -853,20 +865,20 @@ export function BarangClient({
                         }}
                       >
                         {qrCodeUrl ? (
-                          <img 
-                            src={qrCodeUrl} 
+                          <img
+                            src={qrCodeUrl}
                             style={{
                               width: "75px",
                               height: "75px",
                               display: "inline-block",
                               objectFit: "contain"
-                            }} 
-                            alt="QR Code" 
+                            }}
+                            alt="QR Code"
                           />
                         ) : (
                           <div style={{ fontSize: "8px", fontWeight: "bold", color: "#666" }}>Memuat...</div>
                         )}
-                        <div 
+                        <div
                           style={{
                             fontSize: "8px",
                             fontFamily: "monospace",
@@ -879,16 +891,15 @@ export function BarangClient({
                           {selectedItem.kode}
                         </div>
                       </td>
-                      
-                      {/* Right Column: Name + Price */}
-                      <td 
+
+                      <td
                         style={{
                           verticalAlign: "middle",
                           padding: "8px 12px 8px 0px",
                           boxSizing: "border-box"
                         }}
                       >
-                        <div 
+                        <div
                           style={{
                             fontSize: "11px",
                             fontWeight: "900",
@@ -901,7 +912,7 @@ export function BarangClient({
                         >
                           {selectedItem.nama}
                         </div>
-                        <div 
+                        <div
                           style={{
                             fontSize: "12px",
                             fontWeight: "bold",
@@ -933,7 +944,8 @@ export function BarangClient({
               </Button>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
       {/* 7. Modal Konfirmasi Hapus Barang */}
@@ -944,14 +956,14 @@ export function BarangClient({
         >
           <div
             onClick={(e) => e.stopPropagation()}
-            className="w-full max-w-md rounded-2xl border border-border bg-white p-6 shadow-2xl anim-rise"
+            className="w-full max-w-md rounded-2xl border border-border bg-card p-6 shadow-2xl anim-rise"
           >
             <div className="flex items-start gap-3.5">
               <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-rose-100 text-rose-600">
                 <AlertTriangle size={22} />
               </div>
               <div className="flex-1">
-                <h3 className="text-base font-bold text-slate-900">Hapus barang ini?</h3>
+                <h3 className="text-base font-bold text-foreground">Hapus barang ini?</h3>
                 <p className="mt-1 text-sm text-slate-600">
                   Anda akan menghapus <b className="text-rose-700">{selectedIds.size} barang</b> secara permanen.
                   Tindakan ini <b>tidak bisa dibatalkan</b>.

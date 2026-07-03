@@ -39,7 +39,7 @@ export function DashboardCharts({ revenueTrend, topItems, projectSales, showMarg
     <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
       {/* Revenue & Margin Trend */}
       <div className={`rounded-lg border border-border bg-[var(--card)] p-6 shadow-[var(--shadow-card)] ${!showMargin ? "lg:col-span-2" : ""}`}>
-        <h3 className="mb-4 text-xs font-bold text-slate-800 uppercase tracking-wider">
+        <h3 className="mb-4 text-xs font-bold text-foreground dark:text-slate-200 uppercase tracking-wider">
           {showMargin ? "Tren Omset & Margin Kotor" : "Tren Omset"}
         </h3>
         <div className="h-72">
@@ -47,31 +47,31 @@ export function DashboardCharts({ revenueTrend, topItems, projectSales, showMarg
             <AreaChart data={revenueTrend} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
               <defs>
                 <linearGradient id="colorOmset" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor="#0f766e" stopOpacity={0.22} />
-                  <stop offset="95%" stopColor="#0f766e" stopOpacity={0} />
+                  <stop offset="5%" stopColor="#0284c7" stopOpacity={0.22} />
+                  <stop offset="95%" stopColor="#0284c7" stopOpacity={0} />
                 </linearGradient>
                 {showMargin && (
                   <linearGradient id="colorMargin" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#2563eb" stopOpacity={0.18} />
-                    <stop offset="95%" stopColor="#2563eb" stopOpacity={0} />
+                    <stop offset="5%" stopColor="#10b981" stopOpacity={0.18} />
+                    <stop offset="95%" stopColor="#10b981" stopOpacity={0} />
                   </linearGradient>
                 )}
               </defs>
-              <CartesianGrid strokeDasharray="3 3" stroke="#e9f0ed" />
+              <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
               <XAxis dataKey="tanggal" tick={{ fontSize: 10, fill: "#94a3b8" }} />
               <YAxis
                 tick={{ fontSize: 10, fill: "#94a3b8" }}
                 tickFormatter={(v) => (v >= 1_000_000 ? `${(v / 1_000_000).toFixed(1)}jt` : `${v / 1000}rb`)}
               />
               <Tooltip
-                contentStyle={{ backgroundColor: "#fff", border: "1px solid #e2e8f0", borderRadius: "12px", boxShadow: "0 4px 12px rgba(0,0,0,0.05)" }}
-                labelStyle={{ fontWeight: "bold", color: "#0f172a" }}
+                contentStyle={{ backgroundColor: "var(--card)", border: "1px solid var(--border)", borderRadius: "12px", boxShadow: "var(--shadow-card)", color: "var(--foreground)" }}
+                labelStyle={{ fontWeight: "bold", color: "var(--foreground)" }}
                 formatter={(v: unknown) => [formatRupiah(v as number), undefined]}
               />
               <Legend verticalAlign="top" height={36} iconType="circle" />
-              <Area name="Omset" type="monotone" dataKey="omset" stroke="#0f766e" strokeWidth={2.5} fillOpacity={1} fill="url(#colorOmset)" />
+              <Area name="Omset" type="monotone" dataKey="omset" stroke="#0284c7" strokeWidth={2.5} fillOpacity={1} fill="url(#colorOmset)" />
               {showMargin && (
-                <Area name="Margin" type="monotone" dataKey="margin" stroke="#2563eb" strokeWidth={2} fillOpacity={1} fill="url(#colorMargin)" />
+                <Area name="Margin" type="monotone" dataKey="margin" stroke="#10b981" strokeWidth={2} fillOpacity={1} fill="url(#colorMargin)" />
               )}
             </AreaChart>
           </ResponsiveContainer>
@@ -80,21 +80,21 @@ export function DashboardCharts({ revenueTrend, topItems, projectSales, showMarg
 
       {/* Sales by Project */}
       <div className="rounded-lg border border-border bg-[var(--card)] p-6 shadow-[var(--shadow-card)]">
-        <h3 className="mb-4 text-xs font-bold text-slate-800 uppercase tracking-wider">Omset Berdasarkan Proyek</h3>
+        <h3 className="mb-4 text-xs font-bold text-foreground dark:text-slate-200 uppercase tracking-wider">Omset Berdasarkan Proyek</h3>
         <div className="h-72">
           {projectSales.length === 0 ? (
             <div className="h-full flex items-center justify-center text-xs text-slate-400">Belum ada data penjualan proyek.</div>
           ) : (
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={projectSales} layout="vertical" margin={{ top: 10, right: 10, left: 10, bottom: 5 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#e9f0ed" horizontal={false} />
+                <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" horizontal={false} />
                 <XAxis type="number" tick={{ fontSize: 10, fill: "#94a3b8" }} tickFormatter={(v) => `${v / 1_000_000}jt`} />
                 <YAxis type="category" dataKey="nama" width={80} tick={{ fontSize: 10, fill: "#94a3b8" }} />
                 <Tooltip
-                  contentStyle={{ backgroundColor: "#fff", border: "1px solid #e2e8f0", borderRadius: "12px" }}
+                  contentStyle={{ backgroundColor: "var(--card)", border: "1px solid var(--border)", borderRadius: "12px", color: "var(--foreground)" }}
                   formatter={(v: unknown) => [formatRupiah(v as number), undefined]}
                 />
-                <Bar name="Omset" dataKey="total" fill="#0f766e" radius={[0, 6, 6, 0]} />
+                <Bar name="Omset" dataKey="total" fill="#0284c7" radius={[0, 6, 6, 0]} />
               </BarChart>
             </ResponsiveContainer>
           )}
@@ -103,18 +103,18 @@ export function DashboardCharts({ revenueTrend, topItems, projectSales, showMarg
 
       {/* Top Selling Items */}
       <div className="rounded-lg border border-border bg-[var(--card)] p-6 shadow-[var(--shadow-card)]">
-        <h3 className="mb-4 text-xs font-bold text-slate-800 uppercase tracking-wider">10 Barang Terlaris (Qty)</h3>
+        <h3 className="mb-4 text-xs font-bold text-foreground dark:text-slate-200 uppercase tracking-wider">10 Barang Terlaris (Qty)</h3>
         <div className="h-72 ">
           {topItems.length === 0 ? (
             <div className="h-full flex items-center justify-center text-xs text-slate-400">Belum ada data penjualan.</div>
           ) : (
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={topItems} margin={{ top: 10, right: 10, left: 0, bottom: 5 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#e9f0ed" vertical={false} />
+                <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" vertical={false} />
                 <XAxis dataKey="nama" tick={{ fontSize: 9, fill: "#94a3b8" }} />
                 <YAxis tick={{ fontSize: 10, fill: "#94a3b8" }} />
-                <Tooltip contentStyle={{ backgroundColor: "#fff", border: "1px solid #e2e8f0", borderRadius: "12px" }} />
-                <Bar name="Qty Terjual" dataKey="qty" fill="#0f766e" radius={[6, 6, 0, 0]} />
+                <Tooltip contentStyle={{ backgroundColor: "var(--card)", border: "1px solid var(--border)", borderRadius: "12px", color: "var(--foreground)" }} />
+                <Bar name="Qty Terjual" dataKey="qty" fill="#0284c7" radius={[6, 6, 0, 0]} />
               </BarChart>
             </ResponsiveContainer>
           )}
@@ -124,15 +124,15 @@ export function DashboardCharts({ revenueTrend, topItems, projectSales, showMarg
       {/* Margin Trend (%) */}
       {showMargin && (
         <div className="rounded-lg border border-border bg-[var(--card)] p-6 shadow-[var(--shadow-card)]">
-          <h3 className="mb-4 text-xs font-bold text-slate-800 uppercase tracking-wider">Tren Persentase Margin Kotor (%)</h3>
+          <h3 className="mb-4 text-xs font-bold text-foreground dark:text-slate-200 uppercase tracking-wider">Tren Persentase Margin Kotor (%)</h3>
           <div className="h-72">
             <ResponsiveContainer width="100%" height="100%">
               <LineChart data={revenueTrend.map(d => ({ ...d, marginPct: d.omset > 0 ? Math.round((d.margin / d.omset) * 100) : 0 }))} margin={{ top: 10, right: 10, left: 0, bottom: 5 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#e9f0ed" />
+                <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
                 <XAxis dataKey="tanggal" tick={{ fontSize: 10, fill: "#94a3b8" }} />
                 <YAxis tick={{ fontSize: 10, fill: "#94a3b8" }} tickFormatter={(v) => `${v}%`} />
                 <Tooltip
-                  contentStyle={{ backgroundColor: "#fff", border: "1px solid #e2e8f0", borderRadius: "12px" }}
+                  contentStyle={{ backgroundColor: "var(--card)", border: "1px solid var(--border)", borderRadius: "12px", color: "var(--foreground)" }}
                   formatter={(v: unknown) => [`${v as number}%`, "Margin (%)"]}
                 />
                 <Line name="Margin %" type="monotone" dataKey="marginPct" stroke="#f59e0b" strokeWidth={2.5} activeDot={{ r: 6 }} />

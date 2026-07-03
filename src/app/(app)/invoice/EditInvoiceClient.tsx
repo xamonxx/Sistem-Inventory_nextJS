@@ -165,13 +165,13 @@ export function EditInvoiceClient({ invoice, catalogItems }: EditInvoiceClientPr
       {/* Left Column: Metadata & Search catalog */}
       <div className="lg:col-span-2 space-y-6">
         {/* Metadata Card */}
-        <Card className="p-6 border border-slate-100 shadow-sm rounded-2xl">
-          <div className="flex items-center gap-2.5 pb-4 border-b border-slate-100">
+        <Card className="p-6 border border-border shadow-sm rounded-2xl">
+          <div className="flex items-center gap-2.5 pb-4 border-b border-border">
             <div className="p-2 bg-primary/10 rounded-xl text-primary">
               <FileText size={18} />
             </div>
             <div>
-              <h3 className="font-extrabold text-slate-800 tracking-tight text-sm uppercase">Detail Faktur &amp; Klien</h3>
+              <h3 className="font-extrabold text-foreground tracking-tight text-sm uppercase">Detail Faktur &amp; Klien</h3>
               <p className="text-[10px] text-slate-450 font-semibold mt-0.5">Informasi klien dan nomor faktur</p>
             </div>
           </div>
@@ -312,13 +312,13 @@ export function EditInvoiceClient({ invoice, catalogItems }: EditInvoiceClientPr
         </Card>
 
         {/* Item Search & Catalog Selector */}
-        <Card className="p-6 border border-slate-100 shadow-sm rounded-2xl">
-          <div className="flex items-center gap-2.5 pb-4 border-b border-slate-100">
+        <Card className="p-6 border border-border shadow-sm rounded-2xl">
+          <div className="flex items-center gap-2.5 pb-4 border-b border-border">
             <div className="p-2 bg-blue-50 text-blue-600 rounded-xl">
               <ShoppingBag size={18} />
             </div>
             <div>
-              <h3 className="font-extrabold text-slate-800 tracking-tight text-sm uppercase">Cari &amp; Tambah Barang</h3>
+              <h3 className="font-extrabold text-foreground tracking-tight text-sm uppercase">Cari &amp; Tambah Barang</h3>
               <p className="text-[10px] text-slate-450 font-semibold mt-0.5">Cari barang di katalog untuk ditambahkan ke faktur</p>
             </div>
           </div>
@@ -337,17 +337,17 @@ export function EditInvoiceClient({ invoice, catalogItems }: EditInvoiceClientPr
               className="pl-10 h-11 rounded-xl text-xs"
             />
             {showDropdown && searchQuery.trim() && (
-              <div className="absolute z-20 w-full mt-2 bg-white border border-slate-150 rounded-2xl shadow-xl max-h-60 overflow-y-auto divide-y divide-slate-100 animate-in fade-in slide-in-from-top-1 duration-150">
+              <div className="absolute z-20 w-full mt-2 bg-card border border-slate-150 rounded-2xl shadow-xl max-h-60 overflow-y-auto divide-y divide-border animate-in fade-in slide-in-from-top-1 duration-150">
                 {filteredCatalog.map((item) => (
                   <div
                     key={item.id}
                     onClick={() => handleAddItem(item)}
-                    className="flex justify-between items-center p-3.5 hover:bg-slate-50 cursor-pointer transition-colors text-xs"
+                    className="flex justify-between items-center p-3.5 hover:bg-slate-50 dark:hover:bg-slate-900 cursor-pointer transition-colors text-xs"
                   >
                     <div className="min-w-0 flex-1 pr-4">
-                      <p className="font-bold text-slate-800 truncate">{item.nama}</p>
+                      <p className="font-bold text-foreground truncate">{item.nama}</p>
                       <div className="flex items-center gap-2 mt-1">
-                        <span className="font-mono text-[9px] text-slate-400 bg-slate-100 px-1.5 py-0.5 rounded-md">{item.kode}</span>
+                        <span className="font-mono text-[9px] text-slate-400 bg-slate-100 dark:bg-slate-800 px-1.5 py-0.5 rounded-md">{item.kode}</span>
                         {item.stok > 10 ? (
                           <Badge tone="green" className="text-[8px] px-1.5 py-0.5">Stok: {item.stok}</Badge>
                         ) : item.stok > 0 ? (
@@ -358,7 +358,7 @@ export function EditInvoiceClient({ invoice, catalogItems }: EditInvoiceClientPr
                       </div>
                     </div>
                     <div className="flex items-center gap-3">
-                      <span className="font-mono font-extrabold text-slate-800">{formatRupiah(item.hargaJual)}</span>
+                      <span className="font-mono font-extrabold text-foreground">{formatRupiah(item.hargaJual)}</span>
                       <Button variant="outline" size="sm" className="h-7 w-7 p-0 flex items-center justify-center rounded-lg hover:bg-primary hover:text-white transition active:scale-90">
                         <Plus size={13} className="stroke-[2.5]" />
                       </Button>
@@ -377,13 +377,13 @@ export function EditInvoiceClient({ invoice, catalogItems }: EditInvoiceClientPr
       {/* Right Column: Checkout list & Summary - Sticky on Desktop */}
       <div className="space-y-6 lg:sticky lg:top-6">
         {/* Checkout List */}
-        <Card className="p-6 border border-slate-100 shadow-sm rounded-2xl">
-          <div className="flex items-center gap-2.5 pb-4 border-b border-slate-100">
+        <Card className="p-6 border border-border shadow-sm rounded-2xl">
+          <div className="flex items-center gap-2.5 pb-4 border-b border-border">
             <div className="p-2 bg-amber-50 text-amber-600 rounded-xl">
               <ShoppingCart size={18} />
             </div>
             <div>
-              <h3 className="font-extrabold text-slate-800 tracking-tight text-sm uppercase">Daftar Barang</h3>
+              <h3 className="font-extrabold text-foreground tracking-tight text-sm uppercase">Daftar Barang</h3>
               <p className="text-[10px] text-slate-450 font-semibold mt-0.5">Total {items.length} jenis barang</p>
             </div>
           </div>
@@ -401,8 +401,8 @@ export function EditInvoiceClient({ invoice, catalogItems }: EditInvoiceClientPr
                     isRetur
                       ? "bg-red-50/20 border-red-100/60"
                       : isGanti
-                      ? "bg-emerald-50/20 border-emerald-100/60"
-                      : "bg-slate-50/40 border-slate-200/60"
+                      ? "bg-primary-50/20 border-primary-100/60"
+                      : "bg-slate-50/40 border-border/60"
                   }`}
                 >
                   <div className="flex justify-between items-start gap-2">
@@ -410,25 +410,25 @@ export function EditInvoiceClient({ invoice, catalogItems }: EditInvoiceClientPr
                       <div className="flex items-center gap-1.5 flex-wrap">
                         {isRetur && <Badge tone="red" className="text-[8px] px-1.5 py-0.25">Retur</Badge>}
                         {isGanti && <Badge tone="green" className="text-[8px] px-1.5 py-0.25">Pengganti</Badge>}
-                        <p className="font-bold text-slate-800 truncate">{cleanNama}</p>
+                        <p className="font-bold text-foreground truncate">{cleanNama}</p>
                       </div>
                       <p className="font-mono text-[9px] text-slate-450">{item.kode} · {formatRupiah(item.harga)}</p>
                     </div>
                     <button
                       type="button"
                       onClick={() => handleRemoveItem(item.itemId, cleanNama)}
-                      className="flex h-7 w-7 items-center justify-center rounded-lg border border-red-200 bg-white text-red-650 hover:bg-red-50 transition cursor-pointer shrink-0 active:scale-95 shadow-xs"
+                      className="flex h-7 w-7 items-center justify-center rounded-lg border border-red-200 bg-card text-red-650 hover:bg-red-50 transition cursor-pointer shrink-0 active:scale-95 shadow-xs"
                       title="Batalkan barang (kembalikan ke stok)"
                     >
                       <Trash2 size={13} />
                     </button>
                   </div>
-                  <div className="flex items-center justify-between pt-2 border-t border-dashed border-slate-200/80">
-                    <div className="inline-flex items-center bg-white border border-slate-200 rounded-lg p-0.5 overflow-hidden shadow-xs">
+                  <div className="flex items-center justify-between pt-2 border-t border-dashed border-border/80">
+                    <div className="inline-flex items-center bg-card border border-border rounded-lg p-0.5 overflow-hidden shadow-xs">
                       <button
                         type="button"
                         onClick={() => handleQtyChange(item.itemId, item.qty - 1)}
-                        className="h-6 w-6 flex items-center justify-center font-bold text-slate-500 hover:bg-slate-100 hover:text-slate-800 rounded transition cursor-pointer active:scale-90"
+                        className="h-6 w-6 flex items-center justify-center font-bold text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800 hover:text-foreground rounded transition cursor-pointer active:scale-90"
                       >
                         -
                       </button>
@@ -442,12 +442,12 @@ export function EditInvoiceClient({ invoice, catalogItems }: EditInvoiceClientPr
                       <button
                         type="button"
                         onClick={() => handleQtyChange(item.itemId, item.qty + 1)}
-                        className="h-6 w-6 flex items-center justify-center font-bold text-slate-500 hover:bg-slate-100 hover:text-slate-800 rounded transition cursor-pointer active:scale-90"
+                        className="h-6 w-6 flex items-center justify-center font-bold text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800 hover:text-foreground rounded transition cursor-pointer active:scale-90"
                       >
                         +
                       </button>
                     </div>
-                    <p className={`font-mono font-extrabold ${isRetur ? "text-red-650" : "text-slate-800"}`}>
+                    <p className={`font-mono font-extrabold ${isRetur ? "text-red-650" : "text-foreground"}`}>
                       {isRetur ? "-" : ""}{formatRupiah(Math.abs(item.subtotal))}
                     </p>
                   </div>
@@ -466,13 +466,13 @@ export function EditInvoiceClient({ invoice, catalogItems }: EditInvoiceClientPr
         </Card>
 
         {/* Pricing Summary */}
-        <Card className="p-6 border border-slate-100 shadow-sm rounded-2xl space-y-4">
-          <div className="flex items-center gap-2.5 pb-4 border-b border-slate-100">
-            <div className="p-2 bg-emerald-50 text-emerald-600 rounded-xl">
+        <Card className="p-6 border border-border shadow-sm rounded-2xl space-y-4">
+          <div className="flex items-center gap-2.5 pb-4 border-b border-border">
+            <div className="p-2 bg-primary-50 text-primary-600 rounded-xl">
               <DollarSign size={18} />
             </div>
             <div>
-              <h3 className="font-extrabold text-slate-800 tracking-tight text-sm uppercase">Ringkasan Pembayaran</h3>
+              <h3 className="font-extrabold text-foreground tracking-tight text-sm uppercase">Ringkasan Pembayaran</h3>
               <p className="text-[10px] text-slate-450 font-semibold mt-0.5">Detail kalkulasi biaya &amp; piutang</p>
             </div>
           </div>
@@ -480,14 +480,14 @@ export function EditInvoiceClient({ invoice, catalogItems }: EditInvoiceClientPr
           <div className="space-y-3.5 text-xs text-slate-650 mt-4">
             <div className="flex justify-between items-center">
               <span className="font-medium text-slate-500">Subtotal Penjualan</span>
-              <span className="font-mono font-bold text-slate-800">{formatRupiah(subtotal)}</span>
+              <span className="font-mono font-bold text-foreground">{formatRupiah(subtotal)}</span>
             </div>
-            <div className="flex justify-between items-center text-emerald-600 bg-emerald-50/30 px-3 py-2 rounded-xl border border-emerald-100/30">
+            <div className="flex justify-between items-center text-primary-600 bg-primary-50/30 px-3 py-2 rounded-xl border border-primary-100/30">
               <span className="font-medium">Pembayaran Masuk</span>
               <span className="font-mono font-extrabold">− {formatRupiah(invoice.totalDibayar)}</span>
             </div>
-            <div className="pt-3.5 border-t border-dashed border-slate-200 flex justify-between items-center">
-              <span className="font-bold text-slate-800 uppercase tracking-wide">Sisa Piutang</span>
+            <div className="pt-3.5 border-t border-dashed border-border flex justify-between items-center">
+              <span className="font-bold text-foreground uppercase tracking-wide">Sisa Piutang</span>
               <span className="font-mono font-extrabold text-lg text-amber-700">{formatRupiah(sisa)}</span>
             </div>
           </div>
@@ -498,13 +498,13 @@ export function EditInvoiceClient({ invoice, catalogItems }: EditInvoiceClientPr
               <p>Invoice ini memiliki sisa piutang sebesar <strong>{formatRupiah(sisa)}</strong> yang perlu dilunasi oleh pelanggan.</p>
             </div>
           ) : (
-            <div className="flex items-start gap-2.5 p-3 bg-emerald-50/50 border border-emerald-100 rounded-xl text-emerald-800 text-[10px] leading-relaxed">
-              <CheckCircle2 size={14} className="shrink-0 text-emerald-600 mt-0.5" />
+            <div className="flex items-start gap-2.5 p-3 bg-primary-50/50 border border-primary-100 rounded-xl text-primary-800 text-[10px] leading-relaxed">
+              <CheckCircle2 size={14} className="shrink-0 text-primary-600 mt-0.5" />
               <p>Invoice ini telah <strong>LUNAS</strong> sepenuhnya. Klien tidak memiliki tanggungan piutang.</p>
             </div>
           )}
 
-          <div className="flex flex-col gap-2.5 pt-3 border-t border-slate-100">
+          <div className="flex flex-col gap-2.5 pt-3 border-t border-border">
             <Button
               type="submit"
               form="edit-invoice-form"
