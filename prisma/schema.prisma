@@ -15,6 +15,7 @@ datasource db {
 enum Role {
   ADMIN_KASIR
   ADMIN_GUDANG
+  ADMIN_NONGUDANG
 }
 
 model User {
@@ -302,6 +303,127 @@ model Payment {
   @@index([invoiceId])
   @@index([tanggal])
   @@map("payments")
+}
+
+// ============ NON-GUDANG (TRADING / RESELLER) ============
+// Modul terpisah: beli dari toko lain -> jual ke konsumen, fokus analisa margin.
+// TIDAK terkait StockLedger/Item/Transaction. Harga di-snapshot di detail invoice.
+
+model NgProduk {
+  id        Int      @id @default(autoincrement())
+  nama      String
+  namaToko  String // toko sumber
+  kategori  String?
+  satuan    String?
+  hargaBeli Decimal  @default(0) @db.Decimal(15, 2)
+  hargaJual Decimal  @default(0) @db.Decimal(15, 2)
+  aktif     Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  invoiceItems NgInvoiceItem[]
+  @@index([nama])
+  @@index([namaToko])
+  @@map("ng_produk")
+}
+
+model NgKonsumen {
+  id           Int      @id @default(autoincrement())
+  namaGrup     String?
+  nama         String
+  alamat       String?
+  namaWorkshop String?
+  createdAt    DateTime @default(now())
+
+  invoices NgInvoice[]
+  @@index([nama])
+  @@map("ng_konsumen")
+}
+
+enum NgInvoiceStatus {
+  PENDING // tempo, belum bayar (piutang penuh)
+  PARTIAL // sebagian dibayar
+  LUNAS
+}
+
+model NgInvoice {
+  id        Int             @id @default(autoincrement())
+  noInvoice String          @unique // NG-xxxxx
+  tanggal   DateTime        @default(now())
+  status    NgInvoiceStatus @default(PENDING)
+  namaToko  String // toko sumber tunggal utk seluruh invoice (1 toko per CO)
+
+  jatuhTempo DateTime? // TEMPO: tanggal + 7 hari (maks 1 minggu); LUNAS: null
+
+  konsumenId   Int?
+  namaKonsumen String? // snapshot free-text
+  namaGrup     String?
+  alamat       String?
+  namaWorkshop String?
+
+  // Info transfer (opsional, tampil di nota)
+  namaBank   String?
+  noRekening String?
+  atasNama   String?
+
+  totalModal     Decimal @default(0) @db.Decimal(15, 2)
+  totalPenjualan Decimal @default(0) @db.Decimal(15, 2)
+  totalProfit    Decimal @default(0) @db.Decimal(15, 2)
+  margin         Decimal @default(0) @db.Decimal(6, 2)
+  markup         Decimal @default(0) @db.Decimal(6, 2)
+  totalDibayar   Decimal @default(0) @db.Decimal(15, 2)
+
+  userId    Int?
+  createdAt DateTime @default(now())
+
+  konsumen NgKonsumen?     @relation(fields: [konsumenId], references: [id])
+  items    NgInvoiceItem[]
+  payments NgPayment[]
+  @@index([status])
+  @@index([tanggal])
+  @@index([namaToko])
+  @@map("ng_invoices")
+}
+
+model NgInvoiceItem {
+  id                Int     @id @default(autoincrement())
+  invoiceId         Int
+  produkId          Int?
+  namaSnapshot      String
+  namaTokoSnapshot  String?
+  hargaBeliSnapshot Decimal @db.Decimal(15, 2)
+  hargaJualSnapshot Decimal @db.Decimal(15, 2)
+  qty               Int
+  subtotalModal     Decimal @db.Decimal(15, 2) // hargaBeli * qty
+  subtotalPenjualan Decimal @db.Decimal(15, 2) // hargaJual * qty
+  subtotalProfit    Decimal @db.Decimal(15, 2) // penjualan - modal
+
+  invoice NgInvoice @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+  produk  NgProduk? @relation(fields: [produkId], references: [id])
+  @@index([invoiceId])
+  @@index([produkId])
+  @@map("ng_invoice_items")
+}
+
+enum NgPaymentType {
+  CASH
+  TRANSFER
+}
+
+model NgPayment {
+  id         Int           @id @default(autoincrement())
+  invoiceId  Int
+  tanggal    DateTime      @default(now())
+  tipe       NgPaymentType @default(CASH)
+  jumlah     Decimal       @db.Decimal(15, 2)
+  keterangan String?
+  userId     Int?
+  createdAt  DateTime      @default(now())
+
+  invoice NgInvoice @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+  @@index([invoiceId])
+  @@index([tanggal])
+  @@map("ng_payments")
 }
 
 // ============ AUDIT ============

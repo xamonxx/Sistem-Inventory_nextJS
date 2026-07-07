@@ -28,13 +28,21 @@ import { AppLogo } from "./AppLogo";
 type Item = { href: string; label: string; icon: React.ElementType; roles?: Role[] };
 
 const OPERASIONAL: Item[] = [
-  { href: "/", label: "Dashboard", icon: LayoutDashboard },
+  { href: "/", label: "Dashboard", icon: LayoutDashboard, roles: ["ADMIN_KASIR", "ADMIN_GUDANG"] },
   { href: "/kasir", label: "Kasir", icon: ShoppingCart, roles: ["ADMIN_KASIR"] },
   { href: "/retur", label: "Retur / Tukar", icon: RotateCcw, roles: ["ADMIN_KASIR", "ADMIN_GUDANG"] },
 ];
 
 const KEUANGAN: Item[] = [
-  { href: "/invoice", label: "Invoice", icon: FileText },
+  { href: "/invoice", label: "Invoice", icon: FileText, roles: ["ADMIN_KASIR", "ADMIN_GUDANG"] },
+];
+
+// Modul Non-Gudang (trading) — hanya ADMIN_NONGUDANG. Item ditambah per fase.
+const NON_GUDANG: Item[] = [
+  { href: "/non-gudang", label: "Dashboard", icon: LayoutDashboard, roles: ["ADMIN_NONGUDANG"] },
+  { href: "/non-gudang/barang", label: "Master Barang", icon: Boxes, roles: ["ADMIN_NONGUDANG"] },
+  { href: "/non-gudang/buat-invoice", label: "Keranjang CO", icon: ShoppingCart, roles: ["ADMIN_NONGUDANG"] },
+  { href: "/non-gudang/invoice", label: "Riwayat Invoice", icon: FileText, roles: ["ADMIN_NONGUDANG"] },
 ];
 
 const PERSEDIAAN: Item[] = [
@@ -66,6 +74,33 @@ function SidebarContent({
   const pathname = usePathname();
   const [isOpen, setIsOpen] = useState(false);
   const [isCollapsed, setIsCollapsed] = useState(defaultCollapsed);
+  const [isLogoutOpen, setIsLogoutOpen] = useState(false);
+  const [isLoggingOut, setIsLoggingOut] = useState(false);
+
+  useEffect(() => {
+    if (!isLogoutOpen) return;
+    function handleKey(e: KeyboardEvent) {
+      if (e.key === "Escape") setIsLogoutOpen(false);
+    }
+    document.addEventListener("keydown", handleKey);
+    return () => document.removeEventListener("keydown", handleKey);
+  }, [isLogoutOpen]);
+
+  const openLogoutModal = () => {
+    setIsOpen(false);
+    setIsLogoutOpen(true);
+  };
+
+  const confirmLogout = async () => {
+    if (isLoggingOut) return;
+    setIsLoggingOut(true);
+    try {
+      await logoutAction();
+    } finally {
+      setIsLoggingOut(false);
+      setIsLogoutOpen(false);
+    }
+  };
 
   useEffect(() => {
     setIsCollapsed(defaultCollapsed);
@@ -114,6 +149,7 @@ function SidebarContent({
               onClick={() => setIsOpen(false)}
               className={cn(
                 "group relative flex items-center rounded-xl px-3 py-2.5 text-xs font-medium transition-[background-color,color] duration-200 select-none w-full overflow-visible",
+                isCollapsed ? "lg:justify-center lg:px-0" : "",
                 active
                   ? "bg-white/[0.08] text-white font-semibold"
                   : "text-primary-50/55 hover:bg-white/[0.06] hover:text-white"
@@ -168,9 +204,15 @@ function SidebarContent({
         </span>
         <div className="flex items-center gap-2">
           <ThemeToggle />
-          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-white/10 text-xs font-bold text-white uppercase border border-white/10">
+          <button
+            type="button"
+            onClick={openLogoutModal}
+            className="flex h-10 w-10 items-center justify-center rounded-xl bg-white/10 text-xs font-bold text-white uppercase border border-white/10 transition hover:bg-white/20 cursor-pointer"
+            aria-label="Buka konfirmasi keluar"
+            title="Keluar"
+          >
             {initials}
-          </div>
+          </button>
         </div>
       </header>
 
@@ -187,7 +229,7 @@ function SidebarContent({
         className={cn(
           "no-print bg-[#071b2e] text-primary-50/80",
           "lg:fixed lg:left-0 lg:top-0 lg:bottom-0 lg:flex lg:h-screen lg:shrink-0 lg:flex-col lg:border-r lg:border-primary-950/70 lg:transition-[width] lg:duration-200 lg:ease-in-out lg:z-30",
-          isCollapsed ? "lg:w-[80px]" : "lg:w-[280px]",
+          isCollapsed ? "lg:w-[72px]" : "lg:w-[240px]",
           "max-lg:fixed max-lg:top-0 max-lg:left-0 max-lg:z-50 max-lg:h-[100dvh] max-lg:w-[min(300px,85vw)] flex flex-col max-lg:transition-transform max-lg:duration-200 max-lg:ease-in-out",
           isOpen ? "max-lg:translate-x-0" : "max-lg:-translate-x-full"
         )}
@@ -230,6 +272,7 @@ function SidebarContent({
           {renderSection("PERSEDIAAN", PERSEDIAAN)}
           {renderSection("ANALITIK", ANALITIK)}
           {renderSection("ADMINISTRASI", ADMINISTRASI)}
+          {renderSection("NON-GUDANG", NON_GUDANG)}
         </nav>
 
         {/* Desktop Collapse Toggle Row */}
@@ -240,7 +283,10 @@ function SidebarContent({
               setIsCollapsed(next);
               document.cookie = `si_sidebar_collapsed=${next}; path=/; max-age=${60 * 60 * 24 * 365}; SameSite=Lax`;
             }}
-            className="group relative flex items-center rounded-xl px-3 py-2.5 text-xs font-semibold text-primary-50/55 transition-[background-color,color] duration-200 hover:bg-white/[0.06] hover:text-white cursor-pointer w-full overflow-visible"
+            className={cn(
+              "group relative flex items-center rounded-xl px-3 py-2.5 text-xs font-semibold text-primary-50/55 transition-[background-color,color] duration-200 hover:bg-white/[0.06] hover:text-white cursor-pointer w-full overflow-visible",
+              isCollapsed ? "lg:justify-center lg:px-0" : ""
+            )}
           >
             <div className="flex items-center justify-center shrink-0 w-5 h-5">
               {isCollapsed ? <ChevronRight size={16} /> : <ChevronLeft size={16} />}
@@ -265,11 +311,16 @@ function SidebarContent({
           "border-t border-white/10 transition-all duration-200 pb-[max(0.75rem,env(safe-area-inset-bottom))]",
           isCollapsed ? "lg:overflow-visible p-2 lg:pb-2" : "overflow-hidden p-3 lg:pb-3"
         )}>
-          <div className={cn(
-            "flex items-center transition-all duration-200 w-full border rounded-xl",
-            isCollapsed ? "justify-center bg-transparent border-transparent p-0" : "bg-white/[0.06] border-white/10 p-2.5 gap-3"
-          )}>
-            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-white/10 text-xs font-bold text-white uppercase border border-white/10">
+          <button
+            type="button"
+            onClick={openLogoutModal}
+            aria-label="Buka konfirmasi keluar"
+            className={cn(
+              "group flex items-center transition-all duration-200 w-full border rounded-xl text-left cursor-pointer",
+              isCollapsed ? "justify-center bg-transparent border-transparent p-0" : "bg-white/[0.06] border-white/10 p-2.5 gap-3 hover:bg-white/[0.1]"
+            )}
+          >
+            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-white/10 text-xs font-bold text-white uppercase border border-white/10 transition group-hover:bg-white/20">
               {initials}
             </div>
             <div className={cn(
@@ -278,15 +329,12 @@ function SidebarContent({
             )}>
               <p className="truncate text-xs font-bold text-white">{nama}</p>
               <p className="text-[9px] font-bold uppercase tracking-wider text-primary-100/80 mt-0.5 select-none">
-                {role === "ADMIN_KASIR" ? "KASIR POS" : "GUDANG LOGISTIK"}
+                {role === "ADMIN_KASIR" ? "KASIR POS" : role === "ADMIN_NONGUDANG" ? "NON-GUDANG" : "GUDANG LOGISTIK"}
               </p>
             </div>
-          </div>
+          </button>
           <button
-            onClick={async () => {
-              setIsOpen(false);
-              await logoutAction();
-            }}
+            onClick={openLogoutModal}
             className={cn(
               "group relative flex items-center rounded-xl text-slate-400 transition-all duration-200 hover:text-rose-400 cursor-pointer w-full overflow-visible border",
               isCollapsed
@@ -312,6 +360,64 @@ function SidebarContent({
           </button>
         </div>
       </aside>
+
+      {/* Modal konfirmasi keluar */}
+      {isLogoutOpen && (
+        <div
+          className="fixed inset-0 z-[60] flex items-center justify-center bg-slate-900/50 p-4 backdrop-blur-xs animate-fade-in"
+          onClick={() => !isLoggingOut && setIsLogoutOpen(false)}
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="logout-title"
+            className="anim-rise w-full max-w-sm rounded-2xl border border-border bg-card p-6 shadow-2xl"
+          >
+            <div className="flex items-start gap-3">
+              <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-rose-500/10 text-rose-500 dark:bg-rose-500/15">
+                <LogOut size={20} />
+              </div>
+              <div className="min-w-0 flex-1">
+                <h3 id="logout-title" className="text-base font-bold text-foreground">
+                  Keluar dari Sistem?
+                </h3>
+                <p className="mt-1 text-xs leading-relaxed text-muted">
+                  Anda akan diarahkan ke halaman login. Pastikan pekerjaan sudah disimpan sebelum keluar.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => !isLoggingOut && setIsLogoutOpen(false)}
+                className="text-slate-400 transition hover:text-foreground cursor-pointer"
+                aria-label="Tutup"
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            <div className="mt-5 flex flex-col-reverse gap-2.5 sm:flex-row sm:justify-end">
+              <button
+                type="button"
+                onClick={() => setIsLogoutOpen(false)}
+                disabled={isLoggingOut}
+                className="h-10 w-full rounded-xl border border-border bg-card px-4 text-xs font-semibold text-foreground transition hover:bg-[var(--surface-hover)] disabled:cursor-not-allowed disabled:opacity-60 sm:w-auto cursor-pointer"
+              >
+                Batal
+              </button>
+              <button
+                type="button"
+                onClick={confirmLogout}
+                disabled={isLoggingOut}
+                className="h-10 w-full rounded-xl bg-rose-600 px-4 text-xs font-bold text-white transition hover:bg-rose-700 disabled:cursor-not-allowed disabled:opacity-60 sm:w-auto cursor-pointer inline-flex items-center justify-center gap-1.5"
+              >
+                <LogOut size={14} />
+                {isLoggingOut ? "Mengeluarkan…" : "Ya, Keluar"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </>
   );
 }

@@ -37,6 +37,9 @@ export type SessionUser = {
   role: Role;
 };
 
+// Daftar role yang sah untuk sesi. Tambahkan di sini bila ada role baru.
+const VALID_ROLES: readonly Role[] = ["ADMIN_KASIR", "ADMIN_GUDANG", "ADMIN_NONGUDANG"];
+
 export async function createSession(user: SessionUser) {
   const token = await new SignJWT({ ...user })
     .setProtectedHeader({ alg: "HS256" })
@@ -72,7 +75,8 @@ export async function getSession(): Promise<SessionUser | null> {
       typeof payload.id !== "number" ||
       typeof payload.username !== "string" ||
       typeof payload.nama !== "string" ||
-      (payload.role !== "ADMIN_KASIR" && payload.role !== "ADMIN_GUDANG")
+      typeof payload.role !== "string" ||
+      !VALID_ROLES.includes(payload.role as Role)
     ) {
       return null;
     }

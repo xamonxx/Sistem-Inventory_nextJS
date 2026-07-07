@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import { useState, useMemo, useEffect, useTransition, type ReactNode } from "react";
 import { useRouter, usePathname } from "next/navigation";
@@ -1007,9 +1007,9 @@ export function LaporanClient({ role, userName, periodeLabel, initialFrom, initi
       {/* ===== KPI cards ===== */}
       <section className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <StatCard icon={TrendingUp} tone="emerald" label="Total Pendapatan" value={formatRupiah(totalOmset)} hint="Akumulasi omset penjualan" />
-        <StatCard icon={BarChart3} tone="blue" label="Margin Keuntungan" value={isGudang ? formatRupiah(totalMargin) : "ðŸ”’ Dibatasi"} hint="Laba kotor setelah modal" />
+        <StatCard icon={BarChart3} tone="blue" label="Margin Keuntungan" value={isGudang ? formatRupiah(totalMargin) : "🔒 Dibatasi"} hint="Laba kotor setelah modal" />
         <StatCard icon={Wallet} tone="amber" label="Outstanding Piutang" value={formatRupiah(totalPiutang)} hint="Tagihan belum tertagih" />
-        <StatCard icon={Archive} tone="slate" label="Nilai Aset Persediaan" value={isGudang ? formatRupiah(totalAsetValue) : "ðŸ”’ Dibatasi"} hint="Valuasi stok gudang" />
+        <StatCard icon={Archive} tone="slate" label="Nilai Aset Persediaan" value={isGudang ? formatRupiah(totalAsetValue) : "🔒 Dibatasi"} hint="Valuasi stok gudang" />
       </section>
 
       {/* ====================== RINGKASAN ====================== */}
@@ -1106,7 +1106,7 @@ export function LaporanClient({ role, userName, periodeLabel, initialFrom, initi
                   {warningStok.length === 0 && (
                     <tr>
                       <Td colSpan={4} className="py-12 text-center text-sm text-slate-400">
-                        Semua stok aman. Tidak ada barang di bawah limit. ðŸ‘
+                        Semua stok aman. Tidak ada barang di bawah limit. 👍
                       </Td>
                     </tr>
                   )}
@@ -1357,7 +1357,7 @@ export function LaporanClient({ role, userName, periodeLabel, initialFrom, initi
               {!mounted ? (
                 <ChartSkeleton h={260} />
               ) : agingPie.length === 0 ? (
-                <EmptyChart h={260} text="Tidak ada piutang outstanding. ðŸ‘" />
+                <EmptyChart h={260} text="Tidak ada piutang outstanding. 👍" />
               ) : (
                 <ResponsiveContainer width="100%" height={240}>
                   <PieChart>
@@ -1421,7 +1421,7 @@ export function LaporanClient({ role, userName, periodeLabel, initialFrom, initi
                         </Td>
                         <Td className="text-right font-mono text-[var(--text-soft)]">{formatRupiah(p.total)}</Td>
                         <Td className={cn("text-right font-mono font-bold", p.status === "LUNAS" ? "text-slate-400" : "text-rose-600")}>
-                          {p.status === "LUNAS" ? "â€”" : formatRupiah(p.sisa)}
+                          {p.status === "LUNAS" ? "—" : formatRupiah(p.sisa)}
                         </Td>
                         <Td className="text-center">
                           <Badge tone={badgeColor}>{p.status === "LUNAS" ? "LUNAS" : p.ageGroup}</Badge>
@@ -1537,7 +1537,7 @@ export function LaporanClient({ role, userName, periodeLabel, initialFrom, initi
                   ))}
                   {inventoryHealth.slowMoving.length === 0 && (
                     <tr>
-                      <Td colSpan={4} className="py-12 text-center text-sm text-slate-400">Perputaran semua barang normal/baik. ðŸ‘</Td>
+                      <Td colSpan={4} className="py-12 text-center text-sm text-slate-400">Perputaran semua barang normal/baik. 👍</Td>
                     </tr>
                   )}
                 </tbody>
@@ -1564,9 +1564,9 @@ export function LaporanClient({ role, userName, periodeLabel, initialFrom, initi
                     <Td className="font-mono text-xs text-slate-400">{s.kode}</Td>
                     <Td className="font-semibold text-slate-700">{s.nama}</Td>
                     <Td className="text-right font-mono font-bold text-slate-600">{s.stokAkhir} pcs</Td>
-                    <Td className="text-right font-mono text-xs text-slate-500">{isGudang ? formatRupiah(s.hargaBeli) : "ðŸ”’"}</Td>
+                    <Td className="text-right font-mono text-xs text-slate-500">{isGudang ? formatRupiah(s.hargaBeli) : "🔒"}</Td>
                     <Td className="text-right font-mono text-xs text-slate-500">{formatRupiah(s.hargaJual)}</Td>
-                    <Td className="text-right font-mono font-semibold text-foreground">{isGudang ? formatRupiah(s.nilaiAset) : "ðŸ”’ Dibatasi"}</Td>
+                    <Td className="text-right font-mono font-semibold text-foreground">{isGudang ? formatRupiah(s.nilaiAset) : "🔒 Dibatasi"}</Td>
                   </tr>
                 ))}
               </tbody>

@@ -1,12 +1,13 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { Plus, ShoppingCart, Boxes, FileText, RotateCcw } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 export function FloatingActionButton({ role }: { role?: string }) {
   const router = useRouter();
+  const pathname = usePathname();
   const [isOpen, setIsOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
 
@@ -23,6 +24,7 @@ export function FloatingActionButton({ role }: { role?: string }) {
 
   const allActions = [
     { label: "POS Transaksi Baru", icon: ShoppingCart, color: "text-primary-700 dark:text-primary-300 bg-primary-50 dark:bg-primary-950/40", link: "/kasir", roles: ["ADMIN_KASIR"] },
+    { label: "CO Non-Gudang Baru", icon: FileText, color: "text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-950/40", link: "/non-gudang/buat-invoice", roles: ["ADMIN_NONGUDANG"] },
     { label: "Tambah Barang Baru", icon: Boxes, color: "text-primary-600 dark:text-primary-400 bg-primary-50 dark:bg-primary-950/40", link: "/barang?new=true", roles: ["ADMIN_GUDANG"] },
     { label: "Buat Invoice Baru", icon: FileText, color: "text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-950/40", link: "/kasir?type=PROJECT", roles: ["ADMIN_KASIR"] },
     { label: "Proses Retur / Tukar", icon: RotateCcw, color: "text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-950/40", link: "/retur", roles: ["ADMIN_KASIR", "ADMIN_GUDANG"] },
@@ -36,10 +38,10 @@ export function FloatingActionButton({ role }: { role?: string }) {
   }
 
   // If there are no actions for the user's role, don't render the FAB at all
-  if (actions.length === 0) return null;
+  if (pathname === "/non-gudang/buat-invoice" || actions.length === 0) return null;
 
   return (
-    <div ref={menuRef} className="no-print pointer-events-none fixed bottom-6 right-6 z-40 hidden flex-col items-end md:flex">
+    <div ref={menuRef} className="no-print pointer-events-none fixed bottom-6 right-6 z-30 hidden flex-col items-end md:flex">
       {/* Floating Menu list */}
       <div
         className={cn(

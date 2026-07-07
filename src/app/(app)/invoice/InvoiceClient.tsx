@@ -446,23 +446,24 @@ export function InvoiceClient({ initialInvoices, canBayar, userName }: InvoiceCl
       </section>
 
       {/* 2. Filter & Actions Toolbar */}
-      <Card className="p-4 space-y-4">
-        <div className="flex flex-col gap-4 sm:flex-row sm:items-center justify-between">
-          <div className="flex-1 relative">
-            <Search size={16} className="absolute left-3 top-3 text-slate-400" />
+      <Card className="rounded-2xl border border-border/90 p-4 md:p-5">
+        <div className="flex flex-col gap-3 lg:flex-row lg:flex-nowrap lg:items-center lg:gap-3">
+          <div className="relative w-full min-w-0 lg:w-[320px] lg:shrink-0 xl:w-[360px]">
+            <Search size={17} className="absolute left-4 top-1/2 -translate-y-1/2 text-[var(--text-muted-2)]" />
             <Input
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               maxLength={FIELD_LIMITS.search}
-              placeholder="Cari berdasarkan Nomor Invoice, Klien, atau nama Proyek..."
-              className="pl-9 h-10 rounded-xl"
+              placeholder="Cari invoice, klien..."
+              className="h-11 rounded-2xl pl-11 pr-4"
             />
           </div>
-          <div className="grid w-full grid-cols-1 gap-2.5 sm:flex sm:w-auto sm:flex-wrap sm:items-center">
+
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:flex lg:flex-nowrap lg:items-center lg:gap-3">
             <Select
               value={statusFilter}
               onChange={(e) => setStatusFilter(e.target.value)}
-              className="h-10 w-full rounded-xl text-xs font-bold sm:w-44"
+              className="h-11 w-full rounded-2xl text-xs font-bold sm:w-[200px] lg:shrink-0"
             >
               <option value="ALL">Semua Tagihan</option>
               <option value="PENDING">Belum Lunas (Pending)</option>
@@ -470,13 +471,19 @@ export function InvoiceClient({ initialInvoices, canBayar, userName }: InvoiceCl
               <option value="DRAFT">Draft</option>
             </Select>
 
-            <PeriodFilter onChange={setDateRange} align="right" className="w-full sm:w-auto" />
+            <PeriodFilter
+              onChange={setDateRange}
+              align="right"
+              className="w-full sm:w-auto lg:shrink-0"
+            />
+          </div>
 
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:ml-auto lg:flex lg:flex-nowrap lg:items-center lg:gap-3">
             <Button
               variant="outline"
               size="sm"
               onClick={() => setShowConfig(!showConfig)}
-              className="h-11 rounded-xl px-3 sm:h-10"
+              className="h-11 w-full rounded-2xl px-4 sm:w-auto lg:shrink-0"
             >
               <SlidersHorizontal size={14} /> Kolom
             </Button>
@@ -486,7 +493,7 @@ export function InvoiceClient({ initialInvoices, canBayar, userName }: InvoiceCl
               size="sm"
               onClick={handleExportExcel}
               disabled={exporting}
-              className="h-11 rounded-xl px-3 gap-1.5 border-primary-200 bg-primary-50 text-primary-700 hover:bg-primary-100 disabled:opacity-60 disabled:cursor-not-allowed sm:h-10"
+              className="h-11 w-full rounded-2xl border-primary-200 bg-primary-50 px-4 text-primary-700 hover:bg-primary-100 disabled:cursor-not-allowed disabled:opacity-60 sm:w-auto lg:shrink-0"
             >
               <Download size={14} /> {exporting ? "Mengekspor..." : "Export Excel"}
             </Button>
@@ -496,7 +503,7 @@ export function InvoiceClient({ initialInvoices, canBayar, userName }: InvoiceCl
                 variant="danger"
                 size="sm"
                 onClick={() => setIsBulkDeleteConfirmOpen(true)}
-                className="h-11 rounded-xl px-4 gap-1.5 font-bold animate-fade-in bg-red-600 hover:bg-red-700 text-white border-transparent cursor-pointer sm:h-10"
+                className="h-11 w-full rounded-2xl bg-red-600 px-4 font-bold text-white hover:bg-red-700 sm:w-auto lg:shrink-0"
               >
                 <Trash2 size={14} /> Hapus Terpilih ({selectedInvoiceIds.length})
               </Button>
@@ -914,7 +921,7 @@ export function InvoiceClient({ initialInvoices, canBayar, userName }: InvoiceCl
                       max={FIELD_LIMITS.maxMoney}
                       value={paymentAmount || ""}
                       onChange={(e) => setPaymentAmount(parseInt(e.target.value) || 0)}
-                      placeholder="Ketik nominal cicilan..."
+                      placeholder="Nominal cicilan"
                       className="h-10 w-full pl-9 pr-4 rounded-xl border border-border bg-card font-mono font-bold text-xs outline-none transition-all focus:border-[var(--primary)] focus:ring-4 focus:ring-[var(--primary)]/10"
                     />
                   </div>

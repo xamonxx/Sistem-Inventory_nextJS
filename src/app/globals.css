@@ -52,6 +52,9 @@
   --bg-glow-2: rgba(168, 85, 247, 0.04);
   --row-hover: #f8fafc;
   --topnav-bg: rgba(251, 253, 252, 0.86);
+  --scrollbar-track: rgba(215, 226, 223, 0.45);
+  --scrollbar-thumb: rgba(96, 115, 111, 0.46);
+  --scrollbar-thumb-hover: rgba(2, 132, 199, 0.72);
 }
 
 .dark {
@@ -82,6 +85,9 @@
   --bg-glow-2: rgba(37, 99, 235, 0.04);
   --row-hover: rgba(255, 255, 255, 0.03);
   --topnav-bg: rgba(9, 20, 34, 0.86);
+  --scrollbar-track: rgba(14, 165, 233, 0.12);
+  --scrollbar-thumb: #0ea5e9;
+  --scrollbar-thumb-hover: #38bdf8;
 }
 
 
@@ -147,6 +153,20 @@ body {
 
 body {
   min-width: 320px;
+}
+
+/* Ratakan tampilan autofill browser dengan tema aplikasi (hindari kotak biru default Chrome) */
+input:-webkit-autofill,
+input:-webkit-autofill:hover,
+input:-webkit-autofill:focus,
+input:-webkit-autofill:active,
+textarea:-webkit-autofill,
+select:-webkit-autofill {
+  -webkit-box-shadow: 0 0 0 1000px var(--card) inset !important;
+  box-shadow: 0 0 0 1000px var(--card) inset !important;
+  -webkit-text-fill-color: var(--foreground) !important;
+  caret-color: var(--foreground);
+  transition: background-color 5000s ease-in-out 0s;
 }
 
 .app-shell-bg {
@@ -411,23 +431,31 @@ h3,
 /* Thin custom scrollbar */
 * {
   scrollbar-width: thin;
-  scrollbar-color: #cbd5e1 transparent;
+  scrollbar-color: var(--scrollbar-thumb) var(--scrollbar-track);
 }
 
 /* Scrollbar styles for webkit browsers */
 ::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
+  width: 10px;
+  height: 10px;
 }
 ::-webkit-scrollbar-track {
-  background: transparent;
+  background: var(--scrollbar-track);
+  border-radius: 999px;
 }
 ::-webkit-scrollbar-thumb {
-  background: #cbd5e1;
-  border-radius: 3px;
+  min-height: 44px;
+  border: 2px solid transparent;
+  border-radius: 999px;
+  background: var(--scrollbar-thumb);
+  background-clip: content-box;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: #94a3b8;
+  background: var(--scrollbar-thumb-hover);
+  background-clip: content-box;
+}
+::-webkit-scrollbar-corner {
+  background: transparent;
 }
 
 /* Enterprise invoice document uses Inter per brand brief */
@@ -1232,11 +1260,11 @@ body:has(#search-item) .no-print.fixed.bottom-6.right-6 {
   .app-shell-main {
     transition: margin-left 0.2s ease-in-out;
   }
-  aside.lg\:w-\[280px\] ~ .app-shell-main {
-    margin-left: 280px;
+  aside.lg\:w-\[240px\] ~ .app-shell-main {
+    margin-left: 240px;
   }
-  aside.lg\:w-\[80px\] ~ .app-shell-main {
-    margin-left: 80px;
+  aside.lg\:w-\[72px\] ~ .app-shell-main {
+    margin-left: 72px;
   }
 }
 

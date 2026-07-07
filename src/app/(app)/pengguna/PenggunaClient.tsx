@@ -324,7 +324,7 @@ export function PenggunaClient({
                       onChange={(e) => setNewPasswordVal(e.target.value)}
                       minLength={FIELD_LIMITS.passwordMin}
                       maxLength={FIELD_LIMITS.passwordMax}
-                      placeholder={`Masukkan password baru (min ${FIELD_LIMITS.passwordMin} karakter)...`}
+                      placeholder={`Password baru (min ${FIELD_LIMITS.passwordMin} karakter)`}
                       className="pr-12 bg-card rounded-xl shadow-xs"
                     />
                     <button

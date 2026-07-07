@@ -227,7 +227,7 @@ export function EditInvoiceClient({ invoice, catalogItems }: EditInvoiceClientPr
                   maxLength={FIELD_LIMITS.alamat}
                   value={metadata.alamat}
                   onChange={(e) => setMetadata({ ...metadata, alamat: e.target.value })}
-                  placeholder="Alamat pelanggan..."
+                  placeholder="Alamat pelanggan"
                   className="pl-10 font-bold text-xs"
                 />
               </div>
@@ -243,7 +243,7 @@ export function EditInvoiceClient({ invoice, catalogItems }: EditInvoiceClientPr
                   maxLength={FIELD_LIMITS.namaWs}
                   value={metadata.namaWs}
                   onChange={(e) => setMetadata({ ...metadata, namaWs: e.target.value })}
-                  placeholder="Nama bengkel..."
+                  placeholder="Nama bengkel"
                   className="pl-10 font-bold text-xs"
                 />
               </div>
@@ -301,7 +301,7 @@ export function EditInvoiceClient({ invoice, catalogItems }: EditInvoiceClientPr
                       maxLength={FIELD_LIMITS.atasNama}
                       value={metadata.atasNama}
                       onChange={(e) => setMetadata({ ...metadata, atasNama: e.target.value })}
-                      placeholder="Nama pemilik rekening"
+                      placeholder="Atas nama"
                       className="pl-10 font-bold text-xs"
                     />
                   </div>
@@ -333,7 +333,7 @@ export function EditInvoiceClient({ invoice, catalogItems }: EditInvoiceClientPr
                 setShowDropdown(true);
               }}
               onFocus={() => setShowDropdown(true)}
-              placeholder="Cari nama barang atau kode barang untuk di-checkout..."
+              placeholder="Cari nama atau kode barang..."
               className="pl-10 h-11 rounded-xl text-xs"
             />
             {showDropdown && searchQuery.trim() && (

@@ -23,8 +23,8 @@ export function Button({
     warning: "bg-[var(--warning)] text-white hover:brightness-105 shadow-sm active:scale-[0.98]",
   };
   const sizes = {
-    sm: "h-11 min-h-11 px-4 text-xs font-medium rounded-[10px] sm:h-9 sm:min-h-9",
-    md: "h-11 px-5 text-sm font-semibold rounded-[12px]",
+    sm: "h-11 min-h-11 px-4 text-xs font-medium rounded-md sm:h-9 sm:min-h-9",
+    md: "h-11 px-5 text-sm font-semibold rounded-md",
   };
   return (
     <button
@@ -46,7 +46,7 @@ export const Input = React.forwardRef<HTMLInputElement, React.InputHTMLAttribute
       <input
         ref={ref}
         className={cn(
-          "h-11 w-full rounded-[12px] border border-border bg-card px-4 text-sm text-foreground outline-none transition-all",
+          "h-11 w-full rounded-md border border-border bg-card px-4 text-sm text-foreground outline-none transition-all",
           "focus:border-[var(--primary)] focus:ring-4 focus:ring-[var(--primary)]/10",
           "disabled:bg-[var(--surface-2)] disabled:text-[var(--text-muted-2)] placeholder:text-[var(--text-muted-2)]",
           className
@@ -64,7 +64,7 @@ export const Textarea = React.forwardRef<HTMLTextAreaElement, React.TextareaHTML
       <textarea
         ref={ref}
         className={cn(
-          "w-full rounded-[12px] border border-border bg-card px-4 py-2.5 text-sm text-foreground outline-none transition-all resize-y",
+          "w-full rounded-md border border-border bg-card px-4 py-2.5 text-sm text-foreground outline-none transition-all resize-y",
           "focus:border-[var(--primary)] focus:ring-4 focus:ring-[var(--primary)]/10",
           "disabled:bg-[var(--surface-2)] disabled:text-[var(--text-muted-2)] placeholder:text-[var(--text-muted-2)]",
           className
@@ -142,7 +142,7 @@ function splitClasses(className?: string) {
   if (!className) {
     return {
       wrapperClasses: "w-full",
-      buttonClasses: "h-11 rounded-[12px]",
+      buttonClasses: "h-11 rounded-md",
     };
   }
 
@@ -185,7 +185,7 @@ function splitClasses(className?: string) {
   }
 
   if (!hasHeight) buttonWords.push("h-11");
-  if (!hasRounded) buttonWords.push("rounded-[12px]");
+  if (!hasRounded) buttonWords.push("rounded-md");
 
   return {
     wrapperClasses: wrapperWords.join(" "),
@@ -201,11 +201,15 @@ export function Select({
   onChange,
   name,
   required,
+  hideChevron,
+  displayValue,
   ...props
 }: Omit<React.SelectHTMLAttributes<HTMLSelectElement>, "value" | "onChange"> & {
   value?: string | number;
   defaultValue?: string | number;
   onChange?: (e: React.ChangeEvent<HTMLSelectElement>) => void;
+  hideChevron?: boolean;
+  displayValue?: React.ReactNode;
 }) {
   const options = React.useMemo(() => {
     return React.Children.toArray(children)
@@ -281,7 +285,7 @@ export function Select({
   const hasText = buttonClasses.split(/\s+/).some((w) => w.startsWith("text-"));
 
   return (
-    <div ref={containerRef} className={cn("relative inline-block", wrapperClasses)}>
+    <div ref={containerRef} className={cn("relative inline-block", isOpen ? "z-[45]" : "z-0", wrapperClasses)}>
       <select
         ref={hiddenSelectRef}
         name={name}
@@ -307,7 +311,8 @@ export function Select({
         type="button"
         onClick={() => setIsOpen(!isOpen)}
         className={cn(
-          "flex w-full items-center justify-between px-4 text-sm font-medium text-left outline-none transition-all cursor-pointer shadow-[0_1px_2px_rgba(0,0,0,0.05)] select-none",
+          "flex w-full items-center px-4 text-sm font-medium text-left outline-none transition-all cursor-pointer shadow-[0_1px_2px_rgba(0,0,0,0.05)] select-none",
+          hideChevron ? "justify-center" : "justify-between",
           !hasBorder && "border border-border hover:border-[var(--line-strong)]",
           !hasBg && "bg-card hover:bg-[var(--surface-hover)]",
           "focus:border-[var(--primary)] focus:ring-4 focus:ring-[var(--primary)]/10",
@@ -315,12 +320,14 @@ export function Select({
           buttonClasses
         )}
       >
-        <span className={cn("truncate", !hasText && "text-foreground")}>{displayLabel}</span>
-        <ChevronDown size={16} className={cn("text-[var(--text-muted-2)] transition-transform duration-200 ml-2 flex-shrink-0", isOpen && "rotate-180")} />
+        <span className={cn("truncate", !hasText && "text-foreground")}>{displayValue ?? displayLabel}</span>
+        {!hideChevron && (
+          <ChevronDown size={16} className={cn("text-[var(--text-muted-2)] transition-transform duration-200 ml-2 flex-shrink-0", isOpen && "rotate-180")} />
+        )}
       </button>
 
       {isOpen && (
-        <div className="absolute left-0 right-0 z-[9999] mt-2 max-h-60 overflow-y-auto rounded-[12px] border border-border bg-card p-1.5 shadow-[0_10px_25px_-5px_rgba(0,0,0,0.1),0_8px_10px_-6px_rgba(0,0,0,0.1)] animate-in fade-in duration-100 ease-out">
+          <div className="absolute left-0 z-[46] mt-2 max-h-60 w-max min-w-full max-w-[calc(100vw-2rem)] overflow-y-auto rounded-md border border-border bg-card p-1.5 shadow-[0_18px_45px_-18px_rgba(15,23,42,0.45)] animate-in fade-in duration-100 ease-out">
           {options.length === 0 ? (
             <div className="px-3 py-2 text-xs text-slate-400 text-center">Tidak ada pilihan</div>
           ) : (
@@ -333,11 +340,11 @@ export function Select({
                   onClick={() => handleSelect(opt.value)}
                   disabled={opt.disabled}
                   className={cn(
-                    "flex w-full items-center justify-between rounded-[8px] px-3 py-2 text-left text-xs font-semibold text-[var(--text-soft)] transition-all select-none hover:bg-[var(--surface-hover)] hover:text-foreground cursor-pointer disabled:opacity-50 disabled:pointer-events-none",
+                  "flex w-full items-center justify-between rounded-md px-3 py-2 text-left text-xs font-semibold text-[var(--text-soft)] transition-all select-none hover:bg-[var(--surface-hover)] hover:text-foreground cursor-pointer disabled:opacity-50 disabled:pointer-events-none",
                     isSelected && "bg-[var(--primary)]/10 text-[var(--primary)] hover:bg-[var(--primary)]/15 hover:text-[var(--primary)]"
                   )}
                 >
-                  <span className="truncate">{opt.label}</span>
+                  <span className="whitespace-nowrap pr-3">{opt.label}</span>
                   {isSelected && <Check size={14} className="text-[var(--primary)] flex-shrink-0 ml-2" />}
                 </button>
               );
@@ -389,7 +396,7 @@ export function Badge({
   return (
     <span
       className={cn(
-        "inline-flex items-center gap-1 rounded-full px-3 py-1 text-xs font-semibold leading-none whitespace-nowrap",
+        "inline-flex items-center gap-1 rounded-md px-3 py-1 text-xs font-semibold leading-none whitespace-nowrap",
         tones[tone],
         className
       )}
@@ -398,11 +405,36 @@ export function Badge({
   );
 }
 
-export function Table({ children, className }: { children: React.ReactNode; className?: string }) {
+export function Table({
+  children,
+  className,
+  variant = "card",
+}: {
+  children: React.ReactNode;
+  className?: string;
+  variant?: "card" | "plain";
+}) {
+  const wrapperClass =
+    variant === "plain"
+      ? "max-w-full overflow-hidden"
+      : [
+          "max-w-full overflow-hidden rounded-md border border-slate-300/80 bg-white",
+          "shadow-[0_18px_55px_-42px_rgba(15,23,42,0.65)]",
+          "dark:border-slate-700 dark:bg-slate-900",
+        ].join(" ");
+
   return (
-    <div className={cn("max-w-full overflow-hidden rounded-lg border border-border bg-[var(--card)] shadow-[var(--shadow-card)]", className)}>
+    <div className={cn(wrapperClass, className)}>
       <div className="w-full overflow-x-auto overscroll-x-contain">
-        <table className="min-w-max w-full border-collapse text-sm [&_thead_th]:sticky [&_thead_th]:top-0 [&_thead_th]:z-10">
+        <table
+          className={cn(
+            "min-w-max w-full border-collapse text-sm",
+            "[&_thead_th]:sticky [&_thead_th]:top-0 [&_thead_th]:z-10",
+            "[&_tbody_tr:nth-child(even)]:bg-slate-50/70 dark:[&_tbody_tr:nth-child(even)]:bg-slate-900/55",
+            "[&_tbody_tr]:transition-colors [&_tbody_tr:hover]:bg-sky-50/80 dark:[&_tbody_tr:hover]:bg-sky-950/25",
+            "[&_tbody_tr:last-child_td]:border-b-0"
+          )}
+        >
           {children}
         </table>
       </div>
@@ -414,7 +446,11 @@ export function Th({ className, ...props }: React.ThHTMLAttributes<HTMLTableCell
   return (
     <th
       className={cn(
-        "h-[52px] border-b border-border bg-[var(--surface-2)] px-5 text-left text-xs font-semibold uppercase tracking-[0.05em] text-[var(--text-muted-2)] font-sans",
+        [
+          "h-[52px] border-b border-slate-300 bg-slate-100 px-5 text-left font-sans",
+          "text-xs font-black uppercase tracking-[0.08em] text-slate-600",
+          "dark:border-slate-700 dark:bg-slate-800/85 dark:text-slate-300",
+        ].join(" "),
         className
       )}
       {...props}
@@ -426,7 +462,10 @@ export function Td({ className, ...props }: React.TdHTMLAttributes<HTMLTableCell
   return (
     <td
       className={cn(
-        "h-16 border-b border-border dark:border-border px-5 align-middle text-sm font-medium text-foreground dark:text-slate-200 font-sans",
+        [
+          "h-16 border-b border-slate-200 px-5 align-middle font-sans",
+          "text-sm font-medium text-slate-900 dark:border-slate-800 dark:text-slate-100",
+        ].join(" "),
         className
       )}
       {...props}

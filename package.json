@@ -14,6 +14,7 @@
     "prisma:migrate": "prisma migrate dev",
     "prisma:push": "prisma db push",
     "db:seed": "tsx prisma/seed.ts",
+    "db:seed:ng": "tsx prisma/seedNonGudang.ts",
     "db:seed:200": "tsx prisma/seed-200.ts",
     "db:clear": "tsx prisma/clear.ts",
     "db:audit:stock": "tsx scripts/fix-stock-seed-duplication.ts",

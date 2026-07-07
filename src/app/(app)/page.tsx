@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { requireUser } from "@/lib/auth";
 import { getStokAkhirMap } from "@/lib/stock";
@@ -49,6 +50,12 @@ export default async function DashboardPage({
   searchParams: Promise<{ from?: string; to?: string; mode?: string }>;
 }) {
   const user = await requireUser();
+
+  // Role non-gudang punya dashboard sendiri
+  if (user.role === "ADMIN_NONGUDANG") {
+    redirect("/non-gudang");
+  }
+
   const params = await searchParams;
 
   const now = new Date();
@@ -307,28 +314,32 @@ export default async function DashboardPage({
             </div>
           )}
 
-          <form className="flex w-full flex-wrap items-center gap-2 xl:w-auto">
-            <DatePicker
-              name="from"
-              defaultValue={params.from ?? ""}
-              className="h-11 min-w-[145px] flex-1 text-xs font-semibold sm:flex-none sm:w-40"
-            />
-            <span className="text-xs text-slate-400 font-bold">s/d</span>
-            <DatePicker
-              name="to"
-              defaultValue={params.to ?? ""}
-              align="right"
-              className="h-11 min-w-[145px] flex-1 text-xs font-semibold sm:flex-none sm:w-40"
-            />
+          <form className="flex w-full flex-col gap-2 xl:w-auto xl:flex-row xl:flex-wrap xl:items-center">
+            <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-2 xl:contents">
+              <DatePicker
+                name="from"
+                defaultValue={params.from ?? ""}
+                className="h-11 min-w-0 text-xs font-semibold xl:w-40 xl:flex-none"
+              />
+              <span className="text-center text-xs font-bold text-slate-400 xl:px-0.5">s/d</span>
+              <DatePicker
+                name="to"
+                defaultValue={params.to ?? ""}
+                align="right"
+                className="h-11 min-w-0 text-xs font-semibold xl:w-40 xl:flex-none"
+              />
+            </div>
             {params.mode && <input type="hidden" name="mode" value={params.mode} />}
-            <button className="h-11 flex-1 rounded-lg bg-[var(--primary)] px-5 text-xs font-bold text-white shadow-md shadow-primary-900/10 transition hover:bg-[var(--primary-strong)] cursor-pointer sm:flex-none">
-              Saring
-            </button>
-            {params.from || params.to ? (
-              <Link href={isOwnerMode ? "/?mode=owner" : "/"} className="flex h-11 flex-1 items-center justify-center rounded-lg border border-border bg-card dark:bg-card px-3 text-xs font-bold text-slate-600 dark:text-slate-400 shadow-xs hover:bg-slate-50 dark:hover:bg-slate-900 sm:flex-none">
-                Reset
-              </Link>
-            ) : null}
+            <div className="flex gap-2">
+              <button className="h-11 flex-1 rounded-lg bg-[var(--primary)] px-5 text-xs font-bold text-white shadow-md shadow-primary-900/10 transition hover:bg-[var(--primary-strong)] cursor-pointer xl:flex-none">
+                Saring
+              </button>
+              {params.from || params.to ? (
+                <Link href={isOwnerMode ? "/?mode=owner" : "/"} className="flex h-11 flex-1 items-center justify-center rounded-lg border border-border bg-card dark:bg-card px-3 text-xs font-bold text-slate-600 dark:text-slate-400 shadow-xs hover:bg-slate-50 dark:hover:bg-slate-900 xl:flex-none">
+                  Reset
+                </Link>
+              ) : null}
+            </div>
           </form>
         </div>
         </div>

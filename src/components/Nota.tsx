@@ -10,6 +10,7 @@ export type NotaData = {
   noReturn?: string | null;
   noInvoice?: string | null;
   tanggal: string;
+  jatuhTempo?: string | null;
   namaClient?: string | null;
   alamat?: string | null;
   namaWs?: string | null;
@@ -19,8 +20,10 @@ export type NotaData = {
   items: NotaItem[];
   total: number;
   bayar?: number; // uang diterima (tunai), opsional
+  sisaTagihan?: number; // sisa piutang/tagihan setelah pembayaran masuk
   kembali?: number; // uang kembalian, opsional
   judul?: string;
+  metodePembayaran?: string;
   catatan?: string;
   verifyUrl?: string | null;
   qrDataUrl?: string | null;
@@ -51,7 +54,7 @@ function renderItemName(name: string, isThermal: boolean = false) {
   return <span className="leading-tight">{name}</span>;
 }
 
-export function Nota({ data }: { data: NotaData }) {
+export function Nota({ data, showKode = true }: { data: NotaData; showKode?: boolean }) {
   const [generatedQr, setGeneratedQr] = useState("");
 
   useEffect(() => {
@@ -78,12 +81,23 @@ export function Nota({ data }: { data: NotaData }) {
   const dueDate = new Date(data.tanggal);
   dueDate.setDate(dueDate.getDate() + 30);
 
+  const pembayaranMasuk = Math.max(0, data.bayar ?? 0);
+  const sisaTagihan =
+    data.sisaTagihan != null ? Math.max(0, data.sisaTagihan) : Math.max(0, data.total - pembayaranMasuk);
+
   // Status mapping
-  const isCredit = data.catatan?.toLowerCase().includes("credit") || data.catatan?.toLowerCase().includes("tempo");
+  const isPartial = pembayaranMasuk > 0 && sisaTagihan > 0;
+  const isCredit =
+    sisaTagihan > 0 ||
+    data.catatan?.toLowerCase().includes("credit") ||
+    data.catatan?.toLowerCase().includes("tempo") ||
+    data.catatan?.toLowerCase().includes("piutang");
   const isReturn = data.total < 0;
-  const belumBayar = data.bayar != null && data.bayar <= 0 && data.total > 0;
+  const belumBayar = pembayaranMasuk <= 0 && data.total > 0;
   const stat = isReturn
     ? { label: "RETUR", fg: "#3730A3", bg: "#E0E7FF" }
+    : isPartial
+    ? { label: "SEBAGIAN", fg: "#1D4ED8", bg: "#DBEAFE" }
     : isCredit
     ? { label: "TEMPO", fg: "#991B1B", bg: "#FEE2E2" }
     : belumBayar
@@ -110,6 +124,7 @@ export function Nota({ data }: { data: NotaData }) {
           {data.noReturn && <Row k="No. Retur" v={data.noReturn} />}
           {data.noInvoice && <Row k="No. Invoice" v={data.noInvoice} />}
           <Row k="Tanggal" v={formatTanggal(data.tanggal)} />
+          {data.jatuhTempo && sisaTagihan > 0 && <Row k="Jatuh Tempo" v={formatTanggal(data.jatuhTempo)} />}
           {data.namaClient && <Row k="Pelanggan" v={data.namaClient} />}
           {data.alamat && <Row k="Alamat" v={data.alamat} />}
           {data.namaWs && <Row k="Bengkel (WS)" v={data.namaWs} />}
@@ -149,10 +164,16 @@ export function Nota({ data }: { data: NotaData }) {
             <span>{data.total < 0 ? "REFUND" : "TOTAL AKHIR"}</span>
             <span>{formatRupiah(Math.abs(data.total))}</span>
           </div>
-          {data.bayar != null && (
+          {pembayaranMasuk > 0 && (
             <div className="mt-1 flex justify-between">
-              <span>Tunai Diterima</span>
-              <span>{formatRupiah(data.bayar)}</span>
+              <span>Pembayaran Masuk</span>
+              <span>{formatRupiah(pembayaranMasuk)}</span>
+            </div>
+          )}
+          {sisaTagihan > 0 && (
+            <div className="mt-1 flex justify-between font-bold">
+              <span>Sisa Tagihan</span>
+              <span>{formatRupiah(sisaTagihan)}</span>
             </div>
           )}
           {data.kembali != null && (
@@ -235,7 +256,8 @@ export function Nota({ data }: { data: NotaData }) {
               <dl className="mt-1.5 space-y-1 text-[10px]">
                 {[
                   ["Tanggal Invoice", formatTanggal(data.tanggal)],
-                  ["Metode Pembayaran", data.catatan?.includes("Split") ? "Split Payment" : data.catatan?.includes("Kredit") ? "Kredit / Tempo" : "Tunai / Transfer"],
+                  ...(data.jatuhTempo && sisaTagihan > 0 ? [["Jatuh Tempo", formatTanggal(data.jatuhTempo)]] : []),
+                  ["Metode Pembayaran", data.metodePembayaran ?? (data.catatan?.includes("Split") ? "Split Payment" : data.catatan?.includes("Kredit") ? "Kredit / Tempo" : "Tunai / Transfer")],
                   ["Status", stat.label],
                 ].map(([k, v]) => (
                   <div key={k} className="flex justify-between gap-3">
@@ -259,36 +281,36 @@ export function Nota({ data }: { data: NotaData }) {
           <div className="inv-table-wrap mt-6">
             <table className="inv-table w-full border-collapse text-[10px]">
               <colgroup>
-                <col style={{ width: "12%" }} />
-                <col style={{ width: "37%" }} />
-                <col style={{ width: "8%" }} />
-                <col style={{ width: "10%" }} />
-                <col style={{ width: "16.5%" }} />
-                <col style={{ width: "16.5%" }} />
+                {showKode && <col style={{ width: "12%" }} />}
+                <col style={{ width: showKode ? "37%" : "42%" }} />
+                <col style={{ width: "9%" }} />
+                <col style={{ width: "11%" }} />
+                <col style={{ width: showKode ? "16.5%" : "19%" }} />
+                <col style={{ width: showKode ? "16.5%" : "19%" }} />
               </colgroup>
               <thead>
                 <tr className="bg-[#1E293B] text-white">
-                  <th className="h-[34px] px-3 text-left text-[10px] font-semibold uppercase tracking-wide">Kode</th>
-                  <th className="px-3 text-left text-[10px] font-semibold uppercase tracking-wide">Nama Barang</th>
-                  <th className="px-3 text-center text-[10px] font-semibold uppercase tracking-wide">Qty</th>
-                  <th className="px-3 text-center text-[10px] font-semibold uppercase tracking-wide">Satuan</th>
-                  <th className="px-3 text-right text-[10px] font-semibold uppercase tracking-wide">Harga</th>
-                  <th className="px-3 text-right text-[10px] font-semibold uppercase tracking-wide">Subtotal</th>
+                  {showKode && <th className="h-[36px] px-4 text-left text-[10px] font-semibold uppercase tracking-wide whitespace-nowrap">Kode</th>}
+                  <th className="h-[36px] px-4 text-left text-[10px] font-semibold uppercase tracking-wide whitespace-nowrap">Nama Barang</th>
+                  <th className="h-[36px] px-3 text-center text-[10px] font-semibold uppercase tracking-wide whitespace-nowrap">Qty</th>
+                  <th className="h-[36px] px-3 text-center text-[10px] font-semibold uppercase tracking-wide whitespace-nowrap">Satuan</th>
+                  <th className="h-[36px] px-4 text-right text-[10px] font-semibold uppercase tracking-wide whitespace-nowrap">Harga</th>
+                  <th className="h-[36px] px-4 text-right text-[10px] font-semibold uppercase tracking-wide whitespace-nowrap">Subtotal</th>
                 </tr>
               </thead>
               <tbody>
                 {data.items.map((it, i) => (
                   <tr key={i} className="border-b border-[#E5E7EB]">
-                    <td className="h-[28px] px-3 font-mono font-semibold text-[#0284c7]">{it.kode ?? "-"}</td>
-                    <td className="h-[28px] px-3 font-medium text-[#111827]">{renderItemName(it.nama)}</td>
-                    <td className="h-[28px] px-3 text-center font-semibold tabular-nums">{it.qty}</td>
-                    <td className="h-[28px] px-3 text-center text-[#64748B]">Unit</td>
-                    <td className="h-[28px] px-3 text-right tabular-nums text-[#334155]">{formatRupiah(it.harga)}</td>
-                    <td className="h-[28px] px-3 text-right font-semibold tabular-nums text-[#111827]">{formatRupiah(it.subtotal)}</td>
+                    {showKode && <td className="h-[32px] px-4 font-mono font-semibold text-[#0284c7]">{it.kode ?? "-"}</td>}
+                    <td className="h-[32px] px-4 font-medium text-[#111827]">{renderItemName(it.nama)}</td>
+                    <td className="h-[32px] px-3 text-center font-semibold tabular-nums">{it.qty}</td>
+                    <td className="h-[32px] px-3 text-center text-[#64748B]">Unit</td>
+                    <td className="h-[32px] px-4 text-right tabular-nums text-[#334155]">{formatRupiah(it.harga)}</td>
+                    <td className="h-[32px] px-4 text-right font-semibold tabular-nums text-[#111827]">{formatRupiah(it.subtotal)}</td>
                   </tr>
                 ))}
                 {data.items.length === 0 && (
-                  <tr><td colSpan={6} className="px-3 py-6 text-center text-[#94A3B8]">Tidak ada rincian item.</td></tr>
+                  <tr><td colSpan={showKode ? 6 : 5} className="px-4 py-6 text-center text-[#94A3B8]">Tidak ada rincian item.</td></tr>
                 )}
               </tbody>
             </table>
@@ -324,10 +346,16 @@ export function Nota({ data }: { data: NotaData }) {
                   <span>Subtotal</span>
                   <span className="tabular-nums">{formatRupiah(Math.abs(data.total))}</span>
                 </div>
-                {lunas && (
-                  <div className="flex justify-between text-[#475569]">
+                {pembayaranMasuk > 0 && (
+                  <div className="hidden">
                     <span>Pembayaran Masuk</span>
                     <span className="tabular-nums">− {formatRupiah(Math.abs(data.total))}</span>
+                  </div>
+                )}
+                {pembayaranMasuk > 0 && (
+                  <div className="flex justify-between text-[#475569]">
+                    <span>Pembayaran Masuk</span>
+                    <span className="tabular-nums">- {formatRupiah(pembayaranMasuk)}</span>
                   </div>
                 )}
               </div>
@@ -336,7 +364,7 @@ export function Nota({ data }: { data: NotaData }) {
                   {lunas ? "Total Lunas" : "Sisa Tagihan"}
                 </span>
                 <span className="text-[20px] font-bold leading-none tabular-nums text-[#111827]">
-                  {formatRupiah(Math.abs(data.total))}
+                  {formatRupiah(lunas ? Math.abs(data.total) : sisaTagihan)}
                 </span>
               </div>
               <p className="mt-1 text-right text-[9px] text-[#94A3B8]">

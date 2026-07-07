@@ -326,22 +326,22 @@ export function BarangClient({
       </section>
 
       {/* 2. Filters Toolbar */}
-      <Card className="flex flex-col gap-4 sm:flex-row sm:items-center p-4">
-        <div className="flex-1 relative">
+      <Card className="flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:gap-4">
+        <div className="relative w-full sm:flex-1">
           <Search size={16} className="absolute left-3 top-3 text-slate-400" />
           <Input
             value={q}
             onChange={(e) => setQ(e.target.value)}
             maxLength={FIELD_LIMITS.search}
-            placeholder="Cari berdasarkan Kode SKU, Barcode, Nama Plywood..."
+            placeholder="Cari SKU, barcode, atau nama..."
             className="pl-9 h-10 rounded-xl"
           />
         </div>
-        <div className="flex flex-wrap items-center gap-2.5">
+        <div className="grid grid-cols-1 gap-2.5 sm:flex sm:flex-wrap sm:items-center">
           <Select
             value={statusFilter}
             onChange={(e) => setStatusFilter(e.target.value as any)}
-            className="h-10 w-40 rounded-xl text-xs font-bold"
+            className="h-10 w-full rounded-xl text-xs font-bold sm:w-40"
           >
             <option value="ALL">Semua Status</option>
             <option value="ACTIVE">Aktif (POS)</option>
@@ -351,7 +351,7 @@ export function BarangClient({
           <Select
             value={stockCondition}
             onChange={(e) => setStockCondition(e.target.value as any)}
-            className="h-10 w-44 rounded-xl text-xs font-bold"
+            className="h-10 w-full rounded-xl text-xs font-bold sm:w-44"
           >
             <option value="ALL">Semua Kondisi Stok</option>
             <option value="LOW">Stok Menipis</option>
@@ -359,16 +359,16 @@ export function BarangClient({
           </Select>
 
           {canEdit && (
-            <>
+            <div className="flex items-stretch gap-2.5 sm:contents">
               <Button
                 onClick={() => setOpenSOPreview(true)}
                 variant="outline"
-                className="h-10 rounded-xl px-4 text-xs font-bold gap-2"
+                className="h-10 flex-1 rounded-xl px-4 text-xs font-bold gap-2 sm:flex-none"
               >
                 <Printer size={14} /> Lembar SO (PDF)
               </Button>
 
-              <div ref={soOptionsRef} className="relative">
+              <div ref={soOptionsRef} className="relative shrink-0">
                 <Button
                   onClick={() => setShowSOOptions(!showSOOptions)}
                   variant="outline"
@@ -392,7 +392,7 @@ export function BarangClient({
                   </div>
                 )}
               </div>
-            </>
+            </div>
           )}
         </div>
       </Card>

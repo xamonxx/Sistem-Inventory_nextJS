@@ -423,7 +423,7 @@ export function ReturClient({
                   onKeyDown={(e) => {
                     if (e.key === "Enter") handleFindTrx();
                   }}
-                  placeholder="mis. PC00001, INV-00007, atau nama pelanggan"
+                  placeholder="Kode transaksi atau nama pelanggan"
                   className="h-11 pl-10"
                 />
               </div>
@@ -494,7 +494,7 @@ export function ReturClient({
                       setReturnPage(1);
                     }}
                     maxLength={FIELD_LIMITS.search}
-                    placeholder="Cari nama atau kode barang..."
+                    placeholder="Cari nama atau kode barang"
                     className="h-10 pl-10 text-xs"
                   />
                 </div>
@@ -586,7 +586,7 @@ export function ReturClient({
                   value={alasan}
                   onChange={(e) => setAlasan(e.target.value)}
                   maxLength={FIELD_LIMITS.alasan}
-                  placeholder="mis. salah beli ukuran, cacat fisik plywood"
+                  placeholder="mis. salah ukuran, cacat fisik"
                 />
               </div>
               <div className="flex items-center justify-between rounded-xl border border-primary-100 dark:border-primary-500/25 bg-primary-50 dark:bg-primary-500/10 p-4">
@@ -635,7 +635,7 @@ export function ReturClient({
                   value={repQuery}
                   onChange={(e) => setRepQuery(e.target.value)}
                   maxLength={FIELD_LIMITS.search}
-                  placeholder="Cari berdasarkan kode / nama barang pengganti..."
+                  placeholder="Cari kode atau nama barang pengganti..."
                   className="h-11 pl-10"
                 />
               </div>

@@ -97,6 +97,7 @@ export function CommandPalette({ role }: { role: Role }) {
 
   const allQuickActions = [
     { title: "Transaksi POS Baru (Kasir)", subtitle: "Mulai transaksi eceran atau proyek", icon: ShoppingCart, link: "/kasir", roles: ["ADMIN_KASIR"] },
+    { title: "Keranjang CO Non-Gudang", subtitle: "Susun barang toko sumber & buat invoice NG", icon: ShoppingCart, link: "/non-gudang/buat-invoice", roles: ["ADMIN_NONGUDANG"] },
     { title: "Master Barang & Plywood", subtitle: "Lihat katalog barang dan harga jual", icon: Boxes, link: "/barang", roles: ["ADMIN_GUDANG"] },
     { title: "Input Stok / Restok Barang", subtitle: "Tambah mutasi masuk material baru", icon: PackagePlus, link: "/stok", roles: ["ADMIN_GUDANG"] },
     { title: "Retur / Tukar Barang", subtitle: "Proses pengembalian atau penggantian barang", icon: RotateCcw, link: "/retur", roles: ["ADMIN_KASIR", "ADMIN_GUDANG"] },
@@ -128,7 +129,7 @@ export function CommandPalette({ role }: { role: Role }) {
             onChange={(e) => setQuery(e.target.value)}
             onKeyDown={handleKeyDown}
             maxLength={80}
-            placeholder="Cari barang, invoice, klien, proyek, atau aksi..."
+            placeholder="Cari barang, invoice, klien, atau aksi..."
             className="w-full bg-transparent text-foreground dark:text-slate-100 outline-none placeholder:text-slate-450 dark:placeholder:text-slate-500 text-base"
           />
           <kbd className="hidden sm:inline-flex h-5 items-center gap-1 rounded border border-border dark:border-slate-800 bg-slate-50 dark:bg-slate-900 px-1.5 font-mono text-[10px] font-medium text-slate-400 dark:text-slate-500">

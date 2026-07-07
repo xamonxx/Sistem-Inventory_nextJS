@@ -16,6 +16,7 @@ import {
   BarChart3,
 } from "lucide-react";
 import { AppLogo } from "@/components/AppLogo";
+import { ThemeToggle } from "@/components/ThemeToggle";
 
 const FEATURES = [
   { icon: Boxes, label: "Stok gudang akurat & real-time" },
@@ -28,12 +29,16 @@ export default function LoginPage() {
   const [showPassword, setShowPassword] = useState(false);
 
   return (
-    <div className="relative flex min-h-screen items-center justify-center overflow-hidden p-4 sm:p-6">
-      {/* Ambient glow senada aksen aplikasi */}
-      <div className="pointer-events-none absolute left-[20%] top-[15%] h-[380px] w-[380px] rounded-full bg-[var(--primary)]/12 blur-[110px]" />
-      <div className="pointer-events-none absolute bottom-[10%] right-[15%] h-[300px] w-[300px] rounded-full bg-[#38bdf8]/8 blur-[100px]" />
+    <div className="app-shell-bg relative flex min-h-screen items-center justify-center overflow-hidden p-4 sm:p-6">
+      {/* Ambient glow senada aksen aplikasi — lebih subtle di light, lebih tegas di dark */}
+      <div className="pointer-events-none absolute left-[20%] top-[15%] h-[380px] w-[380px] rounded-full bg-[var(--primary)]/[0.06] blur-[110px] dark:bg-[var(--primary)]/[0.14]" />
+      <div className="pointer-events-none absolute bottom-[10%] right-[15%] h-[300px] w-[300px] rounded-full bg-[#38bdf8]/[0.05] blur-[100px] dark:bg-[#38bdf8]/[0.1]" />
 
       <div className="anim-rise relative w-full max-w-[880px]">
+        {/* Theme toggle mengambang di sudut kanan atas card */}
+        <div className="absolute right-4 top-4 z-20 sm:right-5 sm:top-5">
+          <ThemeToggle />
+        </div>
         <div className="grid overflow-hidden rounded-[28px] border border-border bg-card shadow-[var(--shadow-modal)] md:grid-cols-[1.08fr_1fr]">
           {/* ===== PANEL BRANDING (kiri) ===== */}
           <div className="relative hidden flex-col justify-between overflow-hidden bg-[#071b2e] p-10 text-white md:flex">
@@ -117,7 +122,7 @@ export default function LoginPage() {
                     id="username"
                     name="username"
                     maxLength={FIELD_LIMITS.username}
-                    placeholder="Masukkan username"
+                    placeholder="Username"
                     autoFocus
                     className="pl-10"
                     onKeyDown={(e) => {

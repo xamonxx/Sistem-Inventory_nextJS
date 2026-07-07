@@ -6,6 +6,7 @@ const CONFIG: Record<string, { prefix: string; pad: number }> = {
   transaksi: { prefix: "PC", pad: 5 },
   return: { prefix: "RET-", pad: 5 },
   invoice: { prefix: "INV-", pad: 5 },
+  ng_invoice: { prefix: "NG-", pad: 5 },
 };
 
 /**

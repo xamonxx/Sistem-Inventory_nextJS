@@ -102,7 +102,7 @@ export function LogAktivitasClient({ initialLogs }: { initialLogs: LogRow[] }) {
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             maxLength={FIELD_LIMITS.search}
-            placeholder="Cari berdasarkan operator / ID target..."
+            placeholder="Cari operator atau ID target..."
             className="pl-9 h-11"
           />
         </div>

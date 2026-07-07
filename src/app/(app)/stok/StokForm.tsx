@@ -115,11 +115,11 @@ export function StokForm({ items }: { items: Item[] }) {
           <h2 className="font-semibold text-foreground">Manajemen Persediaan</h2>
           <p className="text-xs text-muted">Catat barang masuk/restock atau lakukan koreksi penyesuaian stok.</p>
         </div>
-        <div className="flex flex-wrap items-center gap-2.5">
-          <Button variant="success" onClick={() => openStokModal("MASUK")}>
+        <div className="grid grid-cols-1 gap-2.5 sm:flex sm:flex-wrap sm:items-center">
+          <Button variant="success" onClick={() => openStokModal("MASUK")} className="w-full sm:w-auto">
             <ArrowDownCircle size={16} /> Barang Masuk
           </Button>
-          <Button onClick={() => openStokModal("KOREKSI")}>
+          <Button onClick={() => openStokModal("KOREKSI")} className="w-full sm:w-auto">
             <RefreshCcw size={16} /> Koreksi Stok
           </Button>
         </div>
@@ -197,7 +197,7 @@ export function StokForm({ items }: { items: Item[] }) {
                     if (e.key === "Escape") setShowSuggestions(false);
                   }}
                   maxLength={FIELD_LIMITS.search}
-                  placeholder="Ketik kode SKU atau nama barang..."
+                  placeholder="Ketik SKU atau nama barang..."
                   autoComplete="off"
                 />
 
@@ -250,7 +250,7 @@ export function StokForm({ items }: { items: Item[] }) {
                     max={FIELD_LIMITS.maxQty}
                     value={stokSeharusnya}
                     onChange={(e) => setStokSeharusnya(e.target.value)}
-                    placeholder="Masukkan stok fisik riil"
+                    placeholder="Stok fisik hasil opname"
                     required
                   />
                 </div>

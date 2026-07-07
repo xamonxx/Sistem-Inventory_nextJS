@@ -244,6 +244,12 @@ async function main() {
     create: { username: "gudang", nama: "Admin Gudang", password: pass, role: "ADMIN_GUDANG", aktif: true },
   });
 
+  await prisma.user.upsert({
+    where: { username: "nongudang" },
+    update: { password: pass, nama: "Admin Non-Gudang", role: "ADMIN_NONGUDANG", aktif: true },
+    create: { username: "nongudang", nama: "Admin Non-Gudang", password: pass, role: "ADMIN_NONGUDANG", aktif: true },
+  });
+
   console.log("👤 Users seeded.");
 
   // ============ 2000 ITEMS ============
@@ -671,8 +677,9 @@ async function main() {
   console.log("=========================================");
   console.log("Login User:");
   const passwordLabel = seedPassword === "password" ? "password (dev default)" : "[from SEED_DEFAULT_PASSWORD]";
-  console.log(`- Kasir:  username 'kasir'  / password '${passwordLabel}'`);
-  console.log(`- Gudang: username 'gudang' / password '${passwordLabel}'`);
+  console.log(`- Kasir:     username 'kasir'     / password '${passwordLabel}'`);
+  console.log(`- Gudang:    username 'gudang'    / password '${passwordLabel}'`);
+  console.log(`- NonGudang: username 'nongudang' / password '${passwordLabel}'`);
   console.log("=========================================");
 }
 

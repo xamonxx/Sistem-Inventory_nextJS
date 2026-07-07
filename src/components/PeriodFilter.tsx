@@ -1,18 +1,17 @@
 "use client";
 
 import { useState } from "react";
+import { Calendar } from "lucide-react";
 import { Select } from "@/components/ui";
 import { DatePicker } from "@/components/DatePicker";
 import { cn } from "@/lib/utils";
 
 export type PeriodPreset = "all" | "week" | "month" | "year" | "custom";
 
-/** Rentang hasil resolusi filter periode. from/to = "YYYY-MM-DD" ("" = terbuka). */
 export interface ResolvedPeriodRange {
   preset: PeriodPreset;
   from: string;
   to: string;
-  /** Label ramah untuk metadata export / tampilan. */
   label: string;
 }
 
@@ -37,14 +36,10 @@ function fmtId(ymd: string): string {
   return `${d}/${m}/${y}`;
 }
 
-/**
- * Hitung rentang tanggal (from/to YYYY-MM-DD) untuk sebuah preset.
- * Fungsi murni — mudah diuji. "week" = Senin s/d Minggu pekan berjalan.
- */
 export function computePresetRange(preset: PeriodPreset, now = new Date()): { from: string; to: string } {
   if (preset === "week") {
-    const day = now.getDay(); // 0 = Minggu
-    const diffToMonday = (day + 6) % 7; // jumlah hari mundur ke Senin
+    const day = now.getDay();
+    const diffToMonday = (day + 6) % 7;
     const monday = new Date(now.getFullYear(), now.getMonth(), now.getDate() - diffToMonday);
     const sunday = new Date(monday.getFullYear(), monday.getMonth(), monday.getDate() + 6);
     return { from: toYmd(monday), to: toYmd(sunday) };
@@ -57,22 +52,19 @@ export function computePresetRange(preset: PeriodPreset, now = new Date()): { fr
   if (preset === "year") {
     return { from: `${now.getFullYear()}-01-01`, to: `${now.getFullYear()}-12-31` };
   }
-  return { from: "", to: "" }; // all / custom (custom diisi manual)
+  return { from: "", to: "" };
 }
 
 function buildLabel(preset: PeriodPreset, from: string, to: string): string {
   if (preset === "all") return "Semua Waktu";
-  const range = from || to ? `${fmtId(from) || "…"} – ${fmtId(to) || "…"}` : "";
+  const range = from || to ? `${fmtId(from) || "..."} - ${fmtId(to) || "..."}` : "";
   return range ? `${PRESET_LABEL[preset]} (${range})` : PRESET_LABEL[preset];
 }
 
 interface PeriodFilterProps {
-  /** Preset awal (default "all"). */
   defaultPreset?: PeriodPreset;
-  /** Tanggal awal/akhir awal untuk mode custom (YYYY-MM-DD). */
   defaultFrom?: string;
   defaultTo?: string;
-  /** Dipanggil setiap rentang berubah. */
   onChange: (range: ResolvedPeriodRange) => void;
   align?: "left" | "right";
   className?: string;
@@ -108,6 +100,7 @@ export function PeriodFilter({
     setCustomFrom(v);
     emit("custom", v, customTo);
   }
+
   function handleCustomTo(v: string) {
     setCustomTo(v);
     emit("custom", customFrom, v);
@@ -115,28 +108,37 @@ export function PeriodFilter({
 
   return (
     <div className={cn("min-w-0", className)}>
-      <div className="flex min-w-0 flex-wrap items-center gap-2.5">
+      <div className="flex min-w-0 flex-wrap items-center gap-3">
         <Select
+          hideChevron={preset === "custom"}
+          displayValue={
+            preset === "custom" ? (
+              <Calendar size={16} className="text-[var(--text-soft)]" aria-hidden="true" />
+            ) : undefined
+          }
           value={preset}
           onChange={(e) => handlePresetChange(e.target.value as PeriodPreset)}
-          className="h-10 w-full rounded-xl text-xs font-bold sm:w-40"
+          className={cn(
+            "h-11 rounded-2xl text-xs font-bold",
+            preset === "custom" ? "w-11 px-0" : "w-full sm:w-[220px]"
+          )}
           aria-label="Filter periode"
         >
           <option value="all">Semua Waktu</option>
           <option value="week">Minggu Ini</option>
           <option value="month">Bulan Ini</option>
           <option value="year">Tahun Ini</option>
-          <option value="custom">Rentang Custom…</option>
+          <option value="custom">Rentang Custom...</option>
         </Select>
 
         {preset === "custom" && (
-          <div className="grid w-full grid-cols-1 gap-2 sm:flex sm:w-auto sm:flex-wrap sm:items-center">
+          <div className="grid w-full grid-cols-1 gap-3 sm:flex sm:w-auto sm:flex-nowrap sm:items-center">
             <DatePicker
               value={customFrom}
               onChange={handleCustomFrom}
               placeholder="Tanggal awal"
               align={align}
-              className="h-10 w-full rounded-xl sm:w-40"
+              className="h-11 w-full rounded-2xl"
             />
             <span className="hidden text-xs font-semibold text-slate-400 sm:inline">s/d</span>
             <DatePicker
@@ -144,7 +146,7 @@ export function PeriodFilter({
               onChange={handleCustomTo}
               placeholder="Tanggal akhir"
               align={align}
-              className="h-10 w-full rounded-xl sm:w-40"
+              className="h-11 w-full rounded-2xl"
             />
           </div>
         )}

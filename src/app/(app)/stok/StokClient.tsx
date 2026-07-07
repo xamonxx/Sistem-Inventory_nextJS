@@ -171,15 +171,15 @@ export function StokClient({
   return (
     <div className="space-y-6">
       {/* View Toggle and Filter Toolbar */}
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+      <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between md:gap-4">
         <h2 className="text-lg font-bold text-foreground">Riwayat & Filter Mutasi</h2>
-        
+
         {/* Toggle Control */}
-        <div className="flex bg-slate-100 dark:bg-slate-800 p-0.5 rounded-lg border border-border shadow-xs self-end">
+        <div className="flex w-full bg-slate-100 dark:bg-slate-800 p-0.5 rounded-lg border border-border shadow-xs md:w-auto md:self-auto">
           <button
             type="button"
             onClick={() => setViewMode("table")}
-            className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-md transition-all ${
+            className={`flex flex-1 items-center justify-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-md transition-all md:flex-none ${
               viewMode === "table"
                 ? "bg-card text-foreground shadow-sm"
                 : "text-slate-500 hover:text-slate-700"
@@ -191,7 +191,7 @@ export function StokClient({
           <button
             type="button"
             onClick={() => setViewMode("timeline")}
-            className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-md transition-all ${
+            className={`flex flex-1 items-center justify-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-md transition-all md:flex-none ${
               viewMode === "timeline"
                 ? "bg-card text-foreground shadow-sm"
                 : "text-slate-500 hover:text-slate-700"
@@ -241,7 +241,7 @@ export function StokClient({
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               maxLength={FIELD_LIMITS.search}
-              placeholder="Nomor PC / referensi..."
+              placeholder="Nomor PC / referensi"
               className="pl-8"
             />
           </div>
@@ -480,7 +480,7 @@ export function StokClient({
               ) : (
                 <div>
                   <Label>Stok Seharusnya (Hasil Opname)</Label>
-                  <Input type="number" min={0} max={FIELD_LIMITS.maxQty} value={stokSeharusnya} onChange={(e) => setStokSeharusnya(e.target.value)} placeholder="Masukkan stok fisik ril" required />
+                  <Input type="number" min={0} max={FIELD_LIMITS.maxQty} value={stokSeharusnya} onChange={(e) => setStokSeharusnya(e.target.value)} placeholder="Stok fisik hasil opname" required />
                 </div>
               )}
 

@@ -114,7 +114,7 @@ export function PenggunaForm() {
                     name="nama"
                     value={nama}
                     onChange={(e) => setNama(e.target.value)}
-                    placeholder="Nama Lengkap"
+                    placeholder="Nama lengkap operator"
                     required
                     maxLength={FIELD_LIMITS.nama}
                   />

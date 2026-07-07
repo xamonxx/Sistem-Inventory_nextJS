@@ -101,7 +101,7 @@ export function BarangForm({ canEdit }: { canEdit: boolean }) {
 
       {open && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 p-4 backdrop-blur-xs animate-fade-in" onClick={() => { setOpen(false); setEditing(null); }}>
-          <div onClick={(e) => e.stopPropagation()} className="w-full max-w-lg bg-card rounded-2xl overflow-y-auto max-h-[90vh] p-6 shadow-2xl border border-border anim-rise">
+          <div onClick={(e) => e.stopPropagation()} className="scrollbar-none w-full max-w-lg bg-card rounded-2xl overflow-y-auto max-h-[90vh] p-5 shadow-2xl border border-border anim-rise sm:p-6">
             <div className="flex items-center justify-between border-b border-border pb-3.5 mb-4">
               <h3 className="font-bold text-foreground text-lg">
                 {editing ? "Ubah Detail Barang" : "Tambah Barang Baru"}
@@ -113,8 +113,8 @@ export function BarangForm({ canEdit }: { canEdit: boolean }) {
 
             <form action={formAction} ref={formRef} className="space-y-4">
               <input type="hidden" name="id" defaultValue={editing?.id ?? ""} />
-              
-              <div className="grid grid-cols-2 gap-4">
+
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                 <div>
                   <div className="flex items-center justify-between gap-2">
                     <Label className="mb-0">Nama Barang</Label>
@@ -126,7 +126,7 @@ export function BarangForm({ canEdit }: { canEdit: boolean }) {
                     onChange={(e) => setNama(e.target.value)}
                     onBlur={onNamaBlur}
                     maxLength={FIELD_LIMITS.namaBarang}
-                    placeholder="BB Min 18mm New"
+                    placeholder="mis. Plywood 18mm"
                     required
                   />
                 </div>
@@ -138,8 +138,8 @@ export function BarangForm({ canEdit }: { canEdit: boolean }) {
                       value={kode}
                       onChange={(e) => setKode(e.target.value)}
                       maxLength={FIELD_LIMITS.kodeBarang}
-                      placeholder="otomatis dari nama"
-                      className="flex-1"
+                      placeholder="Auto dari nama"
+                      className="min-w-0 flex-1"
                     />
                     <Button
                       type="button"
@@ -158,7 +158,7 @@ export function BarangForm({ canEdit }: { canEdit: boolean }) {
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                 <div>
                   <Label>Harga Beli (Rp)</Label>
                   <Input name="hargaBeli" type="number" min={0} defaultValue={editing?.hargaBeli ?? ""} placeholder="0" />
@@ -169,7 +169,7 @@ export function BarangForm({ canEdit }: { canEdit: boolean }) {
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                 <div>
                   <Label>Stok Awal</Label>
                   <Input name="stokAwal" type="number" min={0} defaultValue={editing?.stokAwal ?? ""} placeholder="0" />
@@ -200,11 +200,11 @@ export function BarangForm({ canEdit }: { canEdit: boolean }) {
                 </div>
               )}
 
-              <div className="flex justify-end gap-2.5 pt-3 border-t border-border mt-5">
-                <Button type="button" variant="outline" onClick={() => { setOpen(false); setEditing(null); }}>
+              <div className="flex flex-col-reverse gap-2.5 pt-3 border-t border-border mt-5 sm:flex-row sm:justify-end">
+                <Button type="button" variant="outline" onClick={() => { setOpen(false); setEditing(null); }} className="w-full sm:w-auto">
                   Batal
                 </Button>
-                <Button type="submit" disabled={pending}>
+                <Button type="submit" disabled={pending} className="w-full sm:w-auto">
                   {pending ? "Menyimpan…" : "Simpan Barang"}
                 </Button>
               </div>

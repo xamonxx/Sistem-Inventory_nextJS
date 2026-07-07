@@ -8,7 +8,7 @@
  * Catatan kejujuran data:
  * - Data omset & margin pada halaman bersifat AGREGAT PER BARANG (bukan per
  *   transaksi), jadi sheet Penjualan/Margin tidak punya kolom tanggal/invoice/
- *   pelanggan. Field semacam itu ditandai "Tidak tersedia" â€” tidak dikarang.
+ *   pelanggan. Field semacam itu ditandai "Tidak tersedia" — tidak dikarang.
  * - HPP (modal) per barang diturunkan dari: HPP = Omset - Laba Kotor (margin).
  */
 
@@ -679,7 +679,7 @@ function addStokAsetSheet(wb: Workbook, payload: ExportAnalyticPayload, meta: Me
       if (sisa <= 0) {
         stokStatus = "Stok Kosong";
         fill = COLOR.red;
-        note = "Sisa stok 0 / minus â€” segera restock";
+        note = "Sisa stok 0 / minus — segera restock";
         cntKosong++;
       } else if (sisa <= minStok) {
         stokStatus = "Stok Rendah";

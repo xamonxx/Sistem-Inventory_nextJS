@@ -1,7 +1,8 @@
 "use client";
 
 import { useState, useRef, useEffect, useMemo } from "react";
-import { Calendar as CalendarIcon, ChevronLeft, ChevronRight, X, ChevronDown } from "lucide-react";
+import { createPortal } from "react-dom";
+import { Calendar as CalendarIcon, ChevronLeft, ChevronRight, ChevronDown } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 // Indonesian translations
@@ -46,6 +47,13 @@ export function DatePicker({
 
   const [isOpen, setIsOpen] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
+  const panelRef = useRef<HTMLDivElement>(null);
+  const [panelStyle, setPanelStyle] = useState<{ top: number; left: number; width: number; visibility: "hidden" | "visible" }>({
+    top: 0,
+    left: 0,
+    width: 290,
+    visibility: "hidden",
+  });
 
   // Parse current date values or default to today
   const parsedDate = useMemo(() => {
@@ -69,13 +77,62 @@ export function DatePicker({
   // Handle clicking outside to close calendar
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
-      if (containerRef.current && !containerRef.current.contains(event.target as Node)) {
+      const target = event.target as Node;
+      const insideTrigger = containerRef.current?.contains(target) ?? false;
+      const insidePanel = panelRef.current?.contains(target) ?? false;
+      if (
+        !insideTrigger &&
+        !insidePanel
+      ) {
         setIsOpen(false);
       }
     }
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
+
+  useEffect(() => {
+    if (!isOpen) return;
+
+    function updatePanelPosition() {
+      const trigger = containerRef.current;
+      if (!trigger) return;
+
+      const rect = trigger.getBoundingClientRect();
+      const viewportPadding = 16;
+      const panelWidth = Math.min(290, window.innerWidth - viewportPadding * 2);
+      let left = align === "right" ? rect.right - panelWidth : rect.left;
+      left = Math.min(Math.max(left, viewportPadding), window.innerWidth - panelWidth - viewportPadding);
+
+      let top = rect.bottom + 8;
+      const panelHeight = panelRef.current?.offsetHeight ?? 0;
+      if (panelHeight) {
+        const bottomOverflow = top + panelHeight - (window.innerHeight - viewportPadding);
+        if (bottomOverflow > 0) {
+          const aboveTop = rect.top - panelHeight - 8;
+          top = aboveTop >= viewportPadding ? aboveTop : Math.max(viewportPadding, top - bottomOverflow);
+        }
+      }
+
+      setPanelStyle({
+        top,
+        left,
+        width: panelWidth,
+        visibility: panelHeight ? "visible" : "hidden",
+      });
+    }
+
+    updatePanelPosition();
+    const frame = window.requestAnimationFrame(updatePanelPosition);
+    window.addEventListener("resize", updatePanelPosition);
+    window.addEventListener("scroll", updatePanelPosition, true);
+
+    return () => {
+      window.cancelAnimationFrame(frame);
+      window.removeEventListener("resize", updatePanelPosition);
+      window.removeEventListener("scroll", updatePanelPosition, true);
+    };
+  }, [align, isOpen, viewMonth, viewYear, internalValue]);
 
   // Format date for display in Indonesian format, e.g. "26 Juni 2026"
   const formattedDisplay = useMemo(() => {
@@ -261,13 +318,17 @@ export function DatePicker({
         <ChevronDown size={14} className={cn("text-slate-400 transition-transform ml-1 shrink-0", isOpen && "rotate-180")} />
       </button>
 
-      {isOpen && (
-        <div 
-          className={cn(
-            "absolute mt-2 z-[9999] w-[min(290px,calc(100vw-2rem))] rounded-lg border border-border bg-card p-4 shadow-xl dark:bg-card",
-            align === "right" ? "right-0" : "left-0"
-          )}
-          style={{ backgroundColor: "var(--card)" }}
+      {isOpen && typeof document !== "undefined" && createPortal(
+        <div
+          ref={panelRef}
+          className="fixed z-[120] rounded-lg border border-border bg-card p-4 shadow-xl dark:bg-card"
+          style={{
+            top: panelStyle.top,
+            left: panelStyle.left,
+            width: panelStyle.width,
+            visibility: panelStyle.visibility,
+            backgroundColor: "var(--card)",
+          }}
         >
           {/* Header Month/Year Navigator */}
           <div className="flex items-center justify-between pb-3 border-b border-border">
@@ -354,7 +415,8 @@ export function DatePicker({
               Hari Ini
             </button>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   );
