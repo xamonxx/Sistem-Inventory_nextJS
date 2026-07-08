@@ -1,7 +1,12 @@
 "use server";
 
+import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { getSession } from "@/lib/auth";
+
+const searchSchema = z.object({
+  query: z.string().min(1).max(80).trim(),
+});
 
 export type SearchResult = {
   id: number;
@@ -15,9 +20,9 @@ export async function universalSearch(query: string): Promise<SearchResult[]> {
   const session = await getSession();
   if (!session) return [];
 
-  // Batasi panjang query untuk mencegah penyalahgunaan/beban berlebih.
-  const q = String(query ?? "").trim().toLowerCase().slice(0, 80);
-  if (!q) return [];
+  const parsed = searchSchema.safeParse({ query });
+  if (!parsed.success) return [];
+  const q = parsed.data.query.toLowerCase();
 
   const results: SearchResult[] = [];
 
@@ -74,7 +79,7 @@ export async function universalSearch(query: string): Promise<SearchResult[]> {
       type: "client",
       title: c.nama,
       subtitle: `Klien/Customer • Alamat: ${c.alamat ?? "—"}`,
-      link: `/invoice?client=${c.nama}` // Filter invoices by customer name
+      link: `/invoice?client=${encodeURIComponent(c.nama)}` // Filter invoices by customer name
     });
   });
 
@@ -91,7 +96,7 @@ export async function universalSearch(query: string): Promise<SearchResult[]> {
       type: "project",
       title: p.nama,
       subtitle: `Proyek Konstruksi`,
-      link: `/invoice?project=${p.nama}`
+      link: `/invoice?project=${encodeURIComponent(p.nama)}`
     });
   });
 

@@ -31,7 +31,7 @@ export function ThemeToggle() {
     <button
       onClick={toggleTheme}
       type="button"
-      className="relative flex h-11 w-11 items-center justify-center rounded-xl border border-border bg-card dark:bg-card text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-900 hover:text-foreground dark:hover:text-slate-200 transition cursor-pointer select-none animate-in fade-in duration-200"
+      className="chrome-icon-button relative flex h-11 w-11 cursor-pointer select-none items-center justify-center rounded-xl backdrop-blur-xl backdrop-saturate-150 transition animate-in fade-in duration-200"
       title={isDark ? "Ubah ke mode terang" : "Ubah ke mode gelap"}
       aria-label="Toggle theme"
     >

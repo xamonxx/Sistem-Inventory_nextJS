@@ -31,7 +31,6 @@ import { Nota, type NotaData } from "@/components/Nota";
 import { ModernDialog } from "@/components/ModernDialog";
 import { printArea } from "@/lib/print";
 import { toast } from "sonner";
-import { toPng } from "html-to-image";
 
 type Item = { id: number; kode: string; nama: string; hargaJual: number; stok: number };
 
@@ -267,6 +266,7 @@ export function KasirClient({ items }: { items: Item[] }) {
       toast.info("Sedang mengambil gambar...");
       // Ukur tinggi penuh isi (scrollHeight) supaya struk panjang tidak
       // terpotong — wrapper memakai overflow-hidden.
+      const { toPng } = await import("html-to-image");
       const imgDataUrl = await toPng(element, {
         quality: 1.0,
         pixelRatio: 2,

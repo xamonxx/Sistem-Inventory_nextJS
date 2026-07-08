@@ -162,7 +162,7 @@ export function PenggunaClient({
 
                 {/* Audit Monitor link */}
                 <Link
-                  href={`/log-aktivitas?q=${u.nama}`}
+                  href={`/log-aktivitas?q=${encodeURIComponent(u.nama)}`}
                   className="inline-flex h-8 items-center justify-center gap-1.5 rounded-lg border border-border bg-card px-2.5 text-xs font-semibold text-slate-650 hover:bg-slate-50 dark:hover:bg-slate-900 transition ml-auto shadow-xs active:scale-95"
                 >
                   <Activity size={12} /> Log Aktivitas

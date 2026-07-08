@@ -67,7 +67,7 @@ export function ModernDialog({
       />
 
       {/* Dialog Box */}
-      <div className="relative max-h-[90dvh] w-full max-w-md transform overflow-y-auto rounded-t-[20px] border border-border bg-card p-5 shadow-[var(--shadow-modal)] transition-all duration-300 scale-100 anim-rise sm:rounded-[20px] sm:p-6 dark:bg-card">
+      <div className="relative max-h-[90dvh] w-full max-w-md scale-100 transform overflow-y-auto rounded-t-[20px] border border-border bg-card p-5 shadow-[var(--shadow-modal)] transition-[opacity,transform] duration-300 anim-rise sm:rounded-[20px] sm:p-6 dark:bg-card">
         {/* Close Button */}
         <button
           onClick={onClose}

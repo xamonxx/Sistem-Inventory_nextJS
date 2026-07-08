@@ -19,7 +19,7 @@ import {
   Trash2,
   Wallet,
 } from "lucide-react";
-import { toPng } from "html-to-image";
+
 import { toast } from "sonner";
 import { createNgInvoice, resolveNgProductForCart } from "./actions";
 import { Nota, type NotaData } from "@/components/Nota";
@@ -83,17 +83,29 @@ const EMPTY_ITEM_DRAFT: ItemDraft = {
   qty: "1",
 };
 
+type KonsumenOption = {
+  id: number;
+  nama: string;
+  namaGrup: string;
+  alamat: string;
+  namaWorkshop: string;
+};
+
 export function NgBuatInvoiceClient({
   items,
   tokoOptions,
+  konsumenOptions,
 }: {
   items: ProductOption[];
   tokoOptions: string[];
+  konsumenOptions: KonsumenOption[];
 }) {
   const [activeStep, setActiveStep] = useState<StepKey>(1);
   const [q, setQ] = useState("");
   const [storeInput, setStoreInput] = useState("");
   const [storeDropdownOpen, setStoreDropdownOpen] = useState(false);
+  const [konsumenId, setKonsumenId] = useState<number | null>(null);
+  const [konsumenDropdownOpen, setKonsumenDropdownOpen] = useState(false);
   const [itemDropdownOpen, setItemDropdownOpen] = useState(false);
   const [itemDraft, setItemDraft] = useState<ItemDraft>(EMPTY_ITEM_DRAFT);
   const [selectedCatalogId, setSelectedCatalogId] = useState<number | null>(null);
@@ -142,6 +154,23 @@ export function NgBuatInvoiceClient({
     if (!keyword) return knownStores.slice(0, 8);
     return knownStores.filter((toko) => toko.toLowerCase().includes(keyword)).slice(0, 8);
   }, [storeInput, knownStores]);
+
+  const filteredKonsumen = useMemo(() => {
+    const keyword = namaKonsumen.trim().toLowerCase();
+    if (!keyword) return konsumenOptions.slice(0, 8);
+    return konsumenOptions
+      .filter((k) => k.nama.toLowerCase().includes(keyword) || k.namaGrup.toLowerCase().includes(keyword))
+      .slice(0, 8);
+  }, [namaKonsumen, konsumenOptions]);
+
+  function handleChooseKonsumen(k: KonsumenOption) {
+    setNamaKonsumen(k.nama);
+    setNamaGrup(k.namaGrup);
+    setAlamat(k.alamat);
+    setNamaWorkshop(k.namaWorkshop);
+    setKonsumenId(k.id);
+    setKonsumenDropdownOpen(false);
+  }
 
   const storeCatalog = useMemo(
     () => catalogItems.filter((item) => (tokoSumber ? item.namaToko === tokoSumber : false)),
@@ -384,6 +413,7 @@ export function NgBuatInvoiceClient({
       const result = await createNgInvoice({
         tanggal,
         namaToko: tokoSumber,
+        konsumenId,
         namaKonsumen,
         namaGrup,
         alamat,
@@ -408,6 +438,7 @@ export function NgBuatInvoiceClient({
         setQ("");
         setStoreInput("");
         setItemDraft(EMPTY_ITEM_DRAFT);
+        setKonsumenId(null);
         setActiveStep(1);
         toast.success(`Invoice ${result.invoice.noInvoice} berhasil dibuat.`);
       }
@@ -434,6 +465,7 @@ export function NgBuatInvoiceClient({
       toast.info("Sedang mengambil gambar...");
       element.style.zoom = "1";
       void element.offsetWidth;
+      const { toPng } = await import("html-to-image");
       const imgDataUrl = await toPng(element, {
         quality: 1,
         pixelRatio: 2,
@@ -522,7 +554,7 @@ export function NgBuatInvoiceClient({
         <div className="relative mx-auto flex max-w-3xl items-center justify-between px-4">
           <div className="absolute left-[10%] right-[10%] top-[30%] h-[3px] -translate-y-1/2 rounded-full bg-slate-100 dark:bg-slate-800" />
           <div
-            className="absolute left-[10%] top-[30%] h-[3px] -translate-y-1/2 rounded-full bg-gradient-to-r from-[var(--primary)] to-primary-500 transition-all duration-500 ease-in-out"
+            className="absolute left-[10%] top-[30%] h-[3px] -translate-y-1/2 rounded-full bg-gradient-to-r from-[var(--primary)] to-primary-500 transition-[width,background-color] duration-500 ease-in-out"
             style={{ width: activeStep === 1 ? "0%" : activeStep === 2 ? "40%" : "80%" }}
           />
           <StepDot step={1} activeStep={activeStep} label="Toko" done={activeStep > 1} onClick={() => setActiveStep(1)} />
@@ -927,7 +959,42 @@ export function NgBuatInvoiceClient({
                 <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                   <div>
                     <Label>Nama konsumen</Label>
-                    <Input value={namaKonsumen} onChange={(e) => setNamaKonsumen(e.target.value)} maxLength={FIELD_LIMITS.namaClient} placeholder="Nama konsumen / pelanggan" disabled={cart.length === 0} />
+                    <div className="relative">
+                      <Input
+                        value={namaKonsumen}
+                        onChange={(e) => { setNamaKonsumen(e.target.value); setKonsumenId(null); setKonsumenDropdownOpen(true); }}
+                        onFocus={() => setKonsumenDropdownOpen(true)}
+                        onBlur={() => setTimeout(() => setKonsumenDropdownOpen(false), 120)}
+                        maxLength={FIELD_LIMITS.namaClient}
+                        placeholder="Ketik atau pilih konsumen tersimpan"
+                        disabled={cart.length === 0}
+                        autoComplete="off"
+                      />
+                      {konsumenDropdownOpen && filteredKonsumen.length > 0 && (
+                        <div className="absolute left-0 right-0 top-[calc(100%+8px)] z-[80] overflow-hidden rounded-2xl border border-border bg-card shadow-[0_18px_40px_-18px_rgba(15,23,42,0.45)]">
+                          <div className="max-h-56 overflow-y-auto p-1.5">
+                            {filteredKonsumen.map((k) => (
+                              <button
+                                key={k.id}
+                                type="button"
+                                onMouseDown={(e) => e.preventDefault()}
+                                onClick={() => handleChooseKonsumen(k)}
+                                className="flex w-full items-center justify-between gap-2 rounded-xl px-3 py-2.5 text-left transition hover:bg-[var(--surface-hover)]"
+                              >
+                                <span className="min-w-0">
+                                  <span className="block truncate text-sm font-semibold text-foreground">{k.nama}</span>
+                                  {k.namaGrup && <span className="block truncate text-[11px] text-slate-500">{k.namaGrup}</span>}
+                                </span>
+                                {konsumenId === k.id && <Badge tone="blue">Dipilih</Badge>}
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                    <p className="mt-1.5 text-[11px] text-slate-500">
+                      {konsumenId !== null ? "Terhubung ke konsumen tersimpan." : "Pilih konsumen tersimpan untuk auto-isi, atau ketik nama baru (otomatis disimpan ke master)."}
+                    </p>
                   </div>
                   <div>
                     <Label>Nama grup</Label>
@@ -1215,7 +1282,7 @@ function StepDot({
     >
       <div
         className={[
-          "flex h-8 w-8 items-center justify-center rounded-full border text-xs font-bold shadow-xs transition-all duration-300",
+          "flex h-8 w-8 items-center justify-center rounded-full border text-xs font-bold shadow-xs transition-[background-color,border-color,color,box-shadow,transform] duration-300",
           activeStep === step
             ? "scale-110 border-[var(--primary)] bg-[var(--primary)] text-white ring-4 ring-[var(--primary)]/15"
             : done

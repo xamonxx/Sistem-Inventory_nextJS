@@ -4,7 +4,7 @@ import { useEffect, useState, useRef, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { Search, ShoppingCart, Boxes, RotateCcw, FileText, BarChart3, PackagePlus, ArrowRight, CornerDownLeft } from "lucide-react";
 import type { Role } from "@prisma/client";
-import { universalSearch, type SearchResult } from "./CommandPaletteActions";
+import type { SearchResult } from "./CommandPaletteActions";
 import { cn } from "@/lib/utils";
 
 export function CommandPalette({ role }: { role: Role }) {
@@ -51,8 +51,15 @@ export function CommandPalette({ role }: { role: Role }) {
     const delayDebounceFn = setTimeout(() => {
       startTransition(async () => {
         try {
-          const res = await universalSearch(query);
-          setResults(res);
+          const response = await fetch(`/api/search?q=${encodeURIComponent(query)}`, {
+            cache: "no-store",
+            credentials: "same-origin",
+          });
+          if (!response.ok) {
+            throw new Error(`Search request failed: ${response.status}`);
+          }
+          const data = (await response.json()) as { results?: SearchResult[] };
+          setResults(data.results ?? []);
           setSelectedIndex(0);
         } catch (err) {
           console.error("Search error:", err);
@@ -153,7 +160,7 @@ export function CommandPalette({ role }: { role: Role }) {
                       key={action.link}
                       onClick={() => handleQuickAction(action)}
                       className={cn(
-                        "flex w-full items-center justify-between rounded-xl px-3 py-2.5 text-left transition-all cursor-pointer",
+                        "flex w-full cursor-pointer items-center justify-between rounded-xl px-3 py-2.5 text-left transition-[background-color,color,box-shadow,transform]",
                         isSelected ? "bg-slate-50 dark:bg-slate-900 text-foreground dark:text-slate-150" : "text-slate-650 dark:text-slate-400 hover:bg-slate-50/50 dark:hover:bg-slate-900/50"
                       )}
                     >
@@ -194,7 +201,7 @@ export function CommandPalette({ role }: { role: Role }) {
                         key={`${result.type}-${result.id}`}
                         onClick={() => handleSelect(result)}
                         className={cn(
-                          "flex w-full items-center justify-between rounded-xl px-3 py-2.5 text-left transition-all cursor-pointer",
+                          "flex w-full cursor-pointer items-center justify-between rounded-xl px-3 py-2.5 text-left transition-[background-color,color,box-shadow,transform]",
                           isSelected ? "bg-slate-50 dark:bg-slate-900 text-foreground dark:text-slate-150" : "text-slate-650 dark:text-slate-400 hover:bg-slate-50/50 dark:hover:bg-slate-900/50"
                         )}
                       >

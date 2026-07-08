@@ -3,6 +3,22 @@ import type { NextConfig } from "next";
 const nextConfig: NextConfig = {
   poweredByHeader: false,
   serverExternalPackages: ["bcryptjs", "qrcode"],
+  // NOTE: `modularizeImports` was removed — it is NOT supported by Turbopack
+  // (`next dev --turbo`) and rewrites the module graph inconsistently between the
+  // client and server bundles. That mismatch broke Server Action dispatch
+  // (e.g. `POST /non-gudang/buat-invoice` → 404) and caused stale-chunk errors.
+  // `experimental.optimizePackageImports` below is the Turbopack-compatible
+  // successor and already tree-shakes lucide-react + date-fns.
+  experimental: {
+    optimizePackageImports: [
+      "lucide-react",
+      "date-fns",
+      "recharts",
+      "framer-motion",
+      "@tanstack/react-table",
+      "@tanstack/react-query",
+    ],
+  },
   async headers() {
     return [
       {

@@ -89,8 +89,10 @@ const fmtAxis = (v: unknown) => {
   return n >= 1_000_000 ? `${(n / 1_000_000).toFixed(1)}jt` : n >= 1000 ? `${Math.round(n / 1000)}rb` : `${n}`;
 };
 
-const AXIS_TICK_COLOR = "#cbd5e1";
-const AXIS_LABEL_COLOR = "#e2e8f0";
+// Theme-aware so labels stay readable in light mode (previously hardcoded
+// light slate tones that washed out on a white background).
+const AXIS_TICK_COLOR = "var(--muted)";
+const AXIS_LABEL_COLOR = "var(--foreground)";
 // ===== Reusable surface (shadcn "Card") =====
 function Panel({
   title,
@@ -774,6 +776,20 @@ export function LaporanClient({ role, userName, periodeLabel, initialFrom, initi
 
   useEffect(() => setMounted(true), []);
 
+  // ===== Responsive chart sizing =====
+  // Long category labels (product names) must not swallow the plot area on phones.
+  const [isMobile, setIsMobile] = useState(false);
+  useEffect(() => {
+    const mq = window.matchMedia("(max-width: 640px)");
+    const update = () => setIsMobile(mq.matches);
+    update();
+    mq.addEventListener("change", update);
+    return () => mq.removeEventListener("change", update);
+  }, []);
+  // Narrow the label gutter on mobile so bars get real width; full width on desktop.
+  const catAxisWidth = isMobile ? 100 : 250;
+  const truncLabel = (v: string) => (isMobile && v.length > 15 ? `${v.slice(0, 14)}…` : v);
+
   // ===== Filter periode (server-side via query URL) =====
   // Data analitik diagregasi di server, jadi perubahan periode mendorong
   // parameter ?from&to ke URL lalu server memuat ulang data sesuai rentang.
@@ -1036,7 +1052,7 @@ export function LaporanClient({ role, userName, periodeLabel, initialFrom, initi
                   </defs>
                   <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" horizontal={false} />
                   <XAxis type="number" tick={{ fontSize: 10, fill: AXIS_TICK_COLOR }} tickFormatter={fmtAxis} />
-                  <YAxis type="category" dataKey="nama" width={250} tick={{ fontSize: 10, fill: AXIS_LABEL_COLOR }} />
+                  <YAxis type="category" dataKey="nama" width={catAxisWidth} tickFormatter={truncLabel} tick={{ fontSize: 10, fill: AXIS_LABEL_COLOR }} interval={0} />
                   <Tooltip {...TOOLTIP_STYLE} cursor={{ fill: "rgba(5,150,105,0.05)" }} formatter={(v: unknown) => [formatRupiah(v as number), "Omset"]} />
                   <Bar dataKey="omset" fill="url(#omsetBar)" radius={[0, 6, 6, 0]} barSize={18}>
                     <LabelList dataKey="omset" position="right" formatter={fmtAxis} fontSize={10} fill={AXIS_LABEL_COLOR} />
@@ -1141,7 +1157,7 @@ export function LaporanClient({ role, userName, periodeLabel, initialFrom, initi
                   </defs>
                   <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" horizontal={false} />
                   <XAxis type="number" allowDecimals={false} tick={{ fontSize: 10, fill: AXIS_TICK_COLOR }} />
-                  <YAxis type="category" dataKey="nama" width={250} tick={{ fontSize: 10, fill: AXIS_LABEL_COLOR }} />
+                  <YAxis type="category" dataKey="nama" width={catAxisWidth} tickFormatter={truncLabel} tick={{ fontSize: 10, fill: AXIS_LABEL_COLOR }} interval={0} />
                   <Tooltip {...TOOLTIP_STYLE} cursor={{ fill: "rgba(16,185,129,0.05)" }} formatter={(v: unknown) => [`${v as number} unit`, "Qty Terjual"]} />
                   <Bar dataKey="qty" fill="url(#qtyBar)" radius={[0, 6, 6, 0]} barSize={18}>
                     <LabelList dataKey="qty" position="right" formatter={(v: unknown) => `${v as number}`} fontSize={10} fill={AXIS_LABEL_COLOR} />
@@ -1194,7 +1210,7 @@ export function LaporanClient({ role, userName, periodeLabel, initialFrom, initi
                 <BarChart data={omsetTop} layout="vertical" margin={{ left: 8, right: 16 }} barGap={2}>
                   <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" horizontal={false} />
                   <XAxis type="number" tick={{ fontSize: 10, fill: AXIS_TICK_COLOR }} tickFormatter={fmtAxis} />
-                  <YAxis type="category" dataKey="nama" width={250} tick={{ fontSize: 10, fill: AXIS_LABEL_COLOR }} />
+                  <YAxis type="category" dataKey="nama" width={catAxisWidth} tickFormatter={truncLabel} tick={{ fontSize: 10, fill: AXIS_LABEL_COLOR }} interval={0} />
                   <Tooltip {...TOOLTIP_STYLE} cursor={{ fill: "rgba(59,130,246,0.05)" }} formatter={(v: unknown, n: unknown) => [formatRupiah(v as number), n as string]} />
                   <Legend verticalAlign="top" height={30} iconType="circle" wrapperStyle={{ fontSize: 11 }} />
                   <Bar name="Omset" dataKey="omset" fill="#cbd5e1" radius={[0, 5, 5, 0]} barSize={10} />
@@ -1461,7 +1477,7 @@ export function LaporanClient({ role, userName, periodeLabel, initialFrom, initi
                     </defs>
                     <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" horizontal={false} />
                   <XAxis type="number" tick={{ fontSize: 10, fill: AXIS_TICK_COLOR }} tickFormatter={fmtAxis} />
-                  <YAxis type="category" dataKey="name" width={260} tick={{ fontSize: 10, fill: AXIS_LABEL_COLOR }} />
+                  <YAxis type="category" dataKey="name" width={catAxisWidth} tickFormatter={truncLabel} tick={{ fontSize: 10, fill: AXIS_LABEL_COLOR }} interval={0} />
                     <Tooltip {...TOOLTIP_STYLE} cursor={{ fill: "rgba(37,99,235,0.05)" }} formatter={(v: unknown) => [formatRupiah(v as number), "Nilai Aset"]} />
                     <Bar dataKey="nilai" fill="url(#asetBar)" radius={[0, 6, 6, 0]} barSize={18}>
                     <LabelList dataKey="nilai" position="right" formatter={fmtAxis} fontSize={10} fill={AXIS_LABEL_COLOR} />

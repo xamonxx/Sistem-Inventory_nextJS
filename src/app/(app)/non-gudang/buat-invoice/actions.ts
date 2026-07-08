@@ -15,6 +15,7 @@ const createNgInvoiceSchema = z
   .object({
     tanggal: z.coerce.date(),
     namaToko: requiredText(FIELD_LIMITS.supplierName, "Toko sumber"),
+    konsumenId: dbId.nullable().optional(),
     namaKonsumen: optionalText(FIELD_LIMITS.namaClient, "Nama konsumen"),
     namaGrup: optionalText(FIELD_LIMITS.projectGroupNama, "Nama grup"),
     alamat: optionalText(FIELD_LIMITS.alamat, "Alamat"),
@@ -59,6 +60,7 @@ const resolveNgProductSchema = z
 type CreateNgInvoiceInput = {
   tanggal: string;
   namaToko: string;
+  konsumenId?: number | null;
   namaKonsumen: string;
   namaGrup: string;
   alamat: string;
@@ -146,12 +148,42 @@ export async function createNgInvoice(input: CreateNgInvoiceInput) {
     const created = await prisma.$transaction(async (tx) => {
       const noInvoice = await nextDocNumber(tx, "ng_invoice");
 
+      // Link ke master konsumen: pakai id terpilih bila valid, cari yang sudah ada
+      // berdasar nama, atau auto-create bila baru — supaya invoice & CRM tersambung.
+      let linkedKonsumenId: number | null = null;
+      const namaK = data.namaKonsumen.trim();
+      if (namaK) {
+        if (data.konsumenId) {
+          const chosen = await tx.ngKonsumen.findUnique({ where: { id: data.konsumenId }, select: { id: true, nama: true } });
+          // Hanya pakai id terpilih bila namanya masih cocok (hindari id basi salah link).
+          if (chosen && chosen.nama === namaK) linkedKonsumenId = chosen.id;
+        }
+        if (!linkedKonsumenId) {
+          const match = await tx.ngKonsumen.findFirst({ where: { nama: namaK }, select: { id: true } });
+          if (match) {
+            linkedKonsumenId = match.id;
+          } else {
+            const createdK = await tx.ngKonsumen.create({
+              data: {
+                nama: namaK,
+                namaGrup: data.namaGrup.trim() || null,
+                alamat: data.alamat.trim() || null,
+                namaWorkshop: data.namaWorkshop.trim() || null,
+              },
+              select: { id: true },
+            });
+            linkedKonsumenId = createdK.id;
+          }
+        }
+      }
+
       const invoice = await tx.ngInvoice.create({
         data: {
           noInvoice,
           tanggal: data.tanggal,
           status: data.paymentStatus === "LUNAS" ? "LUNAS" : "PENDING",
           namaToko: data.namaToko,
+          konsumenId: linkedKonsumenId,
           jatuhTempo: dueDate,
           namaKonsumen: data.namaKonsumen || null,
           namaGrup: data.namaGrup || null,
@@ -221,6 +253,7 @@ export async function createNgInvoice(input: CreateNgInvoiceInput) {
     revalidatePath("/non-gudang");
     revalidatePath("/non-gudang/buat-invoice");
     revalidatePath("/non-gudang/invoice");
+    revalidatePath("/non-gudang/konsumen");
 
     return {
       ok: true,

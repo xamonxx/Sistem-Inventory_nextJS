@@ -29,7 +29,6 @@ import {
 import { Nota, type NotaData } from "@/components/Nota";
 import { printArea } from "@/lib/print";
 import { toast } from "sonner";
-import { toPng } from "html-to-image";
 
 type ItemOption = { id: number; kode: string; nama: string; hargaJual: number };
 type OriginalItem = { transactionItemId: number; itemId: number; nama: string; kode: string; qty: number; alreadyReturned: number; availableForReturn: number; harga: number };
@@ -187,6 +186,7 @@ export function ReturClient({
       toast.info("Sedang mengambil gambar...");
       // Ukur tinggi penuh isi (scrollHeight) supaya struk panjang tidak
       // terpotong — wrapper memakai overflow-hidden.
+      const { toPng } = await import("html-to-image");
       const imgDataUrl = await toPng(element, {
         quality: 1.0,
         pixelRatio: 2,

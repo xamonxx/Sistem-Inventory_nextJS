@@ -4,7 +4,7 @@ import { useCallback, useEffect, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { Bell, AlertTriangle, Info, BellRing, Sparkles, ChevronRight, ChevronDown, ChevronUp, X, RotateCw } from "lucide-react";
 import { Drawer } from "./Drawer";
-import { fetchSystemNotifications, type SystemNotification } from "./NotificationActions";
+import type { SystemNotification } from "./NotificationActions";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 
@@ -12,7 +12,7 @@ interface NotificationCenterProps {
   role?: string;
 }
 
-export function NotificationCenter({ role }: NotificationCenterProps) {
+export function NotificationCenter({ role: _role }: NotificationCenterProps) {
   const router = useRouter();
   const [isOpen, setIsOpen] = useState(false);
   const [notifications, setNotifications] = useState<SystemNotification[]>([]);
@@ -57,13 +57,24 @@ export function NotificationCenter({ role }: NotificationCenterProps) {
   const loadNotifications = useCallback(() => {
     startTransition(async () => {
       try {
-        const data = await fetchSystemNotifications(role);
-        setNotifications(data);
+        const response = await fetch("/api/notifications", {
+          cache: "no-store",
+          credentials: "same-origin",
+        });
+        if (response.status === 401) {
+          window.location.href = "/login";
+          return;
+        }
+        if (!response.ok) {
+          throw new Error(`Notification request failed: ${response.status}`);
+        }
+        const data = (await response.json()) as { notifications?: SystemNotification[] };
+        setNotifications(data.notifications ?? []);
       } catch (err) {
         console.error("Failed to load notifications:", err);
       }
     });
-  }, [role]);
+  }, []);
 
   // Load notifications initially
   useEffect(() => {
@@ -115,7 +126,7 @@ export function NotificationCenter({ role }: NotificationCenterProps) {
           setIsOpen(true);
           loadNotifications();
         }}
-        className="relative flex h-11 w-11 items-center justify-center rounded-xl border border-border bg-card dark:bg-card text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-900 hover:text-foreground dark:hover:text-slate-200 transition cursor-pointer"
+        className="chrome-icon-button relative flex h-11 w-11 cursor-pointer items-center justify-center rounded-xl backdrop-blur-xl backdrop-saturate-150 transition"
         title="Pusat Notifikasi"
       >
         {alertCount > 0 ? (
@@ -171,7 +182,7 @@ export function NotificationCenter({ role }: NotificationCenterProps) {
                   key={notif.id}
                   onClick={() => handleNotifClick(notif)}
                   className={cn(
-                    "group relative w-full rounded-xl border p-4 flex items-start gap-3 text-xs leading-relaxed transition-all hover:shadow-sm cursor-pointer text-left",
+                    "group relative flex w-full cursor-pointer items-start gap-3 rounded-xl border p-4 text-left text-xs leading-relaxed transition-[background-color,border-color,box-shadow,transform] hover:shadow-sm",
                     severityStyles[notif.severity]
                   )}
                 >

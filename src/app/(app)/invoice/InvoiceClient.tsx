@@ -13,7 +13,6 @@ import { Nota } from "@/components/Nota";
 import { ModernDialog } from "@/components/ModernDialog";
 import { printArea } from "@/lib/print";
 import { formatRupiah, formatTanggal, cn } from "@/lib/utils";
-import { toPng } from "html-to-image";
 import { exportInvoiceExcel } from "@/lib/export/exportInvoiceExcel";
 import { PeriodFilter, type ResolvedPeriodRange } from "@/components/PeriodFilter";
 import {
@@ -388,6 +387,7 @@ export function InvoiceClient({ initialInvoices, canBayar, userName }: InvoiceCl
       // lebih pendek dari konten sebenarnya.
       const fullWidth = element.scrollWidth;
       const fullHeight = element.scrollHeight;
+      const { toPng } = await import("html-to-image");
       const imgDataUrl = await toPng(element, {
         quality: 1.0,
         pixelRatio: 2,
@@ -834,55 +834,55 @@ export function InvoiceClient({ initialInvoices, canBayar, userName }: InvoiceCl
               )}
             </div>
 
-            {/* Status & Summary Header */}
+            {/* Status & Summary Header — state-driven, WCAG-AA text on tint */}
             {(() => {
               const sisaTagihan = selectedInvoice.total - selectedInvoice.totalDibayar;
               const isPaid = selectedInvoice.status === "PAID" || sisaTagihan <= 0;
+              const state = isPaid
+                ? { label: "Lunas", chip: "green" as const, Icon: CheckCircle, tint: "bg-[color:rgba(34,197,94,0.12)]", ring: "border-[color:rgba(134,239,172,0.40)]", ink: "text-green-800 dark:text-green-300", bar: "bg-green-500" }
+                : selectedInvoice.status === "PARTIAL"
+                ? { label: "Cicilan Aktif", chip: "blue" as const, Icon: Wallet, tint: "bg-[color:rgba(59,130,246,0.12)]", ring: "border-[color:rgba(96,165,250,0.40)]", ink: "text-blue-800 dark:text-blue-300", bar: "bg-blue-500" }
+                : selectedInvoice.status === "DRAFT"
+                ? { label: "Draft", chip: "slate" as const, Icon: FileText, tint: "bg-[var(--surface-2)]", ring: "border-border", ink: "text-[var(--text-soft)]", bar: "bg-slate-400" }
+                : { label: "Pending", chip: "amber" as const, Icon: Clock, tint: "bg-[color:rgba(245,158,11,0.12)]", ring: "border-[color:rgba(251,191,36,0.40)]", ink: "text-amber-800 dark:text-amber-300", bar: "bg-amber-500" };
+              const StateIcon = state.Icon;
+              const paidPct = selectedInvoice.total > 0
+                ? Math.min(100, Math.round((selectedInvoice.totalDibayar / selectedInvoice.total) * 100))
+                : 0;
               return (
-                <div className={cn(
-                  "flex items-center justify-between border p-5 rounded-2xl transition-all shadow-xs",
-                  isPaid 
-                    ? "bg-[color:rgba(34,197,94,0.14)] border-[color:rgba(134,239,172,0.34)]"
-                    : selectedInvoice.status === "PARTIAL"
-                    ? "bg-[color:rgba(59,130,246,0.14)] border-[color:rgba(96,165,250,0.34)]"
-                    : "bg-[color:rgba(245,158,11,0.14)] border-[color:rgba(251,191,36,0.34)]"
-                )}>
-                  <div>
-                    <p className={cn(
-                      "text-[10px] font-bold uppercase tracking-wide",
-                      isPaid
-                        ? "text-green-300"
-                        : selectedInvoice.status === "PARTIAL"
-                        ? "text-blue-300"
-                        : "text-amber-300"
-                    )}>Status Pembayaran</p>
-                    <div className="mt-1.5">
-                      {isPaid && <Badge tone="green" className="px-2.5 py-1 font-bold">Lunas</Badge>}
-                      {!isPaid && selectedInvoice.status === "PARTIAL" && <Badge tone="blue" className="px-2.5 py-1 font-bold">Cicilan Aktif</Badge>}
-                      {!isPaid && selectedInvoice.status === "PENDING" && <Badge tone="amber" className="px-2.5 py-1 font-bold">Pending</Badge>}
-                      {!isPaid && selectedInvoice.status === "DRAFT" && <Badge tone="slate" className="px-2.5 py-1 font-bold">Draft</Badge>}
+                <div className={cn("rounded-2xl border p-5 shadow-xs", state.tint, state.ring)}>
+                  <div className="flex items-center justify-between gap-4">
+                    <div className="flex min-w-0 items-center gap-3.5">
+                      <div className={cn("flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-white/70 shadow-sm dark:bg-white/10", state.ink)}>
+                        <StateIcon size={22} className="stroke-[2.4]" />
+                      </div>
+                      <div className="min-w-0">
+                        <p className={cn("text-[10px] font-bold uppercase tracking-wide", state.ink)}>Status Pembayaran</p>
+                        <div className="mt-1.5">
+                          <Badge tone={state.chip} className="px-2.5 py-1 font-bold">{state.label}</Badge>
+                        </div>
+                      </div>
+                    </div>
+                    <div className="shrink-0 text-right">
+                      <p className={cn("text-[10px] font-bold uppercase tracking-wide", state.ink)}>Sisa Tagihan</p>
+                      <p className={cn("mt-1 font-mono text-xl font-extrabold", state.ink)}>{formatRupiah(sisaTagihan)}</p>
                     </div>
                   </div>
-                  <div className="text-right">
-                    <p className={cn(
-                      "text-[10px] font-bold uppercase tracking-wide",
-                      isPaid
-                        ? "text-green-300"
-                        : selectedInvoice.status === "PARTIAL"
-                        ? "text-blue-300"
-                        : "text-amber-300"
-                    )}>Sisa Tagihan</p>
-                    <p className={cn(
-                      "text-xl font-extrabold font-mono mt-1",
-                      isPaid
-                        ? "text-green-300"
-                        : selectedInvoice.status === "PARTIAL"
-                        ? "text-blue-300"
-                        : "text-amber-300"
-                    )}>
-                      {formatRupiah(sisaTagihan)}
-                    </p>
-                  </div>
+
+                  {/* Paid progress — only while partially settled */}
+                  {!isPaid && selectedInvoice.totalDibayar > 0 && (
+                    <div className="mt-4 space-y-1.5">
+                      <div className="flex items-center justify-between text-[10px] font-semibold">
+                        <span className={state.ink}>Terbayar {paidPct}%</span>
+                        <span className={cn("font-mono", state.ink)}>
+                          {formatRupiah(selectedInvoice.totalDibayar)} / {formatRupiah(selectedInvoice.total)}
+                        </span>
+                      </div>
+                      <div className="h-1.5 w-full overflow-hidden rounded-full bg-white/60 dark:bg-white/10">
+                        <div className={cn("h-full rounded-full transition-all", state.bar)} style={{ width: `${paidPct}%` }} />
+                      </div>
+                    </div>
+                  )}
                 </div>
               );
             })()}

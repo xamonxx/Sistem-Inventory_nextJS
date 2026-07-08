@@ -45,7 +45,7 @@ export function FloatingActionButton({ role }: { role?: string }) {
       {/* Floating Menu list */}
       <div
         className={cn(
-          "mb-3 flex flex-col items-end gap-2 transition-all duration-200 origin-bottom-right",
+          "mb-3 flex origin-bottom-right flex-col items-end gap-2 transition-[opacity,transform] duration-200",
           isOpen ? "scale-100 opacity-100 translate-y-0 pointer-events-auto" : "scale-90 opacity-0 translate-y-2 pointer-events-none"
         )}
       >
@@ -55,7 +55,14 @@ export function FloatingActionButton({ role }: { role?: string }) {
             <button
               key={act.label}
               onClick={() => handleAction(act.link)}
-              className="flex items-center gap-3 rounded-full bg-card dark:bg-slate-900 px-4 py-2.5 shadow-lg border border-border hover:bg-[#f6faf8] dark:hover:bg-slate-800 transition cursor-pointer"
+              className="flex cursor-pointer items-center gap-3 rounded-full px-4 py-2.5 transition-[background-color,border-color,color,box-shadow,transform]"
+              style={{
+                background: "rgba(var(--card-rgb, 255, 255, 255), 0.9)",
+                backdropFilter: "blur(12px) saturate(180%)",
+                WebkitBackdropFilter: "blur(12px) saturate(180%)",
+                border: "1px solid rgba(var(--border-rgb, 148, 163, 184), 0.3)",
+                boxShadow: "0 8px 24px -4px rgba(0,0,0,0.15), 0 0 0 1px rgba(59, 130, 246, 0.08)",
+              }}
             >
               <span className="text-xs font-bold text-slate-700 dark:text-slate-200">{act.label}</span>
               <span className={cn("flex h-7 w-7 items-center justify-center rounded-full border border-current/10", act.color)}>
@@ -66,14 +73,20 @@ export function FloatingActionButton({ role }: { role?: string }) {
         })}
       </div>
 
-      {/* Main Trigger Button */}
+      {/* Main Trigger Button — Premium Glass */}
       <button
         onClick={() => setIsOpen((prev) => !prev)}
         className={cn(
-          "pointer-events-auto flex h-14 w-14 items-center justify-center rounded-full bg-[var(--primary)] text-white shadow-lg shadow-primary-950/20 transition-all duration-300 hover:bg-[var(--primary-strong)] active:scale-95 cursor-pointer",
+          "pointer-events-auto flex h-14 w-14 cursor-pointer items-center justify-center rounded-full text-white transition-[background-color,border-color,box-shadow,transform] duration-300 active:scale-95",
           isOpen ? "rotate-45" : ""
         )}
         title="Aksi Cepat Baru"
+        style={{
+          background: isOpen 
+            ? "linear-gradient(135deg, #2563eb 0%, #0ea5e9 100%)" 
+            : "linear-gradient(135deg, #3b82f6 0%, #0ea5e9 100%)",
+          boxShadow: "0 8px 32px -4px rgba(59, 130, 246, 0.5), 0 0 0 1px rgba(59, 130, 246, 0.3)",
+        }}
       >
         <Plus size={28} strokeWidth={2.5} />
       </button>

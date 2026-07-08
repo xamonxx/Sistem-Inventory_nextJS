@@ -303,9 +303,9 @@ export function DatePicker({
         disabled={disabled}
         onClick={() => setIsOpen(!isOpen)}
         className={cn(
-          "flex h-full w-full items-center justify-between px-4 text-xs font-semibold text-left outline-none transition-all cursor-pointer shadow-sm select-none",
-          "border border-border rounded-lg bg-card dark:bg-slate-900 hover:bg-[#f6faf8] dark:hover:bg-slate-950",
-          isOpen && "border-[var(--primary)] ring-4 ring-[var(--primary)]/10",
+          "flex h-full w-full items-center justify-between px-4 text-xs font-bold text-left outline-none cursor-pointer select-none",
+          "rounded-lg border border-sky-200/80 bg-white/82 shadow-[0_12px_28px_-24px_rgba(8,47,73,0.45),inset_0_1px_0_rgba(255,255,255,0.72)] backdrop-blur-xl transition-[background-color,border-color,color,box-shadow,transform] hover:border-sky-300/90 hover:bg-sky-50/80 active:scale-[0.99] dark:border-sky-300/18 dark:bg-slate-900/72 dark:hover:border-sky-300/34 dark:hover:bg-slate-900/90",
+          isOpen && "border-[var(--primary)] ring-4 ring-[var(--primary)]/12",
           disabled && "opacity-50 pointer-events-none bg-slate-50 dark:bg-slate-950 text-slate-400"
         )}
       >
@@ -321,7 +321,7 @@ export function DatePicker({
       {isOpen && typeof document !== "undefined" && createPortal(
         <div
           ref={panelRef}
-          className="fixed z-[120] rounded-lg border border-border bg-card p-4 shadow-xl dark:bg-card"
+          className="fixed z-[120] rounded-xl border border-sky-200/80 bg-white/95 p-4 shadow-[0_22px_55px_-24px_rgba(8,47,73,0.42)] backdrop-blur-2xl dark:border-sky-300/18 dark:bg-slate-900/95"
           style={{
             top: panelStyle.top,
             left: panelStyle.left,
@@ -335,7 +335,7 @@ export function DatePicker({
             <button
               type="button"
               onClick={prevMonth}
-              className="flex h-8 w-8 items-center justify-center rounded-lg border border-border bg-card text-slate-600 transition hover:bg-slate-50 dark:bg-slate-900 dark:text-slate-400 dark:hover:bg-slate-800 cursor-pointer"
+              className="flex h-8 w-8 cursor-pointer items-center justify-center rounded-lg border border-sky-200/80 bg-white/82 text-slate-600 shadow-[inset_0_1px_0_rgba(255,255,255,0.72)] transition-[background-color,border-color,color,transform] hover:border-sky-300/90 hover:bg-sky-50/80 active:scale-[0.98] focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[var(--primary)]/14 dark:border-sky-300/18 dark:bg-slate-900/72 dark:text-slate-300 dark:hover:bg-sky-400/10"
             >
               <ChevronLeft size={14} />
             </button>
@@ -365,7 +365,7 @@ export function DatePicker({
             <button
               type="button"
               onClick={nextMonth}
-              className="flex h-8 w-8 items-center justify-center rounded-lg border border-border bg-card text-slate-600 transition hover:bg-slate-50 dark:bg-slate-900 dark:text-slate-400 dark:hover:bg-slate-800 cursor-pointer"
+              className="flex h-8 w-8 cursor-pointer items-center justify-center rounded-lg border border-sky-200/80 bg-white/82 text-slate-600 shadow-[inset_0_1px_0_rgba(255,255,255,0.72)] transition-[background-color,border-color,color,transform] hover:border-sky-300/90 hover:bg-sky-50/80 active:scale-[0.98] focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[var(--primary)]/14 dark:border-sky-300/18 dark:bg-slate-900/72 dark:text-slate-300 dark:hover:bg-sky-400/10"
             >
               <ChevronRight size={14} />
             </button>
@@ -386,11 +386,11 @@ export function DatePicker({
                 type="button"
                 onClick={() => handleSelectDay(cell.day, cell.isCurrentMonth, cell.offsetMonth)}
                 className={cn(
-                  "flex h-8 w-8 items-center justify-center rounded-lg text-[10px] font-bold transition-all cursor-pointer select-none",
+                  "flex h-8 w-8 cursor-pointer items-center justify-center rounded-lg text-[10px] font-bold select-none transition-[background-color,border-color,color,box-shadow,transform] focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[var(--primary)]/14",
                   cell.isCurrentMonth ? "text-foreground dark:text-slate-200" : "text-slate-300 dark:text-slate-700",
                   cell.isToday && !cell.isSelected && "border border-[var(--primary)] text-[var(--primary)] bg-[var(--primary)]/5",
-                  cell.isSelected && "bg-[var(--primary)] text-white font-extrabold shadow-sm",
-                  !cell.isSelected && "hover:bg-slate-100 dark:hover:bg-slate-800"
+                  cell.isSelected && "border border-sky-400/50 bg-[linear-gradient(180deg,rgba(56,189,248,0.28),transparent_42%),var(--primary)] text-white font-extrabold shadow-[0_12px_28px_-18px_rgba(14,165,233,0.8)]",
+                  !cell.isSelected && "hover:bg-sky-50/80 dark:hover:bg-sky-400/10"
                 )}
               >
                 {cell.day}
@@ -403,14 +403,14 @@ export function DatePicker({
             <button
               type="button"
               onClick={handleClear}
-              className="text-[10px] font-bold text-red-600 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300 px-2 py-1 rounded transition cursor-pointer"
+              className="cursor-pointer rounded-md border border-rose-200/80 bg-rose-50/70 px-2 py-1 text-[10px] font-bold text-red-600 transition-[background-color,border-color,color] hover:border-rose-300 hover:bg-rose-100 dark:border-rose-400/20 dark:bg-rose-500/10 dark:text-red-300 dark:hover:bg-rose-500/15"
             >
               Hapus
             </button>
             <button
               type="button"
               onClick={handleSelectToday}
-              className="text-[10px] font-bold text-[var(--primary)] hover:text-[var(--primary-strong)] px-2 py-1 rounded bg-[var(--primary)]/10 transition cursor-pointer"
+              className="cursor-pointer rounded-md border border-sky-200/80 bg-sky-50/80 px-2 py-1 text-[10px] font-bold text-[var(--primary)] transition-[background-color,border-color,color] hover:border-sky-300 hover:bg-sky-100/80 hover:text-[var(--primary-strong)] dark:border-sky-300/18 dark:bg-sky-400/10 dark:text-sky-200 dark:hover:bg-sky-400/15"
             >
               Hari Ini
             </button>

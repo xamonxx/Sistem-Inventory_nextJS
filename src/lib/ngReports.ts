@@ -204,3 +204,182 @@ export async function ngAnalisa(range?: NgReportRange): Promise<NgAnalisa> {
 
   return { summary, perToko, topProduk, tren };
 }
+
+// ============================================================
+// Riwayat Pembelian — sisi pembelian (harga beli) per toko sumber.
+// 1 toko per invoice, jadi tiap invoice = 1 pembelian dari 1 toko.
+// Read-only, tanpa payable (modal hanya untuk pelaporan pembelian).
+// ============================================================
+
+export type NgPembelianItem = {
+  nama: string;
+  qty: number;
+  hargaBeli: number;
+  subtotal: number; // harga beli × qty (modal)
+};
+
+export type NgPembelianInvoice = {
+  id: number;
+  noInvoice: string;
+  tanggal: string; // ISO
+  namaToko: string;
+  jumlahItem: number;
+  totalQty: number;
+  totalPembelian: number; // Σ subtotal modal
+  items: NgPembelianItem[];
+};
+
+export type NgPembelianTokoRow = {
+  namaToko: string;
+  jumlahInvoice: number;
+  totalQty: number;
+  totalPembelian: number;
+};
+
+export type NgPembelian = {
+  summary: { totalPembelian: number; jumlahInvoice: number; jumlahToko: number; totalQty: number };
+  perToko: NgPembelianTokoRow[];
+  invoices: NgPembelianInvoice[];
+};
+
+/**
+ * Agregasi riwayat pembelian barang dari toko sumber untuk rentang periode.
+ * Menyajikan sisi pembelian (harga beli): ringkasan per toko + daftar per invoice
+ * dengan rincian item. Satu query NgInvoice + items.
+ */
+export async function ngPembelian(range?: NgReportRange): Promise<NgPembelian> {
+  const hasRange = !!(range?.from || range?.to);
+
+  const invoices = await prisma.ngInvoice.findMany({
+    where: hasRange ? { tanggal: { gte: range?.from, lte: range?.to } } : undefined,
+    orderBy: { tanggal: "desc" },
+    select: {
+      id: true,
+      noInvoice: true,
+      tanggal: true,
+      namaToko: true,
+      totalModal: true,
+      items: { select: { namaSnapshot: true, qty: true, hargaBeliSnapshot: true, subtotalModal: true } },
+    },
+  });
+
+  const tokoMap = new Map<string, NgPembelianTokoRow>();
+  let totalPembelian = 0;
+  let totalQty = 0;
+
+  const rows: NgPembelianInvoice[] = invoices.map((inv) => {
+    const modal = Number(inv.totalModal);
+    const qty = inv.items.reduce((s, it) => s + it.qty, 0);
+    totalPembelian += modal;
+    totalQty += qty;
+
+    const t = tokoMap.get(inv.namaToko) ?? { namaToko: inv.namaToko, jumlahInvoice: 0, totalQty: 0, totalPembelian: 0 };
+    t.jumlahInvoice += 1;
+    t.totalQty += qty;
+    t.totalPembelian += modal;
+    tokoMap.set(inv.namaToko, t);
+
+    return {
+      id: inv.id,
+      noInvoice: inv.noInvoice,
+      tanggal: inv.tanggal.toISOString(),
+      namaToko: inv.namaToko,
+      jumlahItem: inv.items.length,
+      totalQty: qty,
+      totalPembelian: round2(modal),
+      items: inv.items.map((it) => ({
+        nama: it.namaSnapshot,
+        qty: it.qty,
+        hargaBeli: Number(it.hargaBeliSnapshot),
+        subtotal: Number(it.subtotalModal),
+      })),
+    };
+  });
+
+  const perToko = [...tokoMap.values()]
+    .map((t) => ({ ...t, totalPembelian: round2(t.totalPembelian) }))
+    .sort((a, b) => b.totalPembelian - a.totalPembelian);
+
+  return {
+    summary: {
+      totalPembelian: round2(totalPembelian),
+      jumlahInvoice: invoices.length,
+      jumlahToko: tokoMap.size,
+      totalQty,
+    },
+    perToko,
+    invoices: rows,
+  };
+}
+
+// ============================================================
+// Laporan per Konsumen — rekap penjualan/piutang/profit tiap konsumen
+// (dikelompokkan dari snapshot namaKonsumen di NgInvoice). Untuk halaman
+// Laporan & Export (Fase 5).
+// ============================================================
+
+export type NgKonsumenLaporanRow = {
+  konsumen: string;
+  namaGrup: string;
+  jumlahInvoice: number;
+  totalOmzet: number;
+  totalDibayar: number;
+  sisaPiutang: number;
+  totalProfit: number;
+  margin: number;
+};
+
+const KONSUMEN_UMUM = "Umum / Tanpa Nama";
+
+export async function ngLaporanKonsumen(range?: NgReportRange): Promise<NgKonsumenLaporanRow[]> {
+  const hasRange = !!(range?.from || range?.to);
+
+  const invoices = await prisma.ngInvoice.findMany({
+    where: hasRange ? { tanggal: { gte: range?.from, lte: range?.to } } : undefined,
+    select: {
+      namaKonsumen: true,
+      namaGrup: true,
+      totalPenjualan: true,
+      totalDibayar: true,
+      totalProfit: true,
+    },
+  });
+
+  const map = new Map<string, NgKonsumenLaporanRow>();
+
+  for (const inv of invoices) {
+    const nama = inv.namaKonsumen?.trim() || KONSUMEN_UMUM;
+    const omzet = Number(inv.totalPenjualan);
+    const dibayar = Number(inv.totalDibayar);
+    const profit = Number(inv.totalProfit);
+
+    const row = map.get(nama) ?? {
+      konsumen: nama,
+      namaGrup: inv.namaGrup?.trim() || "",
+      jumlahInvoice: 0,
+      totalOmzet: 0,
+      totalDibayar: 0,
+      sisaPiutang: 0,
+      totalProfit: 0,
+      margin: 0,
+    };
+    row.jumlahInvoice += 1;
+    row.totalOmzet += omzet;
+    row.totalDibayar += dibayar;
+    row.sisaPiutang += Math.max(0, omzet - dibayar);
+    row.totalProfit += profit;
+    if (!row.namaGrup && inv.namaGrup?.trim()) row.namaGrup = inv.namaGrup.trim();
+    map.set(nama, row);
+  }
+
+  return [...map.values()]
+    .map((r) => ({
+      ...r,
+      totalOmzet: round2(r.totalOmzet),
+      totalDibayar: round2(r.totalDibayar),
+      sisaPiutang: round2(r.sisaPiutang),
+      totalProfit: round2(r.totalProfit),
+      margin: pct(r.totalProfit, r.totalOmzet),
+    }))
+    .sort((a, b) => b.totalOmzet - a.totalOmzet);
+}

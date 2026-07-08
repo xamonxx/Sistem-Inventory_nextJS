@@ -58,7 +58,7 @@ export function Pagination({
   const go = (p: number) => onPage(Math.min(totalPages, Math.max(1, p)));
 
   const btn =
-    "flex h-8 min-w-8 items-center justify-center rounded-lg border border-border bg-card px-2 text-xs font-semibold text-muted transition hover:bg-[var(--row-hover)] disabled:cursor-not-allowed disabled:opacity-40 cursor-pointer";
+    "flex h-8 min-w-8 cursor-pointer items-center justify-center rounded-lg border border-sky-200/80 bg-white/82 px-2 text-xs font-bold text-[var(--text-soft)] shadow-[0_10px_24px_-20px_rgba(8,47,73,0.45),inset_0_1px_0_rgba(255,255,255,0.72)] backdrop-blur-xl transition-[background-color,border-color,color,box-shadow,transform] hover:border-sky-300/90 hover:bg-sky-50/80 hover:text-foreground active:scale-[0.98] focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[var(--primary)]/14 disabled:cursor-not-allowed disabled:opacity-40 dark:border-sky-300/18 dark:bg-slate-900/72 dark:hover:border-sky-300/34 dark:hover:bg-slate-900/90 dark:hover:text-white";
 
   return (
     <div className={cn("flex flex-col items-center justify-between gap-3 px-1 pt-3 text-xs sm:flex-row", className)}>
@@ -73,7 +73,7 @@ export function Pagination({
             <select
               value={perPage}
               onChange={(e) => onPerPage(Number(e.target.value))}
-              className="h-8 rounded-lg border border-border bg-card px-2 text-xs font-semibold text-foreground outline-none cursor-pointer"
+              className="h-8 cursor-pointer rounded-lg border border-sky-200/80 bg-white/82 px-2 text-xs font-bold text-foreground outline-none shadow-[inset_0_1px_0_rgba(255,255,255,0.72)] backdrop-blur-xl focus:border-[var(--primary)] focus:ring-4 focus:ring-[var(--primary)]/14 dark:border-sky-300/18 dark:bg-slate-900/72 dark:text-white"
             >
               {perPageOptions.map((n) => (
                 <option key={n} value={n}>

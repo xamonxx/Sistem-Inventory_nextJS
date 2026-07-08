@@ -32,9 +32,21 @@ export default async function NonGudangBuatInvoicePage() {
 
   const tokoOptions = Array.from(new Set(products.map((product) => product.namaToko))).sort((a, b) => a.localeCompare(b));
 
+  const konsumen = await prisma.ngKonsumen.findMany({
+    orderBy: { nama: "asc" },
+    select: { id: true, nama: true, namaGrup: true, alamat: true, namaWorkshop: true },
+  });
+
   return (
     <NgBuatInvoiceClient
       tokoOptions={tokoOptions}
+      konsumenOptions={konsumen.map((k) => ({
+        id: k.id,
+        nama: k.nama,
+        namaGrup: k.namaGrup ?? "",
+        alamat: k.alamat ?? "",
+        namaWorkshop: k.namaWorkshop ?? "",
+      }))}
       items={products.map((product) => ({
         ...product,
         hargaBeli: Number(product.hargaBeli),

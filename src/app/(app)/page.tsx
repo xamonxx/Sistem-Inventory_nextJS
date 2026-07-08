@@ -4,9 +4,8 @@ import { prisma } from "@/lib/prisma";
 import { requireUser } from "@/lib/auth";
 import { getStokAkhirMap } from "@/lib/stock";
 import { formatRupiah, formatTanggal } from "@/lib/utils";
-import { Card, Badge } from "@/components/ui";
-import { DashboardCharts } from "@/components/DashboardCharts";
 import { DatePicker } from "@/components/DatePicker";
+import { DashboardCharts } from "@/components/DashboardChartsWrapper";
 import {
   TrendingUp,
   Package,
@@ -14,14 +13,12 @@ import {
   Wallet,
   Building2,
   Users,
-  PlusCircle,
   FileText,
-  RotateCcw,
-  Plus,
-  Info,
   Clock,
   Layers,
   CircleAlert,
+  Filter,
+  ShieldCheck,
 } from "lucide-react";
 
 function startOfDay(d: Date) {
@@ -240,9 +237,9 @@ export default async function DashboardPage({
   const kpiCards = isOwnerMode
     ? [
         { label: "Omset Bulan Ini", value: formatRupiah(omsetMonth), desc: "Penjualan kotor bulan berjalan", icon: TrendingUp, tone: "success" },
-        { label: "Margin Kotor", value: isGudang ? formatRupiah(marginTotal) : "🔒 Terbatas", desc: "Berdasarkan filter tanggal", icon: Layers, tone: "blue" },
+        { label: "Margin Kotor", value: isGudang ? formatRupiah(marginTotal) : "Terkunci", desc: "Berdasarkan filter tanggal", icon: Layers, tone: "blue" },
         { label: "Outstanding Piutang", value: formatRupiah(outstandingReceivables), desc: `${unpaidInvoices.length} invoice aktif`, icon: Wallet, tone: "amber" },
-        { label: "Nilai Aset Gudang", value: isGudang ? formatRupiah(totalAssetValue) : "🔒 Terbatas", desc: "Total nilai modal persediaan", icon: Package, tone: "slate" },
+        { label: "Nilai Aset Gudang", value: isGudang ? formatRupiah(totalAssetValue) : "Terkunci", desc: "Total nilai modal persediaan", icon: Package, tone: "slate" },
         { label: "Proyek Konstruksi", value: String(activeProjectsCount), desc: "Proyek aktif terdaftar", icon: Building2, tone: "blue" },
         { label: "Pelanggan Terdaftar", value: String(activeClientsCount), desc: "Customer di dalam CRM", icon: Users, tone: "primary" },
       ]
@@ -270,43 +267,51 @@ export default async function DashboardPage({
 
   return (
     <div className="space-y-7">
-      {/* Dashboard Top Header */}
-      <header className="relative z-20 anim-rise overflow-visible rounded-lg border border-border bg-[var(--card)] p-5 shadow-[var(--shadow-card)] md:p-6">
+      <header className="liquid-panel liquid-panel-strong dashboard-hero relative z-20 anim-rise p-5 backdrop-blur-2xl backdrop-saturate-150 md:p-6">
         <div className="flex flex-col gap-5 xl:flex-row xl:items-center xl:justify-between">
         <div>
-          <p className="u-label flex items-center gap-2 text-[var(--primary)] font-bold">
-            <span className="inline-block h-[2px] w-6 bg-[var(--primary)]" />
+          <p className="u-label flex items-center gap-2.5 text-[var(--primary)]">
+            <span className="inline-block h-[3px] w-7 rounded-full bg-gradient-to-r from-[var(--primary)] via-sky-400 to-amber-400" />
             Sistem ERP Putra Corp
           </p>
-          <h1 className="mt-2 font-extrabold text-slate-950 dark:text-white">
+          <h1 className="mt-3 text-2xl font-extrabold text-foreground tracking-normal">
             {isOwnerMode ? "Owner Business Dashboard" : "Operational Workspace"}
           </h1>
-          <p className="mt-2 text-sm font-semibold text-slate-500">
-            Selamat datang kembali, <span className="text-foreground dark:text-slate-200 font-bold">{user.nama}</span>.
+          <p className="mt-2 max-w-2xl text-sm font-medium leading-6 text-[var(--text-soft)]">
+            Selamat datang kembali, <span className="font-bold text-foreground">{user.nama}</span>. Pantau omset, stok kritis, dan aktivitas gudang dari satu ruang kerja.
           </p>
+          <div className="mt-4 flex flex-wrap gap-2">
+            <span className="dashboard-chip inline-flex items-center gap-2 rounded-full px-3 py-1.5 text-[11px] font-bold text-[var(--text-soft)] backdrop-blur-xl backdrop-saturate-150">
+              <ShieldCheck size={13} className="text-[var(--primary)]" />
+              Live inventory
+            </span>
+            <span className="dashboard-chip inline-flex items-center gap-2 rounded-full px-3 py-1.5 text-[11px] font-bold text-[var(--text-soft)] backdrop-blur-xl backdrop-saturate-150">
+              <Clock size={13} className="text-amber-500" />
+              Update {formatTanggal(now)}
+            </span>
+          </div>
         </div>
 
         {/* Toggle Mode & Filters */}
         <div className="flex w-full flex-col gap-3 xl:w-auto xl:items-end">
-          {/* Mode Switcher capsule */}
           {user.role !== "ADMIN_KASIR" && (
-            <div className="flex w-full rounded-lg border border-border bg-[#e7efec] dark:bg-slate-950 p-1 sm:w-auto">
+            <div className="dashboard-chip flex w-full rounded-xl p-1.5 backdrop-blur-xl backdrop-saturate-150 sm:w-auto">
               <Link
-                href={`/?mode=operational${params.from ? `&from=${params.from}` : ""}${params.to ? `&to=${params.to}` : ""}`}
-                className={`flex-1 rounded-md px-4 py-2 text-center text-xs font-bold transition-all duration-150 sm:flex-none ${
+                href={`/?mode=operational${params.from ? `&from=${encodeURIComponent(params.from)}` : ""}${params.to ? `&to=${encodeURIComponent(params.to)}` : ""}`}
+                className={`flex-1 rounded-lg px-4 py-2.5 text-center text-xs font-bold transition-all duration-200 sm:flex-none ${
                   !isOwnerMode
-                    ? "bg-card dark:bg-slate-900 text-[var(--primary-strong)] dark:text-white shadow-sm"
-                    : "text-slate-500 dark:text-slate-400 hover:text-slate-950 dark:hover:text-white"
+                    ? "bg-gradient-to-br from-[var(--primary)] to-sky-500 text-white shadow-lg shadow-sky-500/20"
+                    : "text-[var(--text-soft)] hover:bg-white/45 hover:text-foreground dark:hover:bg-white/5"
                 }`}
               >
                 Operasional
               </Link>
               <Link
-                href={`/?mode=owner${params.from ? `&from=${params.from}` : ""}${params.to ? `&to=${params.to}` : ""}`}
-                className={`flex-1 rounded-md px-4 py-2 text-center text-xs font-bold transition-all duration-150 sm:flex-none ${
+                href={`/?mode=owner${params.from ? `&from=${encodeURIComponent(params.from)}` : ""}${params.to ? `&to=${encodeURIComponent(params.to)}` : ""}`}
+                className={`flex-1 rounded-lg px-4 py-2.5 text-center text-xs font-bold transition-all duration-200 sm:flex-none ${
                   isOwnerMode
-                    ? "bg-card dark:bg-slate-900 text-[var(--primary-strong)] dark:text-white shadow-sm"
-                    : "text-slate-500 dark:text-slate-400 hover:text-slate-950 dark:hover:text-white"
+                    ? "bg-gradient-to-br from-[var(--primary)] to-sky-500 text-white shadow-lg shadow-sky-500/20"
+                    : "text-[var(--text-soft)] hover:bg-white/45 hover:text-foreground dark:hover:bg-white/5"
                 }`}
               >
                 Owner
@@ -331,11 +336,17 @@ export default async function DashboardPage({
             </div>
             {params.mode && <input type="hidden" name="mode" value={params.mode} />}
             <div className="flex gap-2">
-              <button className="h-11 flex-1 rounded-lg bg-[var(--primary)] px-5 text-xs font-bold text-white shadow-md shadow-primary-900/10 transition hover:bg-[var(--primary-strong)] cursor-pointer xl:flex-none">
+              <button
+                className="inline-flex h-11 flex-1 cursor-pointer items-center justify-center gap-2 rounded-lg bg-gradient-to-br from-[var(--primary)] to-sky-500 px-5 text-xs font-bold text-white shadow-lg shadow-sky-500/20 transition-all hover:brightness-105 xl:flex-none"
+              >
+                <Filter size={14} />
                 Saring
               </button>
               {params.from || params.to ? (
-                <Link href={isOwnerMode ? "/?mode=owner" : "/"} className="flex h-11 flex-1 items-center justify-center rounded-lg border border-border bg-card dark:bg-card px-3 text-xs font-bold text-slate-600 dark:text-slate-400 shadow-xs hover:bg-slate-50 dark:hover:bg-slate-900 xl:flex-none">
+                <Link
+                  href={isOwnerMode ? "/?mode=owner" : "/"}
+                  className="dashboard-chip flex h-11 flex-1 items-center justify-center rounded-lg px-3 text-xs font-bold text-[var(--text-soft)] backdrop-blur-xl backdrop-saturate-150 transition-all hover:text-foreground xl:flex-none"
+                >
                   Reset
                 </Link>
               ) : null}
@@ -345,9 +356,9 @@ export default async function DashboardPage({
         </div>
       </header>
 
-      {/* ===== Alert Center — redesain ===== */}
+      {/* ===== Alert Center — Premium ===== */}
       {(negativeStockItems.length > 0 || lowStockItems.length > 0) && (
-        <Card className="anim-rise space-y-5 p-5">
+        <div className="liquid-panel anim-rise space-y-5 rounded-2xl p-6 backdrop-blur-2xl backdrop-saturate-150">
           {/* Header */}
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div className="flex items-center gap-3">
@@ -397,7 +408,7 @@ export default async function DashboardPage({
                 </ul>
                 {negativeStockItems.length > 4 && (
                   <Link href="/stok" className="flex items-center justify-center gap-1 border-t border-red-200/50 dark:border-red-500/15 px-4 py-2 text-[11px] font-bold text-red-700 dark:text-red-400 transition hover:bg-red-100/50 dark:hover:bg-red-500/10">
-                    +{negativeStockItems.length - 4} barang lainnya →
+                    +{negativeStockItems.length - 4} barang lainnya
                   </Link>
                 )}
               </div>
@@ -436,39 +447,60 @@ export default async function DashboardPage({
                 </ul>
                 {lowStockItems.length > 4 && (
                   <Link href="/stok/masuk" className="flex items-center justify-center gap-1 border-t border-amber-200/50 dark:border-amber-500/15 px-4 py-2 text-[11px] font-bold text-amber-700 dark:text-amber-400 transition hover:bg-amber-100/50 dark:hover:bg-amber-500/10">
-                    +{lowStockItems.length - 4} barang lainnya →
+                    +{lowStockItems.length - 4} barang lainnya
                   </Link>
                 )}
               </div>
             )}
           </div>
-        </Card>
+        </div>
       )}
 
-      {/* KPI Card grid */}
-      <section className={`grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3 ${kpiCards.length === 4 ? "2xl:grid-cols-4" : "2xl:grid-cols-6"}`}>
+      {/* KPI Card grid - Premium Liquid Glass Cards */}
+      <section className={`grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3 ${kpiCards.length === 4 ? "2xl:grid-cols-4" : "2xl:grid-cols-6"}`}>
         {kpiCards.map((kpi, i) => {
           const Icon = kpi.icon;
           return (
             <div
               key={kpi.label}
-              className="tick-card anim-rise relative flex min-h-[126px] flex-col justify-between overflow-hidden rounded-lg border border-border bg-[var(--card)] p-4 shadow-[var(--shadow-card)]"
-              style={{ animationDelay: `${i * 40}ms` }}
+              className="liquid-panel kpi-glass-card anim-rise relative flex min-h-[136px] flex-col justify-between p-5 backdrop-blur-2xl backdrop-saturate-150"
+              style={{
+                animationDelay: `${i * 40}ms`,
+              }}
             >
-              <span className="absolute inset-y-4 left-0 w-[4px] rounded-r-full" style={{ background: toneColors[kpi.tone] }} />
+              {/* Accent indicator with glow */}
+              <span
+                className="absolute inset-y-4 left-0 w-[3px] rounded-r-full"
+                style={{
+                  background: `linear-gradient(180deg, ${toneColors[kpi.tone]}, ${toneColors[kpi.tone]}90)`,
+                  boxShadow: `0 0 12px -2px ${toneColors[kpi.tone]}40`,
+                }}
+              />
+
               <div className="flex items-start justify-between gap-3">
-                <p className="pl-2 text-[10px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 leading-tight">{kpi.label}</p>
-                <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-border dark:border-slate-800 bg-card dark:bg-slate-900">
-                  <Icon size={13} style={{ color: toneColors[kpi.tone] }} strokeWidth={2.5} />
+                <p className="pl-3 text-[11px] font-bold uppercase tracking-wider text-[var(--text-soft)] leading-tight">
+                  {kpi.label}
+                </p>
+                <div
+                  className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl"
+                  style={{
+                    background: `${toneColors[kpi.tone]}15`,
+                    border: `1px solid ${toneColors[kpi.tone]}20`,
+                  }}
+                >
+                  <Icon size={15} style={{ color: toneColors[kpi.tone] }} strokeWidth={2.5} />
                 </div>
               </div>
-              <div className="mt-3 min-w-0 pl-2">
+
+              <div className="mt-3 min-w-0 pl-3">
                 <div data-tooltip={kpi.value}>
-                  <h3 className="tnum overflow-hidden text-ellipsis whitespace-nowrap font-display text-[17px] font-extrabold leading-none text-slate-950 dark:text-slate-100">
+                  <h3 className="tnum overflow-hidden text-ellipsis whitespace-nowrap font-display text-[20px] font-extrabold leading-none text-slate-950 dark:text-slate-50 tracking-tight">
                     {kpi.value}
                   </h3>
                 </div>
-                <p className="mt-1 text-[11px] font-semibold text-slate-500 dark:text-slate-400 leading-tight truncate" title={kpi.desc}>{kpi.desc}</p>
+                <p className="mt-2 line-clamp-2 text-[11px] font-semibold leading-snug text-[var(--text-muted-2)]" title={kpi.desc}>
+                  {kpi.desc}
+                </p>
               </div>
             </div>
           );
@@ -485,16 +517,15 @@ export default async function DashboardPage({
         />
       </section>
 
-      {/* Spacious Double Column Layout: Activity */}
+      {/* Spacious Double Column Layout: Activity - Premium */}
       {user.role !== "ADMIN_KASIR" && (
         <section className="anim-rise">
-          {/* Activity Timeline (Linear-style list) */}
-          <Card className="space-y-5">
+          <div className="liquid-panel space-y-5 rounded-2xl p-6 backdrop-blur-2xl backdrop-saturate-150">
             <div>
-              <h3 className="font-display text-sm font-bold text-foreground dark:text-slate-100 flex items-center gap-2">
-                <Clock size={16} className="text-[var(--primary)]" /> Riwayat Audit Operasional
+              <h3 className="font-display text-base font-bold text-foreground dark:text-slate-100 flex items-center gap-2.5">
+                <Clock size={17} className="text-[var(--primary)]" /> Riwayat Audit Operasional
               </h3>
-              <p className="text-xs text-slate-400 dark:text-slate-500 mt-1">Log audit aktivitas staf kasir dan gudang terbaru.</p>
+              <p className="text-xs text-slate-500 dark:text-slate-400 mt-1.5">Log audit aktivitas staf kasir dan gudang terbaru.</p>
             </div>
 
             <div className="relative border-l border-border dark:border-slate-800 pl-4 ml-2 space-y-5">
@@ -507,7 +538,7 @@ export default async function DashboardPage({
                       <p className="font-semibold text-foreground dark:text-slate-300">
                         {log.user?.nama ?? "System"} melakukan <span className="font-bold text-slate-950 dark:text-white">{log.aksi}</span>
                       </p>
-                      <p className="text-[10px] text-slate-500 dark:text-slate-400 mt-0.5">Target: {log.entitas} (ID: {log.entitasId ?? "—"})</p>
+                      <p className="text-[10px] text-slate-500 dark:text-slate-400 mt-0.5">Target: {log.entitas} (ID: {log.entitasId ?? "-"})</p>
                     </div>
                     <span className="text-[10px] font-bold text-slate-400 dark:text-slate-500 font-mono">
                       {new Date(log.createdAt).toLocaleTimeString("id-ID", { hour: "2-digit", minute: "2-digit" })}
@@ -517,10 +548,10 @@ export default async function DashboardPage({
               ))}
 
               {recentLogs.length === 0 && (
-                <p className="text-xs text-slate-500 text-center py-4">Belum ada catatan aktivitas.</p>
+                <p className="text-xs text-slate-500 text-center py-6">Belum ada catatan aktivitas.</p>
               )}
             </div>
-          </Card>
+          </div>
         </section>
       )}
     </div>

@@ -21,7 +21,6 @@ import {
   Wallet,
   X,
 } from "lucide-react";
-import { toPng } from "html-to-image";
 import { toast } from "sonner";
 import { bayarNgInvoice, updateNgInvoice } from "./actions";
 import { Nota, type NotaData } from "@/components/Nota";
@@ -230,12 +229,13 @@ export function NgInvoiceClient({
     setNotaId(id);
   }
 
-  function handleSaveToImage() {
+  async function handleSaveToImage() {
     if (!notaRow) return;
     const element = document.querySelector<HTMLElement>(".print-area");
     if (!element) return;
     const prevZoom = element.style.zoom;
     element.style.zoom = "1";
+    const { toPng } = await import("html-to-image");
     toPng(element, {
       cacheBust: true,
       pixelRatio: 2,

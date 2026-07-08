@@ -5,7 +5,13 @@ import { headers } from "next/headers";
 import bcrypt from "bcryptjs";
 import { prisma } from "@/lib/prisma";
 import { createSession, destroySession } from "@/lib/auth";
+import { z } from "zod";
 import { FIELD_LIMITS } from "@/lib/fieldLimits";
+
+const loginSchema = z.object({
+  username: z.string().min(1, "Username harus diisi").max(FIELD_LIMITS.username).trim(),
+  password: z.string().min(1, "Password harus diisi").max(FIELD_LIMITS.passwordMax),
+});
 
 // Hash dummy untuk menyamakan waktu proses saat username tidak ditemukan
 // (mengurangi user enumeration via timing). Ini hash bcrypt valid acak.
@@ -29,18 +35,14 @@ function rateLimit(key: string): boolean {
 }
 
 export async function loginAction(_prev: unknown, formData: FormData) {
-  const username = String(formData.get("username") ?? "").trim();
-  const password = String(formData.get("password") ?? "");
-
-  // Batas panjang untuk mencegah payload absurd / DoS.
-  if (
-    !username ||
-    !password ||
-    username.length > FIELD_LIMITS.username ||
-    password.length > FIELD_LIMITS.passwordMax
-  ) {
+  const parsed = loginSchema.safeParse({
+    username: formData.get("username"),
+    password: formData.get("password"),
+  });
+  if (!parsed.success) {
     return { error: "Username atau password salah." };
   }
+  const { username, password } = parsed.data;
 
   // Jangan percaya header proxy kecuali deployment memang berada di trusted proxy.
   const hdrs = await headers();

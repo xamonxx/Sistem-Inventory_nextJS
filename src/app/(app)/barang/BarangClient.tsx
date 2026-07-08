@@ -326,8 +326,8 @@ export function BarangClient({
       </section>
 
       {/* 2. Filters Toolbar */}
-      <Card className="flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:gap-4">
-        <div className="relative w-full sm:flex-1">
+      <Card className="flex flex-col gap-3 p-4 lg:flex-row lg:items-center lg:gap-4">
+        <div className="relative w-full lg:flex-1">
           <Search size={16} className="absolute left-3 top-3 text-slate-400" />
           <Input
             value={q}
@@ -337,7 +337,7 @@ export function BarangClient({
             className="pl-9 h-10 rounded-xl"
           />
         </div>
-        <div className="grid grid-cols-1 gap-2.5 sm:flex sm:flex-wrap sm:items-center">
+        <div className="flex flex-col gap-2.5 sm:flex-row sm:flex-wrap sm:items-center lg:flex-nowrap lg:shrink-0">
           <Select
             value={statusFilter}
             onChange={(e) => setStatusFilter(e.target.value as any)}
@@ -359,7 +359,7 @@ export function BarangClient({
           </Select>
 
           {canEdit && (
-            <div className="flex items-stretch gap-2.5 sm:contents">
+            <div className="flex items-stretch gap-2.5">
               <Button
                 onClick={() => setOpenSOPreview(true)}
                 variant="outline"
@@ -414,6 +414,100 @@ export function BarangClient({
         </div>
       )}
 
+      {/* ===== Mobile / tablet card list (below lg) ===== */}
+      <div className="space-y-3 lg:hidden">
+        {paginatedItems.map((it) => {
+          const isLow = it.stok >= 0 && it.stok < it.minStok;
+          const isNeg = it.stok < 0;
+          return (
+            <div
+              key={it.id}
+              onClick={() => openItemDetails(it)}
+              className={cn(
+                "relative cursor-pointer rounded-2xl border bg-card p-4 shadow-[var(--shadow-card)] transition-colors active:scale-[0.995]",
+                selectedIds.has(it.id)
+                  ? "border-rose-300 bg-rose-50/60"
+                  : "border-border hover:border-[var(--primary)]/40"
+              )}
+            >
+              <div className="flex items-start justify-between gap-3">
+                <div className="flex min-w-0 items-start gap-2.5">
+                  {canEdit && (
+                    <input
+                      type="checkbox"
+                      checked={selectedIds.has(it.id)}
+                      onChange={() => toggleSelect(it.id)}
+                      onClick={(e) => e.stopPropagation()}
+                      aria-label={`Pilih ${it.nama}`}
+                      className="mt-1 h-4 w-4 shrink-0 rounded border-border text-[var(--primary)] focus:ring-[var(--primary)] cursor-pointer"
+                    />
+                  )}
+                  <div className="min-w-0">
+                    <p className="font-mono text-[11px] font-bold text-[var(--primary)]">{it.kode}</p>
+                    <p className="mt-0.5 font-semibold leading-snug text-foreground line-clamp-2">{it.nama}</p>
+                  </div>
+                </div>
+                <Badge tone={it.aktif ? "green" : "slate"}>{it.aktif ? "Aktif" : "Arsip"}</Badge>
+              </div>
+
+              <div className="mt-3.5 grid grid-cols-2 gap-x-4 gap-y-3 border-t border-border pt-3.5">
+                <div>
+                  <p className="text-[10px] font-bold uppercase tracking-wider text-[var(--text-muted-2)]">Harga Jual</p>
+                  <p className="mt-0.5 font-mono text-sm font-bold text-[var(--primary)]">{formatRupiah(it.hargaJual)}</p>
+                </div>
+                <div>
+                  <p className="text-[10px] font-bold uppercase tracking-wider text-[var(--text-muted-2)]">Sisa Stok</p>
+                  <p className="mt-0.5 flex items-center gap-1.5 font-mono text-sm font-bold text-foreground">
+                    {it.stok} unit
+                    <span
+                      className={cn(
+                        "h-1.5 w-1.5 rounded-full",
+                        isNeg ? "bg-red-500" : isLow ? "bg-amber-500" : "bg-primary-500"
+                      )}
+                    />
+                  </p>
+                </div>
+                {canEdit && (
+                  <>
+                    <div>
+                      <p className="text-[10px] font-bold uppercase tracking-wider text-[var(--text-muted-2)]">Harga Beli</p>
+                      <p className="mt-0.5 font-mono text-sm font-semibold text-[var(--text-soft)]">{formatRupiah(it.hargaBeli)}</p>
+                    </div>
+                    <div>
+                      <p className="text-[10px] font-bold uppercase tracking-wider text-[var(--text-muted-2)]">Total Aset</p>
+                      <p className={cn("mt-0.5 font-mono text-sm font-bold", it.stok < 0 ? "text-rose-600" : "text-foreground")}>
+                        {formatRupiah(it.hargaBeli * it.stok)}
+                      </p>
+                    </div>
+                  </>
+                )}
+              </div>
+            </div>
+          );
+        })}
+
+        {paginatedItems.length === 0 && (
+          <div className="rounded-2xl border border-border bg-card py-16 text-center text-slate-400 select-none">
+            <Boxes className="mx-auto mb-2 text-slate-200" size={32} />
+            <p className="text-sm font-semibold">Barang Tidak Ditemukan</p>
+            <p className="text-xs">Katalog kosong atau pencarian tidak cocok.</p>
+          </div>
+        )}
+
+        {filteredItems.length > 0 && canEdit && (
+          <div className="flex items-center justify-between rounded-2xl border border-border bg-[var(--surface-2)] px-4 py-3">
+            <p className="text-[11px] font-bold uppercase tracking-wider text-[var(--text-soft)]">
+              Total Aset ({filteredItems.length})
+            </p>
+            <p className={cn("font-mono text-sm font-extrabold", totalAset < 0 ? "text-rose-600" : "text-foreground")}>
+              {formatRupiah(totalAset)}
+            </p>
+          </div>
+        )}
+      </div>
+
+      {/* ===== Desktop table (lg and up) ===== */}
+      <div className="hidden lg:block">
       <Table>
           <thead>
             <tr>
@@ -538,17 +632,20 @@ export function BarangClient({
             </tfoot>
           )}
         </Table>
+      </div>
 
       {/* Pagination controls */}
       {totalPages > 1 && (
-        <div className="flex justify-between items-center bg-card p-4.5 rounded-[18px] border border-border select-none">
-          <p className="text-xs text-slate-500 font-semibold">
-            Menampilkan halaman {currentPage} dari {totalPages} ({filteredItems.length} total item)
+        <div className="flex flex-col gap-3 rounded-[18px] border border-border bg-card p-4 select-none sm:flex-row sm:items-center sm:justify-between sm:p-4.5">
+          <p className="text-xs font-semibold text-slate-500">
+            Halaman {currentPage} dari {totalPages}
+            <span className="hidden sm:inline"> ({filteredItems.length} total item)</span>
           </p>
           <div className="flex gap-2">
             <Button
               size="sm"
               variant="outline"
+              className="flex-1 sm:flex-none"
               disabled={currentPage === 1}
               onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
             >
@@ -557,6 +654,7 @@ export function BarangClient({
             <Button
               size="sm"
               variant="outline"
+              className="flex-1 sm:flex-none"
               disabled={currentPage === totalPages}
               onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
             >

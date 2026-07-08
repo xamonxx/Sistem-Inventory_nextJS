@@ -15,22 +15,23 @@ export function Button({
 }) {
   const variants = {
     primary:
-      "bg-[var(--primary)] text-white hover:bg-[var(--primary-strong)] shadow-sm transition-transform active:scale-[0.98]",
-    outline: "border border-border bg-card hover:bg-[var(--surface-hover)] text-foreground shadow-xs active:scale-[0.98]",
-    ghost: "hover:bg-[var(--surface-hover)] text-[var(--text-soft)] hover:text-foreground",
-    danger: "bg-[var(--danger)] text-white hover:brightness-105 shadow-sm active:scale-[0.98]",
-    success: "bg-[var(--success)] text-white hover:brightness-105 shadow-sm active:scale-[0.98]",
-    warning: "bg-[var(--warning)] text-white hover:brightness-105 shadow-sm active:scale-[0.98]",
+      "border border-sky-500/40 bg-[linear-gradient(180deg,rgba(56,189,248,0.26),transparent_42%),var(--primary)] text-white shadow-[0_16px_36px_-18px_rgba(14,165,233,0.9),inset_0_1px_0_rgba(255,255,255,0.22)] hover:border-sky-300/70 hover:bg-[var(--primary-strong)] active:scale-[0.98]",
+    outline: "border border-sky-200/80 bg-white/82 text-foreground shadow-[0_12px_28px_-24px_rgba(8,47,73,0.45),inset_0_1px_0_rgba(255,255,255,0.72)] backdrop-blur-xl hover:border-sky-300/90 hover:bg-sky-50/80 active:scale-[0.98] dark:border-sky-300/18 dark:bg-slate-900/72 dark:text-slate-100 dark:hover:border-sky-300/34 dark:hover:bg-slate-900/90",
+    ghost: "border border-transparent text-[var(--text-soft)] hover:border-sky-200/80 hover:bg-sky-50/70 hover:text-foreground active:scale-[0.98] dark:hover:border-sky-300/18 dark:hover:bg-sky-400/10 dark:hover:text-white",
+    danger: "border border-rose-500/35 bg-[linear-gradient(180deg,rgba(251,113,133,0.26),transparent_42%),var(--danger)] text-white shadow-[0_16px_36px_-18px_rgba(239,68,68,0.75),inset_0_1px_0_rgba(255,255,255,0.2)] hover:brightness-105 active:scale-[0.98]",
+    success: "border border-emerald-500/35 bg-[linear-gradient(180deg,rgba(52,211,153,0.28),transparent_42%),var(--success)] text-white shadow-[0_16px_36px_-18px_rgba(16,185,129,0.75),inset_0_1px_0_rgba(255,255,255,0.2)] hover:brightness-105 active:scale-[0.98]",
+    warning: "border border-amber-500/35 bg-[linear-gradient(180deg,rgba(251,191,36,0.3),transparent_42%),var(--warning)] text-white shadow-[0_16px_36px_-18px_rgba(245,158,11,0.8),inset_0_1px_0_rgba(255,255,255,0.2)] hover:brightness-105 active:scale-[0.98]",
   };
   const sizes = {
-    sm: "h-11 min-h-11 px-4 text-xs font-medium rounded-md sm:h-9 sm:min-h-9",
-    md: "h-11 px-5 text-sm font-semibold rounded-md",
+    sm: "h-11 min-h-11 px-4 text-xs font-bold rounded-lg sm:h-9 sm:min-h-9",
+    md: "h-11 px-5 text-sm font-bold rounded-lg",
   };
   return (
     <button
       className={cn(
-        "inline-flex items-center justify-center gap-2 transition-all duration-150 outline-none select-none whitespace-nowrap",
-        "focus-visible:ring-2 focus-visible:ring-[var(--primary)]/30 disabled:opacity-50 disabled:pointer-events-none cursor-pointer",
+        "inline-flex items-center justify-center gap-2 outline-none select-none whitespace-nowrap",
+        "transition-[background-color,border-color,color,box-shadow,transform,filter] duration-150",
+        "focus-visible:ring-4 focus-visible:ring-[var(--primary)]/20 disabled:opacity-50 disabled:pointer-events-none cursor-pointer",
         variants[variant],
         sizes[size],
         className
@@ -46,7 +47,7 @@ export const Input = React.forwardRef<HTMLInputElement, React.InputHTMLAttribute
       <input
         ref={ref}
         className={cn(
-          "h-11 w-full rounded-md border border-border bg-card px-4 text-sm text-foreground outline-none transition-all",
+          "h-11 w-full rounded-md border border-border bg-card px-4 text-sm text-foreground outline-none transition-[background-color,border-color,color,box-shadow]",
           "focus:border-[var(--primary)] focus:ring-4 focus:ring-[var(--primary)]/10",
           "disabled:bg-[var(--surface-2)] disabled:text-[var(--text-muted-2)] placeholder:text-[var(--text-muted-2)]",
           className
@@ -64,7 +65,7 @@ export const Textarea = React.forwardRef<HTMLTextAreaElement, React.TextareaHTML
       <textarea
         ref={ref}
         className={cn(
-          "w-full rounded-md border border-border bg-card px-4 py-2.5 text-sm text-foreground outline-none transition-all resize-y",
+          "w-full rounded-md border border-border bg-card px-4 py-2.5 text-sm text-foreground outline-none transition-[background-color,border-color,color,box-shadow] resize-y",
           "focus:border-[var(--primary)] focus:ring-4 focus:ring-[var(--primary)]/10",
           "disabled:bg-[var(--surface-2)] disabled:text-[var(--text-muted-2)] placeholder:text-[var(--text-muted-2)]",
           className
@@ -311,12 +312,13 @@ export function Select({
         type="button"
         onClick={() => setIsOpen(!isOpen)}
         className={cn(
-          "flex w-full items-center px-4 text-sm font-medium text-left outline-none transition-all cursor-pointer shadow-[0_1px_2px_rgba(0,0,0,0.05)] select-none",
+          "flex w-full items-center px-4 text-sm font-bold text-left outline-none cursor-pointer select-none",
+          "transition-[background-color,border-color,color,box-shadow,transform] shadow-[0_12px_28px_-24px_rgba(8,47,73,0.45),inset_0_1px_0_rgba(255,255,255,0.72)] backdrop-blur-xl",
           hideChevron ? "justify-center" : "justify-between",
-          !hasBorder && "border border-border hover:border-[var(--line-strong)]",
-          !hasBg && "bg-card hover:bg-[var(--surface-hover)]",
-          "focus:border-[var(--primary)] focus:ring-4 focus:ring-[var(--primary)]/10",
-          isOpen && "border-[var(--primary)] ring-4 ring-[var(--primary)]/10",
+          !hasBorder && "border border-sky-200/80 hover:border-sky-300/90 dark:border-sky-300/18 dark:hover:border-sky-300/34",
+          !hasBg && "bg-white/82 hover:bg-sky-50/80 dark:bg-slate-900/72 dark:hover:bg-slate-900/90",
+          "focus:border-[var(--primary)] focus:ring-4 focus:ring-[var(--primary)]/14 active:scale-[0.99]",
+          isOpen && "border-[var(--primary)] ring-4 ring-[var(--primary)]/12",
           buttonClasses
         )}
       >
@@ -327,7 +329,7 @@ export function Select({
       </button>
 
       {isOpen && (
-          <div className="absolute left-0 z-[46] mt-2 max-h-60 w-max min-w-full max-w-[calc(100vw-2rem)] overflow-y-auto rounded-md border border-border bg-card p-1.5 shadow-[0_18px_45px_-18px_rgba(15,23,42,0.45)] animate-in fade-in duration-100 ease-out">
+          <div className="absolute left-0 z-[46] mt-2 max-h-60 w-max min-w-full max-w-[calc(100vw-2rem)] overflow-y-auto rounded-lg border border-sky-200/80 bg-white/95 p-1.5 shadow-[0_22px_55px_-24px_rgba(8,47,73,0.42)] backdrop-blur-2xl animate-in fade-in duration-100 ease-out dark:border-sky-300/18 dark:bg-slate-900/95">
           {options.length === 0 ? (
             <div className="px-3 py-2 text-xs text-slate-400 text-center">Tidak ada pilihan</div>
           ) : (
@@ -340,8 +342,8 @@ export function Select({
                   onClick={() => handleSelect(opt.value)}
                   disabled={opt.disabled}
                   className={cn(
-                  "flex w-full items-center justify-between rounded-md px-3 py-2 text-left text-xs font-semibold text-[var(--text-soft)] transition-all select-none hover:bg-[var(--surface-hover)] hover:text-foreground cursor-pointer disabled:opacity-50 disabled:pointer-events-none",
-                    isSelected && "bg-[var(--primary)]/10 text-[var(--primary)] hover:bg-[var(--primary)]/15 hover:text-[var(--primary)]"
+                  "flex w-full items-center justify-between rounded-md px-3 py-2 text-left text-xs font-bold text-[var(--text-soft)] transition-[background-color,color] select-none hover:bg-sky-50/80 hover:text-foreground cursor-pointer disabled:opacity-50 disabled:pointer-events-none dark:hover:bg-sky-400/10 dark:hover:text-white",
+                    isSelected && "bg-[var(--primary)]/10 text-[var(--primary)] hover:bg-[var(--primary)]/15 hover:text-[var(--primary)] dark:text-sky-200"
                   )}
                 >
                   <span className="whitespace-nowrap pr-3">{opt.label}</span>

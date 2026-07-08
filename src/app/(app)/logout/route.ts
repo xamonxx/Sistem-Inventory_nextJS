@@ -1,14 +1,26 @@
 import { NextResponse } from "next/server";
 import { destroySession } from "@/lib/auth";
 
-export async function POST(request: Request) {
+async function logout() {
   await destroySession();
-  return NextResponse.redirect(new URL("/login", request.url));
+  return new NextResponse(null, {
+    status: 303,
+    headers: {
+      Location: "/login",
+    },
+  });
 }
 
-export function GET() {
-  return NextResponse.json(
-    { error: "Method not allowed" },
-    { status: 405, headers: { Allow: "POST" } }
-  );
+export async function POST(request: Request) {
+  const origin = request.headers.get("origin");
+  const host = request.headers.get("host");
+  if (origin && host && !origin.includes(host)) {
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  }
+
+  return logout();
+}
+
+export async function GET() {
+  return logout();
 }
