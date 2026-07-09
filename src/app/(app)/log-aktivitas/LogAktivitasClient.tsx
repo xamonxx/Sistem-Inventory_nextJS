@@ -55,7 +55,7 @@ export function LogAktivitasClient({ initialLogs }: { initialLogs: LogRow[] }) {
           toast.error(res.error);
         }
       } catch (err) {
-        toast.error("Terjadi kesalahan sistem.");
+        toast.error("Gagal membersihkan log aktivitas. Periksa koneksi lalu muat ulang halaman dan coba lagi.");
       }
     });
   };
@@ -97,7 +97,7 @@ export function LogAktivitasClient({ initialLogs }: { initialLogs: LogRow[] }) {
       {/* Search and Filters bar */}
       <Card className="flex flex-col gap-4 p-4 sm:flex-row sm:items-center sm:p-5">
         <div className="flex-1 relative">
-          <Search size={16} className="absolute left-3 top-3.5 text-muted" />
+          <Search size={16} className="pointer-events-none absolute left-3 top-3.5 z-10 text-[var(--text-soft)]" />
           <Input
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}

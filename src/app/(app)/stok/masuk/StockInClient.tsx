@@ -3,7 +3,7 @@
 import { useState, useTransition, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { submitStockIn } from "./actions";
-import { Button, Card, Input, Label, Select, Table, Th, Td, CharCounter } from "@/components/ui";
+import { Button, Card, CurrencyInput, Input, Label, Select, Table, Th, Td, CharCounter } from "@/components/ui";
 import { FIELD_LIMITS } from "@/lib/fieldLimits";
 import { formatRupiah } from "@/lib/utils";
 import { Plus, Trash2, ArrowLeft, Save, Printer } from "lucide-react";
@@ -199,12 +199,10 @@ export function StockInClient({ items }: { items: ItemOption[] }) {
                         />
                       </Td>
                       <Td>
-                        <Input
-                          type="number"
-                          min={0}
+                        <CurrencyInput
                           max={FIELD_LIMITS.maxMoney}
                           value={l.unitCost}
-                          onChange={(e) => updateRow(index, "unitCost", parseInt(e.target.value) || 0)}
+                          onValueChange={(value) => updateRow(index, "unitCost", parseInt(value) || 0)}
                           className="text-right font-mono"
                         />
                       </Td>

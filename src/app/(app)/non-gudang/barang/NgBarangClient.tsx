@@ -3,10 +3,11 @@
 import { useState, useMemo, useEffect, useTransition } from "react";
 import { toggleNgProdukAktif, deleteNgProduk } from "./actions";
 import { NgBarangForm, type NgProdukRow } from "./NgBarangForm";
-import { Button, Card, Input, Select, Table, Th, Td, Badge } from "@/components/ui";
+import { Button, Card, Input, Select, Table, TableActionButton, Th, Td, Badge } from "@/components/ui";
 import { FIELD_LIMITS } from "@/lib/fieldLimits";
 import { formatRupiah } from "@/lib/utils";
 import { usePagination, Pagination } from "@/components/Pagination";
+import { Tooltip } from "@/components/Tooltip";
 import { Search, Boxes, Store, Percent, Pencil, Trash2, AlertTriangle } from "lucide-react";
 import { toast } from "sonner";
 
@@ -137,32 +138,34 @@ export function NgBarangClient({ initialItems }: { initialItems: NgProdukData[] 
 
   return (
     <div className="space-y-5">
-      <header className="relative overflow-hidden rounded-xl border border-slate-300/80 bg-white shadow-[0_18px_55px_-44px_rgba(15,23,42,0.55)] dark:border-slate-800 dark:bg-slate-900">
+      <header className="liquid-panel liquid-panel-strong dashboard-hero relative z-40 rounded-xl border-sky-200/70 dark:border-sky-300/15" style={{ overflow: "visible" }}>
         <div className="grid lg:grid-cols-[minmax(0,1fr)_520px]">
-          <div className="border-b border-slate-200 p-5 dark:border-slate-800 lg:border-b-0 lg:border-r">
+          <div className="border-b border-sky-200/70 p-5 dark:border-sky-300/15 lg:border-b-0 lg:border-r">
             <div className="grid gap-4">
               <div className="min-w-0">
-                <p className="text-[11px] font-black uppercase tracking-[0.22em] text-[var(--primary-strong)]">Non-Gudang Catalog</p>
-                <h1 className="mt-5 max-w-3xl text-3xl font-black tracking-[-0.045em] text-foreground md:text-5xl">
+                <span className="inline-flex items-center gap-2 rounded-md border border-sky-200/80 bg-sky-50/80 px-3 py-1.5 text-[11px] font-black uppercase tracking-[0.18em] text-[var(--primary-strong)] shadow-[inset_0_1px_0_rgba(255,255,255,0.7)] dark:border-sky-300/20 dark:bg-sky-400/10 dark:text-sky-200">
+                  Master Data
+                </span>
+                <h1 className="mt-5 max-w-3xl text-3xl font-black tracking-normal text-foreground dark:text-white md:text-5xl">
                   Master Barang Non-Gudang
                 </h1>
-                <p className="mt-2 max-w-2xl text-sm font-medium leading-6 text-slate-600 dark:text-slate-300">
+                <p className="mt-2 max-w-2xl text-sm font-semibold leading-6 text-slate-600 dark:text-slate-200/90">
                   Pusat data barang trading: toko sumber, harga modal, harga jual, dan margin operasional.
                 </p>
               </div>
             </div>
           </div>
 
-          <section className="grid grid-cols-2 divide-x divide-y divide-slate-200 bg-slate-50/70 dark:divide-slate-800 dark:bg-slate-950/35">
+          <section className="grid grid-cols-2 divide-x divide-y divide-sky-200/60 bg-sky-50/55 dark:divide-sky-300/15 dark:bg-slate-950/25">
             {kpi.map(({ icon: Icon, label, value, detail }) => (
               <div key={label} className="p-4">
                 <div className="flex items-start justify-between gap-3">
                   <div>
-                    <p className="text-[10px] font-black uppercase tracking-[0.14em] text-slate-500">{label}</p>
-                    <p className="mt-1 text-2xl font-black tracking-tight text-foreground">{value}</p>
-                    <p className="mt-1 text-[11px] font-semibold text-slate-400">{detail}</p>
+                    <p className="text-[10px] font-black uppercase tracking-[0.14em] text-slate-500 dark:text-slate-400">{label}</p>
+                    <p className="mt-1 text-2xl font-black tracking-normal text-foreground dark:text-white">{value}</p>
+                    <p className="mt-1 text-[11px] font-semibold text-slate-500 dark:text-slate-400">{detail}</p>
                   </div>
-                  <div className="flex h-9 w-9 items-center justify-center rounded-md border border-slate-200 bg-white text-[var(--primary-strong)] shadow-sm dark:border-slate-700 dark:bg-slate-900">
+                  <div className="flex h-9 w-9 items-center justify-center rounded-md border border-sky-200/80 bg-white/80 text-[var(--primary-strong)] shadow-[inset_0_1px_0_rgba(255,255,255,0.72)] backdrop-blur-xl dark:border-sky-300/15 dark:bg-sky-400/10 dark:text-sky-200">
                     <Icon size={17} />
                   </div>
                 </div>
@@ -173,16 +176,16 @@ export function NgBarangClient({ initialItems }: { initialItems: NgProdukData[] 
       </header>
 
       {/* Toolbar */}
-      <Card className="relative z-30 rounded-xl border-slate-300/80 bg-white/95 p-3 shadow-[0_16px_45px_-38px_rgba(15,23,42,0.55)] dark:border-slate-800 dark:bg-slate-900/90 md:p-4">
+      <Card className="liquid-panel relative z-30 rounded-xl border-sky-200/70 p-3 dark:border-sky-300/15 md:p-4" style={{ overflow: "visible" }}>
         <div className="grid gap-3 xl:grid-cols-[minmax(320px,1fr)_auto_auto] xl:items-center">
           <div className="relative w-full min-w-0">
-            <Search size={17} className="absolute left-4 top-1/2 -translate-y-1/2 text-[var(--text-muted-2)]" />
+            <Search size={17} className="pointer-events-none absolute left-4 top-1/2 z-10 -translate-y-1/2 text-[var(--text-soft)]" />
             <Input
               value={q}
               onChange={(e) => setQ(e.target.value)}
               maxLength={FIELD_LIMITS.search}
               placeholder="Cari nama, toko, atau kategori..."
-              className="h-12 rounded-lg border-slate-200 bg-white pl-11 pr-4 font-semibold shadow-sm dark:border-slate-700 dark:bg-slate-950/60"
+              className="h-12 rounded-lg border-sky-200/80 bg-white/80 pl-11 pr-4 font-semibold shadow-[inset_0_1px_0_rgba(255,255,255,0.72)] backdrop-blur-xl dark:border-sky-300/15 dark:bg-slate-950/45"
             />
           </div>
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:flex lg:flex-nowrap lg:items-center">
@@ -224,8 +227,8 @@ export function NgBarangClient({ initialItems }: { initialItems: NgProdukData[] 
       )}
 
       {/* Table */}
-      <Card className="relative z-0 overflow-hidden rounded-xl border-slate-300/80 bg-white p-0 shadow-[0_20px_70px_-48px_rgba(15,23,42,0.65)] dark:border-slate-800 dark:bg-slate-900">
-        <div className="flex flex-col gap-2 border-b border-slate-200 bg-slate-50/80 px-5 py-4 dark:border-slate-800 dark:bg-slate-950/35 sm:flex-row sm:items-center sm:justify-between">
+      <Card className="liquid-panel relative z-0 overflow-hidden rounded-xl border-sky-200/70 p-0 dark:border-sky-300/15">
+        <div className="flex flex-col gap-2 border-b border-sky-200/70 bg-sky-50/55 px-5 py-4 dark:border-sky-300/15 dark:bg-slate-950/25 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <p className="text-sm font-black text-foreground">Daftar Barang</p>
             <p className="mt-0.5 text-xs font-medium text-slate-500">Data barang dari toko sumber yang bisa dipakai untuk CO non-gudang.</p>
@@ -233,11 +236,11 @@ export function NgBarangClient({ initialItems }: { initialItems: NgProdukData[] 
           <Badge tone={selectedIds.size > 0 ? "amber" : "blue"}>{filtered.length} hasil</Badge>
         </div>
         <div className="overflow-x-auto">
-          <Table variant="plain" className="min-w-[980px]">
+          <Table variant="plain" tableClassName="min-w-[980px]">
             <thead>
               <tr>
                 <Th className="w-10 text-center">
-                  <input type="checkbox" checked={allOnPageSelected} onChange={toggleSelectAllOnPage} className="h-4 w-4 rounded border-border cursor-pointer" />
+                  <input type="checkbox" checked={allOnPageSelected} onChange={toggleSelectAllOnPage} className="h-4 w-4 rounded border-border cursor-pointer" aria-label="Pilih semua barang di halaman ini" />
                 </Th>
                 <Th>Barang</Th>
                 <Th>Toko Sumber</Th>
@@ -255,7 +258,7 @@ export function NgBarangClient({ initialItems }: { initialItems: NgProdukData[] 
                 return (
                   <tr key={item.id}>
                     <Td className="text-center">
-                      <input type="checkbox" checked={selectedIds.has(item.id)} onChange={() => toggleSelect(item.id)} className="h-4 w-4 rounded border-border cursor-pointer" />
+                      <input type="checkbox" checked={selectedIds.has(item.id)} onChange={() => toggleSelect(item.id)} className="h-4 w-4 rounded border-border cursor-pointer" aria-label={`Pilih ${item.nama}`} />
                     </Td>
                     <Td>
                       <div className="font-bold text-foreground text-xs sm:text-sm">{item.nama}</div>
@@ -269,26 +272,28 @@ export function NgBarangClient({ initialItems }: { initialItems: NgProdukData[] 
                       <Badge tone={m >= 15 ? "green" : m > 0 ? "amber" : "red"} className="text-[10px]">{m.toFixed(1)}%</Badge>
                     </Td>
                     <Td className="text-center">
-                      <button
-                        type="button"
-                        onClick={() => handleToggleAktif(item)}
-                        disabled={pending}
-                        className="cursor-pointer disabled:opacity-50"
-                        title="Klik untuk ubah status"
-                      >
-                        <Badge tone={item.aktif ? "green" : "slate"} className="text-[10px]">{item.aktif ? "Aktif" : "Nonaktif"}</Badge>
-                      </button>
+                      <Tooltip label="Ubah status" description="Klik untuk aktif / nonaktifkan barang">
+                        <button
+                          type="button"
+                          onClick={() => handleToggleAktif(item)}
+                          disabled={pending}
+                          className="cursor-pointer disabled:opacity-50"
+                          aria-label={`Ubah status ${item.nama}`}
+                        >
+                          <Badge tone={item.aktif ? "green" : "slate"} className="text-[10px]">{item.aktif ? "Aktif" : "Nonaktif"}</Badge>
+                        </button>
+                      </Tooltip>
                     </Td>
                     <Td className="text-center">
-                      <button
-                        type="button"
-                        onClick={() => handleEdit(item)}
-                        className="inline-flex h-8 w-8 items-center justify-center rounded-md border border-slate-200 bg-white text-slate-500 shadow-sm transition hover:border-sky-200 hover:bg-sky-50 hover:text-[var(--primary-strong)] dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300 dark:hover:bg-sky-950/30"
-                        title="Ubah barang"
-                        aria-label={`Ubah ${item.nama}`}
-                      >
-                        <Pencil size={15} />
-                      </button>
+                      <Tooltip label="Ubah barang" description="Edit nama, toko, harga & margin">
+                        <TableActionButton
+                          type="button"
+                          onClick={() => handleEdit(item)}
+                          aria-label={`Ubah ${item.nama}`}
+                        >
+                          <Pencil size={15} />
+                        </TableActionButton>
+                      </Tooltip>
                     </Td>
                   </tr>
                 );
@@ -306,7 +311,7 @@ export function NgBarangClient({ initialItems }: { initialItems: NgProdukData[] 
           </Table>
         </div>
         {filtered.length > 0 && (
-          <div className="border-t border-slate-200 bg-white px-4 py-3 dark:border-slate-800 dark:bg-slate-900">
+          <div className="border-t border-sky-200/70 bg-white/55 px-4 py-3 backdrop-blur-xl dark:border-sky-300/15 dark:bg-slate-950/25">
             <Pagination page={pg.page} perPage={pg.perPage} total={pg.total} onPage={pg.setPage} />
           </div>
         )}

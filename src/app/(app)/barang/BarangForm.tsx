@@ -3,7 +3,7 @@
 import { useActionState, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { saveItem, suggestItemCode } from "./actions";
-import { Button, Input, Label, CharCounter } from "@/components/ui";
+import { Button, CurrencyInput, Input, Label, CharCounter } from "@/components/ui";
 import { FIELD_LIMITS } from "@/lib/fieldLimits";
 import { Plus, X, Wand2 } from "lucide-react";
 
@@ -161,11 +161,11 @@ export function BarangForm({ canEdit }: { canEdit: boolean }) {
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                 <div>
                   <Label>Harga Beli (Rp)</Label>
-                  <Input name="hargaBeli" type="number" min={0} defaultValue={editing?.hargaBeli ?? ""} placeholder="0" />
+                  <CurrencyInput name="hargaBeli" defaultValue={editing?.hargaBeli ?? ""} placeholder="0" />
                 </div>
                 <div>
                   <Label>Harga Jual (Rp)</Label>
-                  <Input name="hargaJual" type="number" min={0} defaultValue={editing?.hargaJual ?? ""} placeholder="0" />
+                  <CurrencyInput name="hargaJual" defaultValue={editing?.hargaJual ?? ""} placeholder="0" />
                 </div>
               </div>
 

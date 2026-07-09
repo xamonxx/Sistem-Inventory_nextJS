@@ -29,7 +29,7 @@ export interface ExportNgPayload {
   userName?: string;
   period?: string;
   analisa: NgAnalisa;
-  /** Optional — bila diberikan, tambah sheet "Per Konsumen" (halaman Laporan Fase 5). */
+  /** Optional — bila diberikan, tambah sheet "Per Konsumen" (halaman Laporan Non-Gudang). */
   perKonsumen?: NgKonsumenLaporanRow[];
 }
 

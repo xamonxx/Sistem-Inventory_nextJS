@@ -136,6 +136,17 @@ export async function createNgInvoice(input: CreateNgInvoiceInput) {
     })
   );
 
+  // Guard overflow: kolom uang berupa Decimal(15,2) (maks ~9,99 triliun).
+  // Cap per-field (harga/qty) tidak menjaga TOTAL = harga × qty × baris,
+  // jadi validasi di sini agar user dapat pesan jelas, bukan error DB generik.
+  const DB_MONEY_MAX = 9_999_999_999_999.99;
+  if (computed.totalModal > DB_MONEY_MAX || computed.totalPenjualan > DB_MONEY_MAX) {
+    return {
+      error:
+        "Total invoice melebihi batas maksimum sistem (Rp 9.999.999.999.999). Kurangi qty atau harga barang.",
+    };
+  }
+
   const dueDate =
     data.paymentStatus === "TEMPO"
       ? new Date(data.tanggal.getFullYear(), data.tanggal.getMonth(), data.tanggal.getDate() + 7)

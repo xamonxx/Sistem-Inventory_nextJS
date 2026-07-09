@@ -315,7 +315,7 @@ export async function ngPembelian(range?: NgReportRange): Promise<NgPembelian> {
 // ============================================================
 // Laporan per Konsumen — rekap penjualan/piutang/profit tiap konsumen
 // (dikelompokkan dari snapshot namaKonsumen di NgInvoice). Untuk halaman
-// Laporan & Export (Fase 5).
+// Laporan & Export Non-Gudang.
 // ============================================================
 
 export type NgKonsumenLaporanRow = {

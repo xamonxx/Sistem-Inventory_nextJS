@@ -18,12 +18,14 @@ import {
   Store,
   Trash2,
   Wallet,
+  X,
 } from "lucide-react";
 
 import { toast } from "sonner";
 import { createNgInvoice, resolveNgProductForCart } from "./actions";
 import { Nota, type NotaData } from "@/components/Nota";
-import { Badge, Button, Card, Input, Label, Select, Table, Td, Textarea, Th } from "@/components/ui";
+import { DatePicker } from "@/components/DatePicker";
+import { Badge, Button, Card, CurrencyInput, Input, Label, Select, Table, Td, Textarea, Th } from "@/components/ui";
 import { FIELD_LIMITS } from "@/lib/fieldLimits";
 import { useNgCartStore } from "@/lib/ngCartStore";
 import { computeNgCart, type NgComputedCartLine } from "@/lib/ngMargin";
@@ -83,6 +85,29 @@ const EMPTY_ITEM_DRAFT: ItemDraft = {
   qty: "1",
 };
 
+type ProductPayload = {
+  tokoSumber: string;
+  nama: string;
+  kategori: string;
+  satuan: string;
+  hargaBeli: number;
+  hargaJual: number;
+  qty: number;
+};
+
+type PriceConflictDialog = {
+  message: string;
+  payload: ProductPayload;
+  existing: {
+    hargaBeli: number;
+    hargaJual: number;
+  };
+  incoming: {
+    hargaBeli: number;
+    hargaJual: number;
+  };
+};
+
 type KonsumenOption = {
   id: number;
   nama: string;
@@ -113,6 +138,8 @@ export function NgBuatInvoiceClient({
   const [knownStores, setKnownStores] = useState<string[]>(tokoOptions);
   const [pending, startTransition] = useTransition();
   const [generated, setGenerated] = useState<GeneratedInvoice | null>(null);
+  const [priceConflict, setPriceConflict] = useState<PriceConflictDialog | null>(null);
+  const [pendingStoreChange, setPendingStoreChange] = useState<string | null>(null);
   const [printFormat, setPrintFormat] = useState<"a4" | "thermal">("a4");
 
   const {
@@ -301,8 +328,15 @@ export function NgBuatInvoiceClient({
     }
 
     if (cart.length > 0) {
-      const confirmed = window.confirm("Mengganti toko sumber akan mengosongkan keranjang CO saat ini. Lanjutkan?");
-      if (!confirmed) return;
+      setPendingStoreChange(normalizedStore);
+      return;
+    }
+
+    applyStoreChange(normalizedStore, false);
+  }
+
+  function applyStoreChange(normalizedStore: string, resetCart: boolean) {
+    if (resetCart) {
       clearForStore(normalizedStore);
       setQ("");
       setItemDraft(EMPTY_ITEM_DRAFT);
@@ -311,7 +345,6 @@ export function NgBuatInvoiceClient({
     } else {
       setTokoSumber(normalizedStore);
     }
-
     setStoreInput(normalizedStore);
     setKnownStores((prev) =>
       prev.includes(normalizedStore) ? prev : [...prev, normalizedStore].sort((a, b) => a.localeCompare(b))
@@ -339,7 +372,7 @@ export function NgBuatInvoiceClient({
       return;
     }
 
-    const payload = {
+    const payload: ProductPayload = {
       tokoSumber,
       nama: itemDraft.nama.trim(),
       kategori: itemDraft.kategori.trim(),
@@ -358,29 +391,12 @@ export function NgBuatInvoiceClient({
       }
 
       if (resolved && "conflict" in resolved && resolved.conflict) {
-        const confirmed = window.confirm(
-          `${resolved.message}\n\nLama: beli ${formatRupiah(resolved.existing.hargaBeli)}, jual ${formatRupiah(
-            resolved.existing.hargaJual
-          )}\nBaru: beli ${formatRupiah(resolved.incoming.hargaBeli)}, jual ${formatRupiah(resolved.incoming.hargaJual)}`
-        );
-        if (!confirmed) {
-          toast.info("Penambahan barang dibatalkan.");
-          return;
-        }
-
-        const forced = await resolveNgProductForCart({ ...payload, forceUpdate: true });
-        if (forced && "error" in forced && forced.error) {
-          toast.error(forced.error);
-          return;
-        }
-        if (forced && "ok" in forced && forced.ok) {
-          syncCatalogItem(forced.product);
-          applyProductToCart(forced.product, true);
-          setItemDraft(EMPTY_ITEM_DRAFT);
-          setSelectedCatalogId(null);
-          setItemDropdownOpen(false);
-          toast.success(`Barang "${forced.product.nama}" diperbarui dan ditambahkan ke CO.`);
-        }
+        setPriceConflict({
+          message: resolved.message,
+          payload,
+          existing: resolved.existing,
+          incoming: resolved.incoming,
+        });
         return;
       }
 
@@ -395,6 +411,28 @@ export function NgBuatInvoiceClient({
             ? `Barang "${resolved.product.nama}" diperbarui lalu ditambahkan ke CO.`
             : `Barang "${resolved.product.nama}" ditambahkan ke CO.`
         );
+      }
+    });
+  }
+
+  function handleConfirmPriceConflict() {
+    if (!priceConflict) return;
+    const payload = priceConflict.payload;
+
+    startTransition(async () => {
+      const forced = await resolveNgProductForCart({ ...payload, forceUpdate: true });
+      if (forced && "error" in forced && forced.error) {
+        toast.error(forced.error);
+        return;
+      }
+      if (forced && "ok" in forced && forced.ok) {
+        syncCatalogItem(forced.product);
+        applyProductToCart(forced.product, true);
+        setItemDraft(EMPTY_ITEM_DRAFT);
+        setSelectedCatalogId(null);
+        setItemDropdownOpen(false);
+        setPriceConflict(null);
+        toast.success(`Barang "${forced.product.nama}" diperbarui dan ditambahkan ke CO.`);
       }
     });
   }
@@ -456,7 +494,7 @@ export function NgBuatInvoiceClient({
     if (!generated) return;
     const element = document.querySelector<HTMLElement>(".print-area");
     if (!element) {
-      toast.error("Elemen cetak tidak ditemukan.");
+      toast.error("Pratinjau nota belum siap. Tutup lalu buka lagi pratinjau, kemudian coba cetak/simpan ulang.");
       return;
     }
 
@@ -484,7 +522,7 @@ export function NgBuatInvoiceClient({
       toast.success("Gambar berhasil disimpan.");
     } catch (err) {
       console.error(err);
-      toast.error("Gagal menyimpan gambar.");
+      toast.error("Gagal menyimpan gambar. Coba lagi, atau gunakan tombol Cetak untuk simpan sebagai PDF.");
     } finally {
       element.style.zoom = prevZoom;
     }
@@ -522,16 +560,20 @@ export function NgBuatInvoiceClient({
   const showStep1FloatingNext = activeStep === 1 && !!tokoSumber;
   const showStep2FloatingNext = activeStep === 2 && cart.length > 0;
   const showStep3FloatingActions = activeStep === 3 && cart.length > 0;
-  const hasFloatingActions = showStep1FloatingNext || showStep2FloatingNext || showStep3FloatingActions;
+  // Bar navigasi bawah tampil untuk: step 1 (jika toko sudah dipilih), atau step 2/3.
+  // Dipakai desktop (floating) & mobile/tablet (fixed) — beri padding bawah agar
+  // konten terakhir tidak tertutup bar.
+  const showBottomNav = activeStep === 1 ? !!tokoSumber : true;
+  const hasFloatingActions = showBottomNav;
 
   return (
     <div className={`space-y-6 ${hasFloatingActions ? "pb-24 xl:pb-28" : ""}`}>
-      <header className="overflow-hidden rounded-xl border border-slate-300/80 bg-white shadow-[0_18px_55px_-42px_rgba(15,23,42,0.65)] dark:border-slate-800 dark:bg-slate-900">
+      <header className="liquid-panel liquid-panel-strong dashboard-hero anim-rise relative overflow-hidden backdrop-blur-2xl backdrop-saturate-150">
         <div className="grid lg:grid-cols-[minmax(0,1fr)_minmax(420px,560px)]">
           <div className="p-5 md:p-6">
             <p className="inline-flex items-center gap-2 rounded-md border border-sky-200 bg-sky-50 px-3 py-1 text-[11px] font-black uppercase tracking-[0.18em] text-[var(--primary-strong)] dark:border-sky-900/60 dark:bg-sky-950/35">
               <span className="h-1.5 w-1.5 rounded-full bg-[var(--primary)]" />
-              Fase 2 Non-Gudang
+              Keranjang CO Non-Gudang
             </p>
             <h1 className="mt-5 max-w-3xl text-3xl font-black tracking-[-0.04em] text-foreground md:text-5xl">
               Keranjang CO &amp; Buat Invoice
@@ -541,7 +583,7 @@ export function NgBuatInvoiceClient({
             </p>
           </div>
 
-          <div className="grid grid-cols-2 border-t border-slate-200 bg-slate-50/80 dark:border-slate-800 dark:bg-slate-950/25 lg:border-l lg:border-t-0">
+          <div className="grid grid-cols-2 border-t border-[var(--glass-border)] bg-white/40 dark:bg-white/[0.02] lg:border-l lg:border-t-0">
             <CheckoutHeaderMetric label="Langkah Aktif" value={`${activeStep}/3`} hint={activeStep === 1 ? "pilih toko" : activeStep === 2 ? "input barang" : "data invoice"} icon={<FileText size={18} />} />
             <CheckoutHeaderMetric label="Toko Sumber" value={tokoSumber || "-"} hint={tokoSumber ? "siap dipakai" : "belum dipilih"} icon={<Store size={18} />} />
             <CheckoutHeaderMetric label="Item CO" value={`${cart.length}`} hint={`${computedTotalQty} total qty`} icon={<ShoppingCart size={18} />} />
@@ -642,16 +684,9 @@ export function NgBuatInvoiceClient({
                 </div>
                 <div className="min-w-0">
                   <Label>Tanggal invoice</Label>
-                  <Input type="date" value={tanggal} onChange={(e) => setTanggal(e.target.value)} />
+                  <DatePicker value={tanggal} onChange={setTanggal} />
                 </div>
               </div>
-              {tokoSumber && (
-                <div className="flex justify-end xl:hidden">
-                  <Button onClick={() => setActiveStep(2)}>
-                    Lanjut ke Input Barang <ArrowRight size={15} />
-                  </Button>
-                </div>
-              )}
             </Card>
           )}
 
@@ -741,11 +776,11 @@ export function NgBuatInvoiceClient({
                   </div>
                   <div>
                     <Label>Harga beli</Label>
-                    <Input type="number" min={0} max={FIELD_LIMITS.maxMoney} value={itemDraft.hargaBeli} onChange={(e) => setDraft("hargaBeli", e.target.value)} placeholder="Harga modal" disabled={!tokoSumber} />
+                    <CurrencyInput max={FIELD_LIMITS.maxMoney} value={itemDraft.hargaBeli} onValueChange={(value) => setDraft("hargaBeli", value)} placeholder="Harga modal" disabled={!tokoSumber} />
                   </div>
                   <div>
                     <Label>Harga jual</Label>
-                    <Input type="number" min={0} max={FIELD_LIMITS.maxMoney} value={itemDraft.hargaJual} onChange={(e) => setDraft("hargaJual", e.target.value)} placeholder="Harga jual ke konsumen" disabled={!tokoSumber} />
+                    <CurrencyInput max={FIELD_LIMITS.maxMoney} value={itemDraft.hargaJual} onValueChange={(value) => setDraft("hargaJual", value)} placeholder="Harga jual ke konsumen" disabled={!tokoSumber} />
                   </div>
                 </div>
 
@@ -781,7 +816,7 @@ export function NgBuatInvoiceClient({
                     <Badge tone="blue">{filteredItems.length} cocok</Badge>
                   </div>
                   <div className="relative">
-                    <Search size={16} className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" />
+                    <Search size={16} className="pointer-events-none absolute left-4 top-1/2 z-10 -translate-y-1/2 text-[var(--text-soft)]" />
                     <Input value={q} onChange={(e) => setQ(e.target.value)} maxLength={FIELD_LIMITS.search} placeholder="Cari nama barang atau kategori..." className="pl-11" disabled={!tokoSumber} />
                   </div>
                   <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
@@ -833,7 +868,7 @@ export function NgBuatInvoiceClient({
                     </Button>
                   </div>
                 </div>
-                <Table>
+                <Table tableClassName="min-w-[780px]">
                   <thead>
                     <tr>
                       <Th>Barang</Th>
@@ -911,7 +946,7 @@ export function NgBuatInvoiceClient({
                   </div>
                   <Badge tone="blue">{cart.length} baris</Badge>
                 </div>
-                <Table>
+                <Table tableClassName="min-w-[680px]">
                   <thead>
                     <tr>
                       <Th>Barang</Th>
@@ -1006,7 +1041,7 @@ export function NgBuatInvoiceClient({
                   </div>
                   <div>
                     <Label>Tanggal invoice</Label>
-                    <Input type="date" value={tanggal} onChange={(e) => setTanggal(e.target.value)} disabled={cart.length === 0} />
+                    <DatePicker value={tanggal} onChange={setTanggal} disabled={cart.length === 0} />
                   </div>
                   <div className="md:col-span-2">
                     <Label>Alamat</Label>
@@ -1054,14 +1089,6 @@ export function NgBuatInvoiceClient({
                     : "Invoice akan dibuat sebagai TEMPO dengan jatuh tempo otomatis 7 hari dari tanggal invoice."}
                 </div>
 
-                <div className="flex flex-col-reverse gap-3 sm:flex-row sm:justify-end xl:hidden">
-                  <Button variant="outline" onClick={() => setActiveStep(2)} disabled={cart.length === 0}>
-                    <ArrowLeft size={15} /> Kembali ke Barang
-                  </Button>
-                  <Button onClick={handleCreateInvoice} disabled={pending || cart.length === 0 || !tokoSumber} className="min-w-[220px]">
-                    {pending ? "Membuat Invoice..." : "Generate Invoice NG"}
-                  </Button>
-                </div>
               </Card>
             </>
           )}
@@ -1135,6 +1162,216 @@ export function NgBuatInvoiceClient({
           >
             {pending ? "Membuat Invoice..." : "Generate Invoice NG"}
           </Button>
+        </div>
+      )}
+
+      {/* Navigasi antar-step untuk mobile/tablet: fixed di bawah layar saat scroll
+          (desktop memakai floating bar di atas). Dirender di root agar benar-benar
+          menempel ke viewport, tidak terpengaruh container ber-transform. */}
+      {showBottomNav && (
+        <div
+          className="no-print fixed inset-x-0 bottom-0 z-40 border-t border-sky-200/70 bg-white/90 px-4 py-3 backdrop-blur-xl dark:border-sky-300/15 dark:bg-slate-950/90 xl:hidden"
+          style={{ paddingBottom: "max(0.75rem, env(safe-area-inset-bottom))" }}
+        >
+          <div className="mx-auto flex max-w-3xl flex-col-reverse gap-3 sm:flex-row sm:justify-end">
+            {activeStep === 1 && (
+              <Button onClick={() => setActiveStep(2)} className="w-full sm:w-auto">
+                Lanjut ke Input Barang <ArrowRight size={15} />
+              </Button>
+            )}
+            {activeStep === 2 && (
+              <>
+                <Button variant="outline" onClick={() => setActiveStep(1)} className="w-full sm:w-auto">
+                  <ArrowLeft size={15} /> Kembali ke Toko
+                </Button>
+                <Button onClick={() => setActiveStep(3)} disabled={cart.length === 0} className="w-full sm:w-auto">
+                  Lanjut ke Invoice <ArrowRight size={15} />
+                </Button>
+              </>
+            )}
+            {activeStep === 3 && (
+              <>
+                <Button variant="outline" onClick={() => setActiveStep(2)} disabled={cart.length === 0} className="w-full sm:w-auto">
+                  <ArrowLeft size={15} /> Kembali ke Barang
+                </Button>
+                <Button
+                  onClick={handleCreateInvoice}
+                  disabled={pending || cart.length === 0 || !tokoSumber}
+                  className="w-full sm:w-auto"
+                >
+                  {pending ? "Membuat Invoice..." : "Generate Invoice NG"}
+                </Button>
+              </>
+            )}
+          </div>
+        </div>
+      )}
+
+      {pendingStoreChange && (
+        <div
+          className="fixed inset-0 flex items-end justify-center bg-slate-950/55 p-3 backdrop-blur-sm sm:items-center sm:p-4"
+          style={{ zIndex: 2147483002 }}
+          role="presentation"
+          onMouseDown={(e) => {
+            if (e.target === e.currentTarget) setPendingStoreChange(null);
+          }}
+        >
+          <div
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="store-change-title"
+            className="anim-rise w-full max-w-md overflow-hidden rounded-2xl border border-sky-200/80 bg-white shadow-[0_28px_80px_rgba(15,23,42,0.24)] dark:border-sky-400/20 dark:bg-[#102133]"
+          >
+            <div className="flex items-start gap-4 border-b border-sky-100 bg-gradient-to-br from-sky-50 via-white to-cyan-50 px-5 py-4 dark:border-sky-400/15 dark:from-sky-500/10 dark:via-[#102133] dark:to-cyan-500/10">
+              <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-sky-200 bg-sky-100 text-[var(--primary)] shadow-[0_12px_26px_rgba(14,165,233,0.18)] dark:border-sky-400/25 dark:bg-sky-500/15 dark:text-sky-300">
+                <Store size={20} strokeWidth={2.5} />
+              </div>
+              <div className="min-w-0 flex-1">
+                <p className="text-[10px] font-black uppercase tracking-[0.18em] text-[var(--primary)]">
+                  Ganti toko sumber
+                </p>
+                <h3 id="store-change-title" className="mt-1 text-base font-black leading-snug text-foreground">
+                  Keranjang CO akan direset
+                </h3>
+                <p className="mt-1.5 text-sm font-medium leading-6 text-[var(--text-soft)]">
+                  Mengganti toko ke <span className="font-black text-foreground">{pendingStoreChange}</span> akan mengosongkan keranjang CO saat ini.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setPendingStoreChange(null)}
+                className="flex h-9 w-9 shrink-0 cursor-pointer items-center justify-center rounded-xl text-slate-400 transition hover:bg-white/75 hover:text-foreground dark:hover:bg-white/10"
+                aria-label="Tutup dialog"
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            <div className="px-5 py-5">
+              <div className="rounded-xl border border-sky-200/80 bg-sky-50 px-4 py-3 text-xs font-semibold leading-5 text-sky-900 dark:border-sky-400/20 dark:bg-sky-500/10 dark:text-sky-200">
+                Data barang yang sudah masuk CO akan dibersihkan agar tidak tercampur dengan katalog toko lain.
+              </div>
+            </div>
+
+            <div className="flex flex-col-reverse gap-2.5 border-t border-border bg-[var(--surface-2)] px-5 py-4 sm:flex-row sm:justify-end">
+              <Button type="button" variant="outline" onClick={() => setPendingStoreChange(null)}>
+                Batal
+              </Button>
+              <Button
+                type="button"
+                onClick={() => {
+                  applyStoreChange(pendingStoreChange, true);
+                  setPendingStoreChange(null);
+                }}
+              >
+                Reset & Ganti Toko
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {priceConflict && (
+        <div
+          className="fixed inset-0 flex items-end justify-center bg-slate-950/55 p-3 backdrop-blur-sm sm:items-center sm:p-4"
+          style={{ zIndex: 2147483002 }}
+          role="presentation"
+          onMouseDown={(e) => {
+            if (e.target === e.currentTarget && !pending) {
+              setPriceConflict(null);
+              toast.info("Penambahan barang dibatalkan.");
+            }
+          }}
+        >
+          <div
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="price-conflict-title"
+            className="anim-rise w-full max-w-xl overflow-hidden rounded-2xl border border-amber-200/80 bg-white shadow-[0_28px_80px_rgba(15,23,42,0.24)] dark:border-amber-400/20 dark:bg-[#102133]"
+          >
+            <div className="flex items-start gap-4 border-b border-amber-100 bg-gradient-to-br from-amber-50 via-white to-sky-50 px-5 py-4 dark:border-amber-400/15 dark:from-amber-500/10 dark:via-[#102133] dark:to-sky-500/10">
+              <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-amber-200 bg-amber-100 text-amber-700 shadow-[0_12px_26px_rgba(245,158,11,0.18)] dark:border-amber-400/25 dark:bg-amber-500/15 dark:text-amber-300">
+                <AlertTriangle size={20} strokeWidth={2.5} />
+              </div>
+              <div className="min-w-0 flex-1">
+                <p className="text-[10px] font-black uppercase tracking-[0.18em] text-amber-700 dark:text-amber-300">
+                  Konfirmasi perubahan data
+                </p>
+                <h3 id="price-conflict-title" className="mt-1 text-base font-black leading-snug text-foreground">
+                  Data barang sudah ada
+                </h3>
+                <p className="mt-1.5 text-sm font-medium leading-6 text-[var(--text-soft)]">
+                  {priceConflict.message}
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  if (pending) return;
+                  setPriceConflict(null);
+                  toast.info("Penambahan barang dibatalkan.");
+                }}
+                className="flex h-9 w-9 shrink-0 cursor-pointer items-center justify-center rounded-xl text-slate-400 transition hover:bg-white/75 hover:text-foreground dark:hover:bg-white/10"
+                aria-label="Tutup dialog"
+                disabled={pending}
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            <div className="space-y-4 px-5 py-5">
+              <div className="grid gap-3 sm:grid-cols-2">
+                <div className="rounded-xl border border-slate-200 bg-slate-50/85 p-4 dark:border-slate-700/60 dark:bg-slate-950/30">
+                  <p className="text-[10px] font-black uppercase tracking-[0.14em] text-slate-500">Data lama</p>
+                  <div className="mt-3 space-y-2 text-sm">
+                    <div className="flex items-center justify-between gap-3">
+                      <span className="font-semibold text-[var(--text-soft)]">Harga beli</span>
+                      <span className="font-mono font-black text-foreground">{formatRupiah(priceConflict.existing.hargaBeli)}</span>
+                    </div>
+                    <div className="flex items-center justify-between gap-3">
+                      <span className="font-semibold text-[var(--text-soft)]">Harga jual</span>
+                      <span className="font-mono font-black text-foreground">{formatRupiah(priceConflict.existing.hargaJual)}</span>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="rounded-xl border border-sky-200 bg-sky-50/85 p-4 ring-4 ring-sky-400/10 dark:border-sky-400/25 dark:bg-sky-500/10">
+                  <p className="text-[10px] font-black uppercase tracking-[0.14em] text-[var(--primary)]">Data baru</p>
+                  <div className="mt-3 space-y-2 text-sm">
+                    <div className="flex items-center justify-between gap-3">
+                      <span className="font-semibold text-[var(--text-soft)]">Harga beli</span>
+                      <span className="font-mono font-black text-foreground">{formatRupiah(priceConflict.incoming.hargaBeli)}</span>
+                    </div>
+                    <div className="flex items-center justify-between gap-3">
+                      <span className="font-semibold text-[var(--text-soft)]">Harga jual</span>
+                      <span className="font-mono font-black text-foreground">{formatRupiah(priceConflict.incoming.hargaJual)}</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div className="rounded-xl border border-amber-200/80 bg-amber-50 px-4 py-3 text-xs font-semibold leading-5 text-amber-900 dark:border-amber-400/20 dark:bg-amber-500/10 dark:text-amber-200">
+                Jika dilanjutkan, data katalog lama akan diperbarui dan item CO memakai harga terbaru.
+              </div>
+            </div>
+
+            <div className="flex flex-col-reverse gap-2.5 border-t border-border bg-[var(--surface-2)] px-5 py-4 sm:flex-row sm:justify-end">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => {
+                  setPriceConflict(null);
+                  toast.info("Penambahan barang dibatalkan.");
+                }}
+                disabled={pending}
+              >
+                Batal
+              </Button>
+              <Button type="button" variant="warning" onClick={handleConfirmPriceConflict} disabled={pending}>
+                {pending ? "Memperbarui..." : "Perbarui Barang"}
+              </Button>
+            </div>
+          </div>
         </div>
       )}
 
@@ -1245,7 +1482,7 @@ function CheckoutHeaderMetric({
   accent?: string;
 }) {
   return (
-    <div className="flex min-h-[120px] items-start justify-between gap-4 border-b border-r border-slate-200 p-5 last:border-r-0 even:border-r-0 dark:border-slate-800">
+    <div className="flex min-h-[120px] items-start justify-between gap-4 border-b border-r border-[var(--glass-border)] p-5 last:border-r-0 even:border-r-0">
       <div className="min-w-0">
         <p className="text-[11px] font-black uppercase tracking-[0.14em] text-slate-500">{label}</p>
         <p className={`mt-2 truncate text-2xl font-black tracking-tight text-foreground ${accent ?? ""}`}>{value}</p>
@@ -1383,12 +1620,14 @@ function MetricCard({
   accent?: string;
 }) {
   return (
-    <div className="rounded-2xl border border-border bg-slate-50/70 p-4 dark:bg-slate-900/30">
+    <div className="min-w-0 rounded-2xl border border-border bg-slate-50/70 p-4 dark:bg-slate-900/30">
       <div className="flex items-center gap-2 text-slate-500">
-        {icon}
-        <span className="text-xs font-semibold">{label}</span>
+        <span className="shrink-0">{icon}</span>
+        <span className="truncate text-xs font-semibold">{label}</span>
       </div>
-      <p className={`mt-3 text-lg font-extrabold tracking-tight text-foreground ${accent ?? ""}`}>{value}</p>
+      <div data-tooltip={value} className="mt-3 min-w-0">
+        <p className={`truncate text-lg font-extrabold tracking-tight tabular-nums text-foreground ${accent ?? ""}`}>{value}</p>
+      </div>
     </div>
   );
 }

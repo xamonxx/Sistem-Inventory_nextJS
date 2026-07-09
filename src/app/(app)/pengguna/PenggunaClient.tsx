@@ -55,7 +55,7 @@ export function PenggunaClient({
         
         router.refresh();
       } catch {
-        toast.error("Gagal memperbarui status keaktifan");
+        toast.error("Gagal memperbarui status keaktifan pengguna. Muat ulang halaman lalu coba lagi.");
       }
     });
   }
@@ -63,7 +63,7 @@ export function PenggunaClient({
   async function handleResetPassword() {
     if (!selectedUser) return;
     if (newPasswordVal.length < 4) {
-      return toast.error("Password minimal 4 karakter");
+      return toast.error("Password minimal 4 karakter. Tambahkan karakter lalu simpan lagi.");
     }
 
     setResetting(true);
@@ -76,7 +76,7 @@ export function PenggunaClient({
         setNewPasswordVal("");
       }
     } catch {
-      toast.error("Terjadi kesalahan sistem saat meriset password.");
+      toast.error("Gagal mereset password. Periksa koneksi lalu coba lagi.");
     } finally {
       setResetting(false);
     }

@@ -11,7 +11,7 @@ import {
   ShoppingBag,
   Store,
 } from "lucide-react";
-import { Badge, Table, Td, Th } from "@/components/ui";
+import { Badge, Button, Table, Td, Th } from "@/components/ui";
 import { Pagination, usePagination } from "@/components/Pagination";
 import { PeriodFilter, type ResolvedPeriodRange } from "@/components/PeriodFilter";
 import { cn, formatRupiah, formatTanggal } from "@/lib/utils";
@@ -149,15 +149,15 @@ export function NgPembelianClient({
                 </p>
               )}
               {pendingRange && (
-                <button
-                  type="button"
+                <Button
+                  variant="outline"
                   onClick={() => pendingRange && applyRange(pendingRange)}
                   disabled={!canApply || filtering}
-                  className="inline-flex h-12 items-center justify-center gap-2 rounded-lg border border-sky-300/80 bg-white/82 px-4 text-sm font-black text-[var(--primary-strong)] shadow-[0_14px_32px_-24px_rgba(8,47,73,0.55),inset_0_1px_0_rgba(255,255,255,0.72)] backdrop-blur-xl transition-[background-color,border-color,color,box-shadow,transform] hover:border-sky-400 hover:bg-sky-50/85 active:scale-[0.99] focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[var(--primary)]/20 disabled:opacity-50 dark:border-sky-300/24 dark:bg-sky-400/10 dark:text-sky-100 dark:hover:bg-sky-400/15"
+                  className="h-12 font-black"
                 >
                   <Check size={15} />
                   Terapkan
-                </button>
+                </Button>
               )}
             </div>
           </div>
@@ -204,7 +204,7 @@ export function NgPembelianClient({
             </div>
 
             <div className="hidden overflow-x-auto md:block">
-              <Table variant="plain" className="min-w-[820px] rounded-lg border border-slate-200 dark:border-slate-800">
+              <Table variant="plain" className="rounded-lg border border-slate-200 dark:border-slate-800" tableClassName="min-w-[820px]">
                 <thead>
                   <tr>
                     <Th className="w-16">Rank</Th>
@@ -253,7 +253,7 @@ export function NgPembelianClient({
       >
         <div className="mb-4 grid gap-3 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-center">
           <div className="relative">
-            <Search size={16} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+            <Search size={16} className="pointer-events-none absolute left-3 top-1/2 z-10 -translate-y-1/2 text-[var(--text-soft)]" />
             <input
               value={query}
               onChange={(e) => {
@@ -303,7 +303,7 @@ export function NgPembelianClient({
                   {isOpen && (
                     <div className="border-t border-slate-200 bg-slate-50/70 px-3 py-3 dark:border-slate-800 dark:bg-slate-950/25">
                       <div className="overflow-x-auto">
-                        <Table variant="plain" className="min-w-[560px] rounded-md border border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900">
+                        <Table variant="plain" className="rounded-md border border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900" tableClassName="min-w-[560px]">
                           <thead>
                             <tr>
                               <Th className="text-[10px]">Nama Barang</Th>

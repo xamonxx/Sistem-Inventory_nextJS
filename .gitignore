@@ -1,18 +1,61 @@
-node_modules
+# ============ DEPENDENCIES ============
+node_modules/
+.pnp
+.pnp.js
+
+# ============ BUILD / PRODUCTION ============
 .next
 out
 build
 dist
+
+# ============ ENVIRONMENT VARIABLES (RAHASIA!) ============
 .env
-.env*.local
+.env.local
+.env.*.local
 .env.production
+.env.staging
+
+# ============ LOGS ============
 *.log
 npm-debug.log*
-.DS_Store
-import-errors.csv
-/coverage
-next-env.d.ts
-*.tsbuildinfo
+yarn-debug.log*
+yarn-error.log*
+
+# ============ SISTEM INVENTORY SPESIFIK ============
 tmp/
+audit/
+import-errors.csv
+build_output.log
+index.js
+
+# ============ OS FILES ============
+.DS_Store
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+
+# ============ IDE / EDITOR ============
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.vim/
+
+# ============ CACHE / TEMP ============
+*.tsbuildinfo
+*.tsbuildinfo.*
+next-env.d.ts
+/coverage
 *.tmp
 *.bak
+__pycache__/
+*.pyc
+*.pyo
+playwright_*.py
+server.log
+
+# ============ TESTING / TOOLS ============
+.playwright/
+test-results/

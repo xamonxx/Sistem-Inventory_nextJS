@@ -156,7 +156,7 @@ export default function LoginPage() {
               <div>
                 <Label htmlFor="username" className="text-[13px] font-semibold">Username</Label>
                 <div className="relative mt-2">
-                  <User size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 dark:text-slate-500" />
+                  <User size={16} className="pointer-events-none absolute left-3.5 top-1/2 z-10 -translate-y-1/2 text-slate-400 dark:text-slate-500" />
                   <Input
                     id="username"
                     name="username"
@@ -177,7 +177,7 @@ export default function LoginPage() {
               <div>
                 <Label htmlFor="password" className="text-[13px] font-semibold">Password</Label>
                 <div className="relative mt-2">
-                  <Lock size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 dark:text-slate-500" />
+                  <Lock size={16} className="pointer-events-none absolute left-3.5 top-1/2 z-10 -translate-y-1/2 text-slate-400 dark:text-slate-500" />
                   <Input
                     id="password"
                     name="password"
@@ -189,7 +189,7 @@ export default function LoginPage() {
                   <button
                     type="button"
                     onClick={() => setShowPassword(!showPassword)}
-                    className="absolute right-3.5 top-1/2 flex h-7 w-7 -translate-y-1/2 cursor-pointer select-none items-center justify-center rounded-md text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-700 dark:text-slate-500 dark:hover:bg-slate-800 dark:hover:text-slate-300"
+                    className="absolute right-3.5 top-1/2 z-10 flex h-7 w-7 -translate-y-1/2 cursor-pointer select-none items-center justify-center rounded-md text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-700 dark:text-slate-500 dark:hover:bg-slate-800 dark:hover:text-slate-300"
                     aria-label={showPassword ? "Sembunyikan password" : "Tampilkan password"}
                   >
                     {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}

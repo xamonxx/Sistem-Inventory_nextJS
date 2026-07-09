@@ -24,8 +24,10 @@ import {
 import { toast } from "sonner";
 import { bayarNgInvoice, updateNgInvoice } from "./actions";
 import { Nota, type NotaData } from "@/components/Nota";
+import { DatePicker } from "@/components/DatePicker";
+import { Tooltip } from "@/components/Tooltip";
 import { PeriodFilter, type ResolvedPeriodRange } from "@/components/PeriodFilter";
-import { Badge, Button, Card, Input, Label, Select, Table, Td, Th } from "@/components/ui";
+import { Badge, Button, Card, CurrencyInput, Input, Label, Select, Table, TableActionButton, Td, Th } from "@/components/ui";
 import { FIELD_LIMITS } from "@/lib/fieldLimits";
 import { computeNgCart } from "@/lib/ngMargin";
 import { printArea, setPdfTitle } from "@/lib/print";
@@ -250,7 +252,7 @@ export function NgInvoiceClient({
         link.href = imgDataUrl;
         link.click();
       })
-      .catch(() => toast.error("Gagal menyimpan gambar."))
+      .catch(() => toast.error("Gagal menyimpan gambar. Coba lagi, atau gunakan tombol Cetak untuk simpan sebagai PDF."))
       .finally(() => {
         element.style.zoom = prevZoom;
       });
@@ -265,12 +267,12 @@ export function NgInvoiceClient({
 
   return (
     <div className="space-y-6">
-      <header className="overflow-hidden rounded-xl border border-slate-300/80 bg-white shadow-[0_18px_55px_-42px_rgba(15,23,42,0.65)] dark:border-slate-800 dark:bg-slate-900">
+      <header className="liquid-panel liquid-panel-strong dashboard-hero anim-rise relative overflow-hidden backdrop-blur-2xl backdrop-saturate-150">
         <div className="grid lg:grid-cols-[minmax(0,1fr)_minmax(420px,600px)]">
           <div className="p-5 md:p-6">
             <p className="inline-flex items-center gap-2 rounded-md border border-sky-200 bg-sky-50 px-3 py-1 text-[11px] font-black uppercase tracking-[0.18em] text-[var(--primary-strong)] dark:border-sky-900/60 dark:bg-sky-950/35">
               <span className="h-1.5 w-1.5 rounded-full bg-[var(--primary)]" />
-              Fase 3 Non-Gudang
+              Invoice Non-Gudang
             </p>
             <h1 className="mt-5 max-w-3xl text-3xl font-black tracking-[-0.04em] text-foreground md:text-5xl">
               Riwayat Invoice &amp; Piutang
@@ -280,7 +282,7 @@ export function NgInvoiceClient({
             </p>
           </div>
 
-          <div className="grid grid-cols-2 border-t border-slate-200 bg-slate-50/80 dark:border-slate-800 dark:bg-slate-950/25 lg:border-l lg:border-t-0">
+          <div className="grid grid-cols-2 border-t border-[var(--glass-border)] bg-white/40 dark:bg-white/[0.02] lg:border-l lg:border-t-0">
             <HeaderMetric label="Invoice" value={String(kpi.jumlah)} hint="sesuai filter" tone="slate" icon={ReceiptText} />
             <HeaderMetric label="Omzet" value={formatRupiah(kpi.omzet)} hint="nilai penjualan" tone="blue" icon={TrendingUp} />
             <HeaderMetric label="Piutang" value={formatRupiah(kpi.piutang)} hint="belum tertagih" tone="amber" icon={Wallet} />
@@ -289,11 +291,11 @@ export function NgInvoiceClient({
         </div>
       </header>
 
-      <Card className="relative z-30 rounded-xl border-slate-200/80 bg-white/90 p-3 shadow-[0_16px_45px_-36px_rgba(15,23,42,0.5)] backdrop-blur dark:border-slate-800 dark:bg-slate-900/75 md:p-4">
+      <Card className="liquid-panel relative z-30 rounded-xl border-sky-200/70 p-3 dark:border-sky-300/15 md:p-4" style={{ overflow: "visible" }}>
         <div className="grid gap-3 lg:grid-cols-[1fr_auto] lg:items-center">
           <div className="grid gap-3 md:grid-cols-[minmax(280px,1fr)_220px]">
             <div className="relative">
-              <Search size={18} className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" />
+              <Search size={18} className="pointer-events-none absolute left-4 top-1/2 z-10 -translate-y-1/2 text-[var(--text-soft)]" />
               <Input
                 value={q}
                 onChange={(e) => {
@@ -302,7 +304,7 @@ export function NgInvoiceClient({
                 }}
                 maxLength={FIELD_LIMITS.search}
                 placeholder="Cari no invoice, konsumen, atau toko sumber..."
-                className="h-12 rounded-lg border-slate-200 bg-white pl-12 font-semibold shadow-sm dark:border-slate-700 dark:bg-slate-950/60"
+                className="h-12 rounded-lg border-sky-200/80 bg-white/80 pl-12 pr-4 font-semibold shadow-[inset_0_1px_0_rgba(255,255,255,0.72)] backdrop-blur-xl dark:border-sky-300/15 dark:bg-slate-950/45"
               />
             </div>
             <Select
@@ -311,7 +313,7 @@ export function NgInvoiceClient({
                 setStatusFilter(e.target.value as StatusFilter);
                 setPage(1);
               }}
-              className="h-12 rounded-lg"
+              className="h-12 rounded-lg border-sky-200/80 bg-white/80 shadow-[inset_0_1px_0_rgba(255,255,255,0.72)] backdrop-blur-xl dark:border-sky-300/15 dark:bg-slate-950/45"
             >
               <option value="ALL">Semua Status</option>
               <option value="PENDING">Tempo (Belum Bayar)</option>
@@ -329,8 +331,8 @@ export function NgInvoiceClient({
         </div>
       </Card>
 
-      <Card className="relative z-0 overflow-hidden rounded-xl border-slate-300/80 bg-white shadow-[0_20px_70px_-45px_rgba(15,23,42,0.65)] dark:border-slate-800 dark:bg-slate-900/85">
-        <div className="flex flex-col gap-3 border-b border-slate-300/80 bg-slate-50 px-5 py-4 dark:border-slate-800 dark:bg-slate-900 sm:flex-row sm:items-center sm:justify-between">
+      <Card className="liquid-panel relative z-0 overflow-hidden rounded-xl border-sky-200/70 p-0 dark:border-sky-300/15">
+        <div className="flex flex-col gap-2 border-b border-sky-200/70 bg-sky-50/55 px-5 py-4 dark:border-sky-300/15 dark:bg-slate-950/25 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <p className="text-sm font-black text-foreground">Daftar Invoice</p>
             <p className="mt-0.5 text-xs font-medium text-slate-500">Klik detail untuk melihat margin, pembayaran, edit, atau cetak struk.</p>
@@ -343,7 +345,7 @@ export function NgInvoiceClient({
             <p className="text-sm font-semibold text-slate-500">Tidak ada invoice yang cocok.</p>
           </div>
         ) : (
-          <Table variant="plain" className="min-w-[940px] [&_thead_th]:border-b-sky-200 [&_thead_th]:bg-slate-100 [&_thead_th]:text-slate-600 dark:[&_thead_th]:border-slate-700 dark:[&_thead_th]:bg-slate-800/80 dark:[&_thead_th]:text-slate-300">
+          <Table variant="plain" tableClassName="min-w-[940px]">
             <thead>
               <tr>
                 <Th>No Invoice</Th>
@@ -360,7 +362,7 @@ export function NgInvoiceClient({
               {paginated.map((row) => {
                 const meta = statusMeta(row);
                 return (
-                  <tr key={row.id} className="group odd:bg-white even:bg-slate-50/80 hover:bg-sky-50/80 dark:odd:bg-slate-900 dark:even:bg-slate-900/55 dark:hover:bg-sky-950/25">
+                  <tr key={row.id} className="group">
                     <Td>
                       <button
                         type="button"
@@ -398,16 +400,16 @@ export function NgInvoiceClient({
                     </Td>
                     <Td className="text-right">
                       <div className="inline-flex items-center justify-end gap-1.5">
-                        <IconActionButton label="Detail invoice" onClick={() => setDetailId(row.id)}>
+                        <IconActionButton label="Detail invoice" desc="Lihat rincian margin & pembayaran" onClick={() => setDetailId(row.id)}>
                           <FileText size={15} />
                         </IconActionButton>
-                        <IconActionButton label="Edit invoice" onClick={() => setEditId(row.id)}>
+                        <IconActionButton label="Edit invoice" desc="Ubah data & item invoice" onClick={() => setEditId(row.id)}>
                           <Pencil size={15} />
                         </IconActionButton>
-                        <IconActionButton label="Struk thermal" onClick={() => openNota(row.id, "thermal")}>
+                        <IconActionButton label="Struk thermal" desc="Cetak struk kecil (80mm)" onClick={() => openNota(row.id, "thermal")}>
                           <ReceiptText size={15} />
                         </IconActionButton>
-                        <IconActionButton label="Invoice A4" onClick={() => openNota(row.id, "a4")}>
+                        <IconActionButton label="Invoice A4" desc="Cetak invoice ukuran A4" onClick={() => openNota(row.id, "a4")}>
                           <Printer size={15} />
                         </IconActionButton>
                       </div>
@@ -582,7 +584,7 @@ function HeaderMetric({
     },
   }[tone];
   return (
-    <div className="flex min-h-[128px] items-start justify-between gap-4 border-b border-r border-slate-200 p-5 last:border-r-0 even:border-r-0 dark:border-slate-800">
+    <div className="flex min-h-[128px] items-start justify-between gap-4 border-b border-r border-[var(--glass-border)] p-5 last:border-r-0 even:border-r-0">
       <div className="min-w-0">
         <p className="text-[11px] font-black uppercase tracking-[0.14em] text-slate-500">{label}</p>
         <p className={`mt-2 truncate text-2xl font-black tracking-tight ${styles.accent}`}>{value}</p>
@@ -670,26 +672,28 @@ function PaginationBar({
 
 function IconActionButton({
   label,
+  desc,
   onClick,
   children,
 }: {
   label: string;
+  desc?: string;
   onClick: () => void;
   children: React.ReactNode;
 }) {
   return (
-    <button
-      type="button"
-      onClick={(e) => {
-        e.stopPropagation();
-        onClick();
-      }}
-      aria-label={label}
-      title={label}
-      className="inline-flex h-9 w-9 items-center justify-center rounded-md border border-slate-200 bg-white text-slate-600 shadow-sm transition hover:border-sky-200 hover:bg-sky-50 hover:text-[var(--primary-strong)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--primary)]/25 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300 dark:hover:bg-sky-950/30"
-    >
-      {children}
-    </button>
+    <Tooltip label={label} description={desc}>
+      <TableActionButton
+        type="button"
+        onClick={(e) => {
+          e.stopPropagation();
+          onClick();
+        }}
+        aria-label={label}
+      >
+        {children}
+      </TableActionButton>
+    </Tooltip>
   );
 }
 
@@ -757,34 +761,32 @@ function DetailDrawer({
               <p className="text-xs font-black uppercase tracking-wide text-slate-500">Rincian Barang & Analisa Margin</p>
               <Badge tone="blue">{row.items.length} item</Badge>
             </div>
-            <div className="overflow-x-auto rounded-lg border border-border">
-              <table className="w-full text-xs">
-                <thead className="bg-slate-100 dark:bg-slate-800/80">
-                  <tr>
-                    <th className="px-4 py-3 text-left font-black uppercase tracking-wide text-slate-500">Barang</th>
-                    <th className="px-3 py-3 text-right font-black uppercase tracking-wide text-slate-500">Qty</th>
-                    <th className="px-3 py-3 text-right font-black uppercase tracking-wide text-slate-500">Modal</th>
-                    <th className="px-3 py-3 text-right font-black uppercase tracking-wide text-slate-500">Jual</th>
-                    <th className="px-4 py-3 text-right font-black uppercase tracking-wide text-slate-500">Profit</th>
+            <Table variant="plain" className="rounded-lg border border-border" tableClassName="min-w-[620px]">
+              <thead>
+                <tr>
+                  <Th>Barang</Th>
+                  <Th className="text-right">Qty</Th>
+                  <Th className="text-right">Modal</Th>
+                  <Th className="text-right">Jual</Th>
+                  <Th className="text-right">Profit</Th>
+                </tr>
+              </thead>
+              <tbody>
+                {row.items.map((it) => (
+                  <tr key={it.id}>
+                    <Td>
+                      <span className="font-semibold text-foreground">{it.nama}</span>
+                    </Td>
+                    <Td className="text-right font-semibold tabular-nums">{it.qty}</Td>
+                    <Td className="whitespace-nowrap text-right font-mono text-slate-500 dark:text-slate-300">{formatRupiah(it.subtotalModal)}</Td>
+                    <Td className="whitespace-nowrap text-right font-mono font-semibold">{formatRupiah(it.subtotalPenjualan)}</Td>
+                    <Td className="whitespace-nowrap text-right font-mono font-black text-emerald-600 dark:text-emerald-400">
+                      {formatRupiah(it.subtotalProfit)}
+                    </Td>
                   </tr>
-                </thead>
-                <tbody>
-                  {row.items.map((it) => (
-                    <tr key={it.id} className="border-t border-border">
-                      <td className="px-4 py-3">
-                        <span className="font-medium text-foreground">{it.nama}</span>
-                      </td>
-                      <td className="px-3 py-3 text-right font-semibold">{it.qty}</td>
-                      <td className="px-3 py-3 text-right text-slate-500">{formatRupiah(it.subtotalModal)}</td>
-                      <td className="px-3 py-3 text-right font-semibold">{formatRupiah(it.subtotalPenjualan)}</td>
-                      <td className="px-4 py-3 text-right font-black text-emerald-600 dark:text-emerald-400">
-                        {formatRupiah(it.subtotalProfit)}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+                ))}
+              </tbody>
+            </Table>
           </div>
 
           {/* Ringkasan margin */}
@@ -972,7 +974,7 @@ function PaymentModal({
             </div>
             <div>
               <Label>Tanggal</Label>
-              <Input type="date" value={tanggal} onChange={(e) => setTanggal(e.target.value)} />
+              <DatePicker value={tanggal} onChange={setTanggal} />
             </div>
           </div>
 
@@ -1172,7 +1174,7 @@ function EditModal({
           <div className="grid grid-cols-1 gap-3 rounded-xl border border-border bg-white p-4 shadow-[0_18px_50px_-42px_rgba(15,23,42,0.45)] dark:bg-slate-900/80 sm:grid-cols-2">
             <div>
               <Label>Tanggal</Label>
-              <Input type="date" value={tanggal} onChange={(e) => setTanggal(e.target.value)} />
+              <DatePicker value={tanggal} onChange={setTanggal} />
             </div>
             <div>
               <Label>Nama Konsumen</Label>
@@ -1279,23 +1281,19 @@ function EditModal({
                       </label>
                       <label className="text-[10px] font-semibold uppercase text-slate-400">
                         Harga Beli
-                        <Input
-                          type="number"
-                          min={0}
+                        <CurrencyInput
                           max={FIELD_LIMITS.maxMoney}
                           value={l.hargaBeli}
-                          onChange={(e) => patchLine(l.key, { hargaBeli: Math.max(0, Number(e.target.value) || 0) })}
+                          onValueChange={(value) => patchLine(l.key, { hargaBeli: Math.max(0, Number(value) || 0) })}
                           className="mt-0.5 h-10 rounded-md bg-white text-sm font-bold dark:bg-slate-900"
                         />
                       </label>
                       <label className="text-[10px] font-semibold uppercase text-slate-400">
                         Harga Jual
-                        <Input
-                          type="number"
-                          min={0}
+                        <CurrencyInput
                           max={FIELD_LIMITS.maxMoney}
                           value={l.hargaJual}
-                          onChange={(e) => patchLine(l.key, { hargaJual: Math.max(0, Number(e.target.value) || 0) })}
+                          onValueChange={(value) => patchLine(l.key, { hargaJual: Math.max(0, Number(value) || 0) })}
                           className={`mt-0.5 h-10 rounded-md bg-white text-sm font-bold dark:bg-slate-900 ${l.hargaJual < l.hargaBeli ? "border-red-400" : ""}`}
                         />
                       </label>

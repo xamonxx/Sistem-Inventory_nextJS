@@ -16,7 +16,7 @@ import {
   Wallet,
 } from "lucide-react";
 import { toast } from "sonner";
-import { Badge, Table, Td, Th } from "@/components/ui";
+import { Badge, Button, Table, Td, Th } from "@/components/ui";
 import { PeriodFilter, type ResolvedPeriodRange } from "@/components/PeriodFilter";
 import { exportNgExcel } from "@/lib/export/exportNgExcel";
 import { cn, formatRupiah } from "@/lib/utils";
@@ -113,7 +113,7 @@ export function NgDashboardClient({
           <div className="border-b border-sky-100/80 p-5 dark:border-sky-300/10 lg:border-b-0 lg:border-r md:p-6">
             <p className="inline-flex items-center gap-2 rounded-md border border-sky-200 bg-sky-50/90 px-3 py-1 text-[11px] font-black uppercase tracking-[0.18em] text-[var(--primary-strong)] shadow-sm dark:border-sky-300/20 dark:bg-sky-400/10 dark:text-sky-200">
               <span className="h-1.5 w-1.5 rounded-full bg-[var(--primary)] shadow-[0_0_14px_rgba(14,165,233,0.85)]" />
-              Fase 4 Non-Gudang
+              Dashboard Non-Gudang
             </p>
             <h1 className="mt-5 max-w-3xl text-3xl font-black tracking-normal text-foreground dark:text-white md:text-5xl">
               Dashboard Analisa Margin
@@ -150,25 +150,25 @@ export function NgDashboardClient({
               )}
               <div className="flex flex-wrap gap-2">
                 {pendingRange && (
-                  <button
-                    type="button"
+                  <Button
+                    variant="outline"
                     onClick={() => pendingRange && applyRange(pendingRange)}
                     disabled={!canApply || filtering}
-                    className="inline-flex h-12 flex-1 items-center justify-center gap-2 rounded-lg border border-sky-300/80 bg-white/82 px-4 text-sm font-black text-[var(--primary-strong)] shadow-[0_14px_32px_-24px_rgba(8,47,73,0.55),inset_0_1px_0_rgba(255,255,255,0.72)] backdrop-blur-xl transition-[background-color,border-color,color,box-shadow,transform] hover:border-sky-400 hover:bg-sky-50/85 active:scale-[0.99] focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-sky-400/20 disabled:opacity-50 dark:border-sky-300/24 dark:bg-sky-400/10 dark:text-sky-100 dark:hover:bg-sky-400/15"
+                    className="h-12 flex-1 font-black"
                   >
                     <Check size={15} />
                     Terapkan
-                  </button>
+                  </Button>
                 )}
-                <button
-                  type="button"
+                <Button
+                  variant="primary"
                   onClick={handleExport}
                   disabled={exporting}
-                  className="inline-flex h-12 flex-1 items-center justify-center gap-2 rounded-lg border border-sky-400/50 bg-[linear-gradient(180deg,rgba(56,189,248,0.28),transparent_42%),var(--primary)] px-4 text-sm font-black text-white shadow-[0_16px_38px_-18px_rgba(14,165,233,0.95),inset_0_1px_0_rgba(255,255,255,0.22)] transition-[background-color,border-color,box-shadow,transform,filter] hover:border-sky-300/80 hover:bg-[var(--primary-strong)] active:scale-[0.99] focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-sky-400/25 disabled:opacity-60"
+                  className="h-12 flex-1 font-black"
                 >
                   <Download size={15} />
                   {exporting ? "Mengekspor..." : "Export Excel"}
-                </button>
+                </Button>
               </div>
             </div>
           </div>
@@ -196,7 +196,7 @@ export function NgDashboardClient({
           <>
             <TokoMobileList rows={perToko} />
             <div className="hidden overflow-x-auto md:block">
-              <Table variant="plain" className="min-w-[900px]">
+              <Table variant="plain" tableClassName="min-w-[900px]">
                 <thead>
                   <tr>
                     <Th>#</Th>
@@ -244,7 +244,7 @@ export function NgDashboardClient({
           <>
             <ProdukMobileList rows={topProduk} />
             <div className="hidden overflow-x-auto md:block">
-              <Table variant="plain" className="min-w-[780px]">
+              <Table variant="plain" tableClassName="min-w-[780px]">
                 <thead>
                   <tr>
                     <Th>#</Th>

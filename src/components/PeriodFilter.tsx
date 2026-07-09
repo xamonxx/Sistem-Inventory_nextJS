@@ -119,7 +119,7 @@ export function PeriodFilter({
           value={preset}
           onChange={(e) => handlePresetChange(e.target.value as PeriodPreset)}
           className={cn(
-            "h-11 rounded-2xl text-xs font-bold",
+            "h-11 rounded-lg text-xs font-bold",
             preset === "custom" ? "w-11 px-0" : "w-full sm:w-[220px]"
           )}
           aria-label="Filter periode"
@@ -138,7 +138,7 @@ export function PeriodFilter({
               onChange={handleCustomFrom}
               placeholder="Tanggal awal"
               align={align}
-              className="h-11 w-full rounded-2xl"
+              className="h-11 w-full rounded-lg"
             />
             <span className="hidden text-xs font-semibold text-slate-400 sm:inline">s/d</span>
             <DatePicker
@@ -146,7 +146,7 @@ export function PeriodFilter({
               onChange={handleCustomTo}
               placeholder="Tanggal akhir"
               align={align}
-              className="h-11 w-full rounded-2xl"
+              className="h-11 w-full rounded-lg"
             />
           </div>
         )}

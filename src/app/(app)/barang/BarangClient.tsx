@@ -164,7 +164,7 @@ export function BarangClient({
       const history = await getItemHistory(item.id);
       setItemHistory(history);
     } catch {
-      toast.error("Gagal memuat riwayat kartu stok");
+      toast.error("Gagal memuat riwayat kartu stok. Periksa koneksi lalu buka ulang detail barang ini.");
     } finally {
       setLoadingHistory(false);
     }
@@ -202,7 +202,7 @@ export function BarangClient({
           setSelectedItem({ ...selectedItem, aktif: !currentStatus });
         }
       } catch {
-        toast.error("Gagal mengubah status barang");
+        toast.error("Gagal mengubah status barang. Muat ulang halaman lalu coba lagi.");
       }
     });
   }
@@ -280,7 +280,7 @@ export function BarangClient({
           toast.error(res.error ?? "Gagal menghapus barang");
         }
       } catch {
-        toast.error("Terjadi kesalahan saat menghapus barang");
+        toast.error("Gagal menghapus barang. Muat ulang halaman lalu coba lagi.");
       }
     });
   }
@@ -328,7 +328,7 @@ export function BarangClient({
       {/* 2. Filters Toolbar */}
       <Card className="flex flex-col gap-3 p-4 lg:flex-row lg:items-center lg:gap-4">
         <div className="relative w-full lg:flex-1">
-          <Search size={16} className="absolute left-3 top-3 text-slate-400" />
+          <Search size={16} className="pointer-events-none absolute left-3 top-3 z-10 text-[var(--text-soft)]" />
           <Input
             value={q}
             onChange={(e) => setQ(e.target.value)}

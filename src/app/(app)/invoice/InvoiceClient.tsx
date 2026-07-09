@@ -4,7 +4,7 @@ import { useState, useTransition, useMemo, useRef, useEffect } from "react";
 import { createPortal } from "react-dom";
 import { useRouter } from "next/navigation";
 import { bayarInvoice, updateInvoice, deleteInvoice, deleteInvoices, updateInvoiceAndItems } from "./actions";
-import { Button, Card, Input, Label, Select, Table, Th, Td, Badge } from "@/components/ui";
+import { Button, Card, CurrencyInput, Input, Label, Select, Table, Th, Td, Badge } from "@/components/ui";
 import { FIELD_LIMITS } from "@/lib/fieldLimits";
 import { Drawer } from "@/components/Drawer";
 import { Pagination, usePagination } from "@/components/Pagination";
@@ -362,14 +362,14 @@ export function InvoiceClient({ initialInvoices, canBayar, userName }: InvoiceCl
       await navigator.clipboard.writeText(link);
       toast.success("Link invoice disalin ke clipboard.");
     } catch {
-      toast.error("Gagal menyalin link.");
+      toast.error("Gagal menyalin link otomatis. Salin manual dari kolom alamat browser.");
     }
   }
 
   async function handleSaveToImage() {
     const element = document.querySelector<HTMLElement>(".print-area");
     if (!element) {
-      toast.error("Elemen cetak tidak ditemukan.");
+      toast.error("Pratinjau nota belum siap. Tutup lalu buka lagi pratinjau, kemudian coba cetak/simpan ulang.");
       return;
     }
     // Pratinjau A4 memakai `zoom` auto-fit agar muat di layar (di mobile bisa
@@ -406,7 +406,7 @@ export function InvoiceClient({ initialInvoices, canBayar, userName }: InvoiceCl
       toast.success("Gambar berhasil disimpan!");
     } catch (err) {
       console.error(err);
-      toast.error("Gagal menyimpan gambar.");
+      toast.error("Gagal menyimpan gambar. Coba lagi, atau gunakan tombol Cetak untuk simpan sebagai PDF.");
     } finally {
       element.style.zoom = prevZoom; // pulihkan zoom auto-fit pratinjau
     }
@@ -449,7 +449,7 @@ export function InvoiceClient({ initialInvoices, canBayar, userName }: InvoiceCl
       <Card className="rounded-2xl border border-border/90 p-4 md:p-5">
         <div className="flex flex-col gap-3 lg:flex-row lg:flex-nowrap lg:items-center lg:gap-3">
           <div className="relative w-full min-w-0 lg:w-[320px] lg:shrink-0 xl:w-[360px]">
-            <Search size={17} className="absolute left-4 top-1/2 -translate-y-1/2 text-[var(--text-muted-2)]" />
+            <Search size={17} className="pointer-events-none absolute left-4 top-1/2 z-10 -translate-y-1/2 text-[var(--text-soft)]" />
             <Input
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
@@ -914,15 +914,12 @@ export function InvoiceClient({ initialInvoices, canBayar, userName }: InvoiceCl
                 </div>
                 <div className="flex flex-col sm:flex-row gap-3">
                   <div className="flex-1 relative">
-                    <span className="absolute left-3.5 top-1/2 -translate-y-1/2 font-bold text-xs text-[var(--text-muted-2)] font-mono">Rp</span>
-                    <input
-                      type="number"
-                      min={0}
+                    <CurrencyInput
                       max={FIELD_LIMITS.maxMoney}
                       value={paymentAmount || ""}
-                      onChange={(e) => setPaymentAmount(parseInt(e.target.value) || 0)}
+                      onValueChange={(value) => setPaymentAmount(parseInt(value) || 0)}
                       placeholder="Nominal cicilan"
-                      className="h-10 w-full pl-9 pr-4 rounded-xl border border-border bg-card font-mono font-bold text-xs outline-none transition-all focus:border-[var(--primary)] focus:ring-4 focus:ring-[var(--primary)]/10"
+                      className="h-10 rounded-xl bg-card pr-4 text-xs font-mono font-bold"
                     />
                   </div>
                   <div className="w-full sm:w-36 shrink-0">

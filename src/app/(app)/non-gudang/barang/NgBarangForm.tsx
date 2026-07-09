@@ -4,7 +4,7 @@ import { useActionState, useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { useRouter } from "next/navigation";
 import { saveNgProduk } from "./actions";
-import { Button, Input, Label, CharCounter } from "@/components/ui";
+import { Button, CurrencyInput, Input, Label, CharCounter } from "@/components/ui";
 import { FIELD_LIMITS } from "@/lib/fieldLimits";
 import { cn } from "@/lib/utils";
 import { Plus, X } from "lucide-react";
@@ -126,11 +126,11 @@ export function NgBarangForm({ triggerClassName }: { triggerClassName?: string }
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                 <div>
                   <Label>Harga Beli (Rp)</Label>
-                  <Input name="hargaBeli" type="number" min={0} defaultValue={editing?.hargaBeli ?? ""} placeholder="0" />
+                  <CurrencyInput name="hargaBeli" defaultValue={editing?.hargaBeli ?? ""} placeholder="0" />
                 </div>
                 <div>
                   <Label>Harga Jual (Rp)</Label>
-                  <Input name="hargaJual" type="number" min={0} defaultValue={editing?.hargaJual ?? ""} placeholder="0" />
+                  <CurrencyInput name="hargaJual" defaultValue={editing?.hargaJual ?? ""} placeholder="0" />
                 </div>
               </div>
 

@@ -65,7 +65,7 @@ export function InvoiceDocument({
   const qrSrc = qrDataUrl;
 
   const Label = ({ children }: { children: React.ReactNode }) => (
-    <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-[#94A3B8]">{children}</p>
+    <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-[#475569]">{children}</p>
   );
 
   return (
@@ -87,7 +87,7 @@ export function InvoiceDocument({
               <p className="mt-0.5 text-[9px] font-bold uppercase tracking-[0.08em] text-[#0284c7]">
                 {COMPANY.tagline}
               </p>
-              <div className="mt-1.5 space-y-px text-[10px] leading-snug text-[#64748B]">
+              <div className="mt-1.5 space-y-px text-[10px] leading-snug text-[#475569]">
                 <p>{COMPANY.alamat}</p>
                 <p>Telp: {COMPANY.telepon}</p>
                 <p>{COMPANY.email} · {COMPANY.website}</p>
@@ -100,7 +100,7 @@ export function InvoiceDocument({
             <p className="mt-1 font-mono text-[16px] font-semibold text-[#0284c7]">{inv.noInvoice}</p>
             <dl className="mt-2.5 space-y-0.5 text-[10px]">
               <div className="flex justify-end gap-2">
-                <dt className="text-[#94A3B8]">Tanggal</dt>
+                <dt className="text-[#475569]">Tanggal</dt>
                 <dd className="w-[78px] font-semibold tabular-nums text-[#111827]">{formatTanggal(inv.tanggal)}</dd>
               </div>
             </dl>
@@ -119,9 +119,9 @@ export function InvoiceDocument({
             <Label>Ditagihkan Kepada</Label>
             <p className="mt-1.5 text-[13px] font-bold text-[#111827]">{inv.namaClient}</p>
             {inv.namaWs && (
-              <p className="mt-0.5 text-[10px] text-[#475569]">Bengkel / WS: <span className="font-semibold">{inv.namaWs}</span></p>
+              <p className="mt-0.5 text-[10px] text-[#475569]">Workshop: <span className="font-semibold">{inv.namaWs}</span></p>
             )}
-            {inv.alamat && <p className="mt-0.5 text-[10px] leading-snug text-[#64748B]">{inv.alamat}</p>}
+            {inv.alamat && <p className="mt-0.5 text-[10px] leading-snug text-[#475569]">{inv.alamat}</p>}
           </div>
 
           <div>
@@ -133,7 +133,7 @@ export function InvoiceDocument({
                 ["Status", stat.label],
               ].map(([k, v]) => (
                 <div key={k} className="flex justify-between gap-3">
-                  <dt className="text-[#94A3B8]">{k}</dt>
+                  <dt className="text-[#475569]">{k}</dt>
                   <dd className="font-semibold text-[#111827]">{v}</dd>
                 </div>
               ))}
@@ -144,7 +144,7 @@ export function InvoiceDocument({
             <div className="text-center">
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img src={qrSrc} alt="QR Verifikasi" className="h-[68px] w-[68px]" />
-              <p className="mt-1 text-[7.5px] uppercase tracking-wide text-[#94A3B8]">Scan untuk verifikasi</p>
+              <p className="mt-1 text-[7.5px] uppercase tracking-wide text-[#475569]">Scan untuk verifikasi</p>
             </div>
           )}
         </div>
@@ -176,13 +176,13 @@ export function InvoiceDocument({
                   <td className="h-[28px] px-3 font-mono font-semibold text-[#0284c7]">{it.kode}</td>
                   <td className="h-[28px] px-3 font-medium text-[#111827]">{renderItemName(it.nama)}</td>
                   <td className="h-[28px] px-3 text-center font-semibold tabular-nums">{it.qty}</td>
-                  <td className="h-[28px] px-3 text-center text-[#64748B]">{it.satuan ?? "Unit"}</td>
+                  <td className="h-[28px] px-3 text-center text-[#475569]">{it.satuan ?? "Unit"}</td>
                   <td className="h-[28px] px-3 text-right tabular-nums text-[#334155]">{formatRupiah(it.harga)}</td>
                   <td className="h-[28px] px-3 text-right font-semibold tabular-nums text-[#111827]">{formatRupiah(it.subtotal)}</td>
                 </tr>
               ))}
               {inv.items.length === 0 && (
-                <tr><td colSpan={6} className="px-3 py-6 text-center text-[#94A3B8]">Tidak ada rincian item.</td></tr>
+                <tr><td colSpan={6} className="px-3 py-6 text-center text-[#475569]">Tidak ada rincian item.</td></tr>
               )}
             </tbody>
           </table>
@@ -194,7 +194,7 @@ export function InvoiceDocument({
           <div className="space-y-4">
             <div>
               <Label>Catatan</Label>
-              <p className="mt-1.5 text-[10px] leading-relaxed text-[#64748B]">
+              <p className="mt-1.5 text-[10px] leading-relaxed text-[#475569]">
                 Terima kasih atas kepercayaan Anda. Penukaran barang maksimal 3 hari dengan nota asli.
                 Mohon konfirmasi setelah melakukan pembayaran/transfer.
               </p>
@@ -203,9 +203,9 @@ export function InvoiceDocument({
               <div>
                 <Label>Pembayaran</Label>
                 <div className="mt-1.5 space-y-0.5 text-[10px]">
-                  {inv.namaBank && <div className="flex justify-between gap-6"><span className="text-[#94A3B8]">Nama Bank</span><span className="font-semibold text-[#111827]">{inv.namaBank}</span></div>}
-                  {inv.noRekening && <div className="flex justify-between gap-6"><span className="text-[#94A3B8]">No. Rekening</span><span className="font-mono font-semibold tabular-nums text-[#111827]">{inv.noRekening}</span></div>}
-                  {inv.atasNama && <div className="flex justify-between gap-6"><span className="text-[#94A3B8]">Atas Nama</span><span className="font-semibold text-[#111827]">{inv.atasNama}</span></div>}
+                  {inv.namaBank && <div className="flex justify-between gap-6"><span className="text-[#475569]">Nama Bank</span><span className="font-semibold text-[#111827]">{inv.namaBank}</span></div>}
+                  {inv.noRekening && <div className="flex justify-between gap-6"><span className="text-[#475569]">No. Rekening</span><span className="font-mono font-semibold tabular-nums text-[#111827]">{inv.noRekening}</span></div>}
+                  {inv.atasNama && <div className="flex justify-between gap-6"><span className="text-[#475569]">Atas Nama</span><span className="font-semibold text-[#111827]">{inv.atasNama}</span></div>}
                 </div>
               </div>
             )}
@@ -226,14 +226,14 @@ export function InvoiceDocument({
               )}
             </div>
             <div className="mt-2.5 flex items-end justify-between border-t-2 border-[#111827] pt-2.5">
-              <span className="text-[10px] font-bold uppercase tracking-wide text-[#64748B]">
+              <span className="text-[10px] font-bold uppercase tracking-wide text-[#475569]">
                 {lunas ? "Total Lunas" : "Sisa Tagihan"}
               </span>
               <span className="text-[20px] font-bold leading-none tabular-nums text-[#111827]">
                 {formatRupiah(lunas ? inv.total : Math.max(0, sisa))}
               </span>
             </div>
-            <p className="mt-1 text-right text-[9px] text-[#94A3B8]">
+            <p className="mt-1 text-right text-[9px] text-[#475569]">
               {inv.items.length} jenis barang · {totalQty} total unit
             </p>
           </div>
@@ -262,14 +262,14 @@ export function InvoiceDocument({
               {role === "Disetujui" ? (
                 <p className="mt-1 text-[9px] font-semibold text-[#475569]">( {SIGNATURE_DISETUJUI_NAMA} )</p>
               ) : (
-                <p className="mt-1 text-[8.5px] text-[#94A3B8]">( ........................... )</p>
+                <p className="mt-1 text-[8.5px] text-[#475569]">( ........................... )</p>
               )}
             </div>
           ))}
         </div>
 
         {/* ============ FOOTER ============ */}
-        <div className="mt-6 flex items-center justify-between border-t border-[#E5E7EB] pt-3 text-[9px] text-[#94A3B8]">
+        <div className="mt-6 flex items-center justify-between border-t border-[#E5E7EB] pt-3 text-[9px] text-[#475569]">
           <span>Invoice dibuat otomatis oleh sistem &amp; sah tanpa tanda tangan basah.</span>
           <span className="font-semibold text-[#0284c7]">{COMPANY.website}</span>
         </div>

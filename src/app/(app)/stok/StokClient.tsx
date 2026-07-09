@@ -236,7 +236,7 @@ export function StokClient({
         <div>
           <Label>Cari Detail / Keterangan</Label>
           <div className="relative">
-            <Search size={16} className="absolute left-2.5 top-3 text-slate-400" />
+            <Search size={16} className="pointer-events-none absolute left-2.5 top-3 z-10 text-[var(--text-soft)]" />
             <Input
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}

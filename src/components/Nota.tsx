@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import QRCode from "qrcode";
 import { formatRupiah, formatTanggal } from "@/lib/utils";
+import { AppLogo } from "./AppLogo";
 
 export type NotaItem = { kode?: string; nama: string; harga: number; qty: number; subtotal: number };
 export type NotaData = {
@@ -33,6 +34,12 @@ const COMPANY = "PUTRA CORPORATION";
 const ADDRESS = process.env.NEXT_PUBLIC_COMPANY_ADDRESS ?? "Jl. Nasional III, Cipatat, Bandung Barat, Jawa Barat (40554)";
 const PHONE = "0822-1234-5678";
 const EMAIL = "info@putracorp.co.id";
+
+// Tanda tangan kolom "Disetujui" — pakai gambar yang sudah ada (public/ttd/disetujui.png).
+const SIGNATURE_DISETUJUI =
+  process.env.NEXT_PUBLIC_SIGNATURE_DISETUJUI ?? "/ttd/disetujui.png";
+const SIGNATURE_DISETUJUI_NAMA =
+  process.env.NEXT_PUBLIC_SIGNATURE_DISETUJUI_NAMA ?? "Putri Nur Fitriani";
 
 function renderItemName(name: string, isThermal: boolean = false) {
   if (name.startsWith("[RETUR]")) {
@@ -127,7 +134,7 @@ export function Nota({ data, showKode = true }: { data: NotaData; showKode?: boo
           {data.jatuhTempo && sisaTagihan > 0 && <Row k="Jatuh Tempo" v={formatTanggal(data.jatuhTempo)} />}
           {data.namaClient && <Row k="Pelanggan" v={data.namaClient} />}
           {data.alamat && <Row k="Alamat" v={data.alamat} />}
-          {data.namaWs && <Row k="Bengkel (WS)" v={data.namaWs} />}
+          {data.namaWs && <Row k="Workshop" v={data.namaWs} />}
         </div>
 
         <table className="w-full py-2 text-[11px] table-fixed">
@@ -192,7 +199,7 @@ export function Nota({ data, showKode = true }: { data: NotaData; showKode?: boo
           {data.catatan && <p className="mt-2.5 italic text-[10px] leading-normal">{data.catatan}</p>}
         </div>
 
-        <p className="mt-5 text-center text-[9px] text-[#64748B] font-sans leading-relaxed">Nota ini dibuat otomatis oleh sistem.</p>
+        <p className="mt-5 text-center text-[9px] text-[#475569] font-sans leading-relaxed">Nota ini dibuat otomatis oleh sistem.</p>
       </div>
 
       {/* 2. PREMIUM A4 ENTERPRISE INVOICE LAYOUT (Elegant, spaced, professional corporate invoice) */}
@@ -204,8 +211,8 @@ export function Nota({ data, showKode = true }: { data: NotaData; showKode?: boo
           {/* ============ HEADER ============ */}
           <div className="flex items-start justify-between gap-6">
             <div className="flex items-start gap-3">
-              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-md bg-[#1E293B] text-sm font-extrabold text-white">
-                PC
+              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-md bg-[#1E293B] text-white">
+                <AppLogo className="h-7 w-7" />
               </div>
               <div className="leading-tight">
                 <p className="max-w-[250px] text-[18px] font-extrabold uppercase leading-[1.05] tracking-[0.025em] text-[#111827]">
@@ -214,7 +221,7 @@ export function Nota({ data, showKode = true }: { data: NotaData; showKode?: boo
                 <p className="mt-0.5 text-[9px] font-bold uppercase tracking-[0.08em] text-[#0284c7]">
                   BUILDING MATERIALS SUPPLIER
                 </p>
-                <div className="mt-1.5 space-y-px text-[10px] leading-snug text-[#64748B]">
+                <div className="mt-1.5 space-y-px text-[10px] leading-snug text-[#475569]">
                   <p>{ADDRESS}</p>
                   <p>Telp: {PHONE}</p>
                   <p>{EMAIL} · www.putracorp.co.id</p>
@@ -227,7 +234,7 @@ export function Nota({ data, showKode = true }: { data: NotaData; showKode?: boo
               <p className="mt-1 font-mono text-[16px] font-semibold text-[#0284c7]">{data.noInvoice ?? data.noTransaksi ?? "-"}</p>
               <dl className="mt-2.5 space-y-0.5 text-[10px]">
                 <div className="flex justify-end gap-2">
-                  <dt className="text-[#94A3B8]">Tanggal</dt>
+                  <dt className="text-[#475569]">Tanggal</dt>
                   <dd className="w-[78px] font-semibold tabular-nums text-[#111827] text-right">{formatTanggal(data.tanggal)}</dd>
                 </div>
               </dl>
@@ -243,16 +250,16 @@ export function Nota({ data, showKode = true }: { data: NotaData; showKode?: boo
           {/* ============ INFO BLOCKS ============ */}
           <div className="mt-5 grid grid-cols-[1fr_1fr_auto] gap-8 border-t border-[#E5E7EB] pt-4">
             <div>
-              <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-[#94A3B8]">Ditagihkan Kepada</p>
+              <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-[#475569]">Ditagihkan Kepada</p>
               <p className="mt-1.5 text-[13px] font-bold text-[#111827]">{data.namaClient || "Umum / Eceran"}</p>
               {data.namaWs && (
-                <p className="mt-0.5 text-[10px] text-[#475569]">Bengkel / WS: <span className="font-semibold">{data.namaWs}</span></p>
+                <p className="mt-0.5 text-[10px] text-[#475569]">Workshop: <span className="font-semibold">{data.namaWs}</span></p>
               )}
-              {data.alamat && <p className="mt-0.5 text-[10px] leading-snug text-[#64748B]">{data.alamat}</p>}
+              {data.alamat && <p className="mt-0.5 text-[10px] leading-snug text-[#475569]">{data.alamat}</p>}
             </div>
 
             <div>
-              <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-[#94A3B8]">Informasi Invoice</p>
+              <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-[#475569]">Informasi Invoice</p>
               <dl className="mt-1.5 space-y-1 text-[10px]">
                 {[
                   ["Tanggal Invoice", formatTanggal(data.tanggal)],
@@ -261,7 +268,7 @@ export function Nota({ data, showKode = true }: { data: NotaData; showKode?: boo
                   ["Status", stat.label],
                 ].map(([k, v]) => (
                   <div key={k} className="flex justify-between gap-3">
-                    <dt className="text-[#94A3B8]">{k}</dt>
+                    <dt className="text-[#475569]">{k}</dt>
                     <dd className="font-semibold text-[#111827]">{v}</dd>
                   </div>
                 ))}
@@ -272,7 +279,7 @@ export function Nota({ data, showKode = true }: { data: NotaData; showKode?: boo
               <div className="text-center">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img src={qrDataUrl} alt="QR Verifikasi" className="h-[68px] w-[68px]" />
-                <p className="mt-1 text-[7.5px] uppercase tracking-wide text-[#94A3B8]">Scan untuk verifikasi</p>
+                <p className="mt-1 text-[7.5px] uppercase tracking-wide text-[#475569]">Scan untuk verifikasi</p>
               </div>
             )}
           </div>
@@ -304,13 +311,13 @@ export function Nota({ data, showKode = true }: { data: NotaData; showKode?: boo
                     {showKode && <td className="h-[32px] px-4 font-mono font-semibold text-[#0284c7]">{it.kode ?? "-"}</td>}
                     <td className="h-[32px] px-4 font-medium text-[#111827]">{renderItemName(it.nama)}</td>
                     <td className="h-[32px] px-3 text-center font-semibold tabular-nums">{it.qty}</td>
-                    <td className="h-[32px] px-3 text-center text-[#64748B]">Unit</td>
+                    <td className="h-[32px] px-3 text-center text-[#475569]">Unit</td>
                     <td className="h-[32px] px-4 text-right tabular-nums text-[#334155]">{formatRupiah(it.harga)}</td>
                     <td className="h-[32px] px-4 text-right font-semibold tabular-nums text-[#111827]">{formatRupiah(it.subtotal)}</td>
                   </tr>
                 ))}
                 {data.items.length === 0 && (
-                  <tr><td colSpan={showKode ? 6 : 5} className="px-4 py-6 text-center text-[#94A3B8]">Tidak ada rincian item.</td></tr>
+                  <tr><td colSpan={showKode ? 6 : 5} className="px-4 py-6 text-center text-[#475569]">Tidak ada rincian item.</td></tr>
                 )}
               </tbody>
             </table>
@@ -321,19 +328,19 @@ export function Nota({ data, showKode = true }: { data: NotaData; showKode?: boo
             {/* Left: notes + bank */}
             <div className="space-y-4">
               <div>
-                <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-[#94A3B8]">Catatan</p>
-                <p className="mt-1.5 text-[10px] leading-relaxed text-[#64748B]">
+                <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-[#475569]">Catatan</p>
+                <p className="mt-1.5 text-[10px] leading-relaxed text-[#475569]">
                   Terima kasih atas kepercayaan Anda. Penukaran barang maksimal 3 hari dengan nota asli.
                   Mohon konfirmasi setelah melakukan pembayaran/transfer.
                 </p>
               </div>
               {(data.namaBank || data.noRekening || data.atasNama) && (
                 <div>
-                  <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-[#94A3B8]">Pembayaran</p>
+                  <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-[#475569]">Pembayaran</p>
                   <div className="mt-1.5 space-y-0.5 text-[10px]">
-                    {data.namaBank && <div className="flex justify-between gap-6"><span className="text-[#94A3B8]">Nama Bank</span><span className="font-semibold text-[#111827]">{data.namaBank}</span></div>}
-                    {data.noRekening && <div className="flex justify-between gap-6"><span className="text-[#94A3B8]">No. Rekening</span><span className="font-mono font-semibold tabular-nums text-[#111827]">{data.noRekening}</span></div>}
-                    {data.atasNama && <div className="flex justify-between gap-6"><span className="text-[#94A3B8]">Atas Nama</span><span className="font-semibold text-[#111827]">{data.atasNama}</span></div>}
+                    {data.namaBank && <div className="flex justify-between gap-6"><span className="text-[#475569]">Nama Bank</span><span className="font-semibold text-[#111827]">{data.namaBank}</span></div>}
+                    {data.noRekening && <div className="flex justify-between gap-6"><span className="text-[#475569]">No. Rekening</span><span className="font-mono font-semibold tabular-nums text-[#111827]">{data.noRekening}</span></div>}
+                    {data.atasNama && <div className="flex justify-between gap-6"><span className="text-[#475569]">Atas Nama</span><span className="font-semibold text-[#111827]">{data.atasNama}</span></div>}
                   </div>
                 </div>
               )}
@@ -360,14 +367,14 @@ export function Nota({ data, showKode = true }: { data: NotaData; showKode?: boo
                 )}
               </div>
               <div className="mt-2.5 flex items-end justify-between border-t-2 border-[#111827] pt-2.5">
-                <span className="text-[10px] font-bold uppercase tracking-wide text-[#64748B]">
+                <span className="text-[10px] font-bold uppercase tracking-wide text-[#475569]">
                   {lunas ? "Total Lunas" : "Sisa Tagihan"}
                 </span>
                 <span className="text-[20px] font-bold leading-none tabular-nums text-[#111827]">
                   {formatRupiah(lunas ? Math.abs(data.total) : sisaTagihan)}
                 </span>
               </div>
-              <p className="mt-1 text-right text-[9px] text-[#94A3B8]">
+              <p className="mt-1 text-right text-[9px] text-[#475569]">
                 {data.items.length} jenis barang · {totalQty} total unit
               </p>
             </div>
@@ -378,14 +385,32 @@ export function Nota({ data, showKode = true }: { data: NotaData; showKode?: boo
             {["Dibuat Oleh", "Disetujui", "Penerima"].map((role) => (
               <div key={role}>
                 <p className="font-semibold text-[#475569]">{role}</p>
-                <div className="mt-10 border-t border-[#94A3B8]" />
-                <p className="mt-1 text-[8.5px] text-[#94A3B8]">( ........................... )</p>
+                {/* Area tanda tangan: garis + gambar TTD absolut (tidak menggeser
+                    layout, jadi ketiga kolom tetap presisi sejajar). */}
+                <div className="relative mt-16 border-t border-[#94A3B8]">
+                  {role === "Disetujui" && (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img
+                      src={SIGNATURE_DISETUJUI}
+                      alt="Tanda tangan disetujui"
+                      className="pointer-events-none absolute bottom-[4px] left-1/2 h-[56px] w-auto max-w-[90%] -translate-x-1/2 object-contain"
+                      onError={(e) => {
+                        e.currentTarget.style.visibility = "hidden";
+                      }}
+                    />
+                  )}
+                </div>
+                {role === "Disetujui" ? (
+                  <p className="mt-1 text-[9px] font-semibold text-[#475569]">( {SIGNATURE_DISETUJUI_NAMA} )</p>
+                ) : (
+                  <p className="mt-1 text-[8.5px] text-[#475569]">( ........................... )</p>
+                )}
               </div>
             ))}
           </div>
 
           {/* ============ FOOTER ============ */}
-          <div className="mt-6 flex items-center justify-between border-t border-[#E5E7EB] pt-3 text-[9px] text-[#94A3B8]">
+          <div className="mt-6 flex items-center justify-between border-t border-[#E5E7EB] pt-3 text-[9px] text-[#475569]">
             <span>Invoice dibuat otomatis oleh sistem.</span>
             <span className="font-semibold text-[#0284c7]">www.putracorp.co.id</span>
           </div>

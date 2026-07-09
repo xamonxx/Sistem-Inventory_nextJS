@@ -3,7 +3,7 @@
 import { useState, useTransition, useRef, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { bayarInvoice } from "./actions";
-import { Button, Card, Input, Label, Select } from "@/components/ui";
+import { Button, Card, CurrencyInput, Input, Label, Select } from "@/components/ui";
 import { FIELD_LIMITS } from "@/lib/fieldLimits";
 import { formatRupiah, formatTanggal } from "@/lib/utils";
 import { MessageCircle, Wallet, Printer, X, Download, Mail, Link2 } from "lucide-react";
@@ -178,7 +178,7 @@ export function InvoiceActions({ inv, canBayar }: { inv: InvoiceRow; canBayar: b
       await navigator.clipboard.writeText(link);
       toast.success("Link invoice disalin ke clipboard.");
     } catch {
-      toast.error("Gagal menyalin link.");
+      toast.error("Gagal menyalin link otomatis. Salin manual dari kolom alamat browser.");
     }
   }
 
@@ -221,13 +221,11 @@ export function InvoiceActions({ inv, canBayar }: { inv: InvoiceRow; canBayar: b
 
               <div>
                 <Label>Jumlah Nominal Bayar (Rp)</Label>
-                <Input
-                  type="number"
-                  min={0}
+                <CurrencyInput
                   max={FIELD_LIMITS.maxMoney}
                   value={jumlah}
-                  onChange={(e) => setJumlah(parseInt(e.target.value) || 0)}
-                  className="font-mono font-semibold h-11 text-base text-right pr-3"
+                  onValueChange={(value) => setJumlah(parseInt(value) || 0)}
+                  className="h-11 pr-3 text-right text-base font-mono font-semibold"
                 />
               </div>
 

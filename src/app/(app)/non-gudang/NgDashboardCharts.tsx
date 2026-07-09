@@ -160,7 +160,7 @@ export function NgDashboardCharts({ tren, perToko, topProduk }: {
               <div className="h-[260px] sm:h-[320px]">
               <ResponsiveContainer width="100%" height="100%">
                 <LineChart data={tren} margin={{ top: 10, right: 16, left: 18, bottom: 0 }}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="rgba(125, 146, 142, 0.34)" vertical={false} />
+                  <CartesianGrid strokeDasharray="3 3" stroke="rgba(100, 116, 139, 0.24)" vertical={false} />
                   <XAxis dataKey="periode" tick={{ fontSize: 11, fill: "var(--foreground)", fontWeight: 600 }} tickMargin={8} />
                   <YAxis tickFormatter={fmtAxis} tick={{ fontSize: 11, fill: "var(--foreground)", fontWeight: 600 }} width={62} />
                   <Tooltip {...TOOLTIP_STYLE} formatter={(v: unknown, n: unknown) => [formatRupiah(v as number), n as string]} />
@@ -192,7 +192,7 @@ export function NgDashboardCharts({ tren, perToko, topProduk }: {
                 <div className="h-[300px] sm:h-[340px]">
                 <ResponsiveContainer width="100%" height="100%">
                   <BarChart data={tokoChart} layout="vertical" margin={{ top: 4, right: 16, left: 16, bottom: 4 }}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="rgba(125, 146, 142, 0.34)" horizontal={false} />
+                    <CartesianGrid strokeDasharray="3 3" stroke="rgba(100, 116, 139, 0.24)" horizontal={false} />
                     <XAxis type="number" tickFormatter={fmtAxis} tick={{ fontSize: 11, fill: "var(--foreground)", fontWeight: 600 }} />
                     <YAxis type="category" dataKey="name" width={142} tick={<CustomYAxisTick />} interval={0} />
                     <Tooltip {...TOOLTIP_STYLE} formatter={(v: unknown, n: unknown) => [formatRupiah(v as number), n as string]} />
@@ -225,7 +225,7 @@ export function NgDashboardCharts({ tren, perToko, topProduk }: {
                 <div className="h-[300px] sm:h-[340px]">
                 <ResponsiveContainer width="100%" height="100%">
                   <BarChart data={produkChart} layout="vertical" margin={{ top: 4, right: 16, left: 16, bottom: 4 }}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="rgba(125, 146, 142, 0.34)" horizontal={false} />
+                    <CartesianGrid strokeDasharray="3 3" stroke="rgba(100, 116, 139, 0.24)" horizontal={false} />
                     <XAxis type="number" tickFormatter={fmtAxis} tick={{ fontSize: 11, fill: "var(--foreground)", fontWeight: 600 }} />
                     <YAxis type="category" dataKey="name" width={142} tick={<CustomYAxisTick />} interval={0} />
                     <Tooltip {...TOOLTIP_STYLE} formatter={(v: unknown, n: unknown) => [formatRupiah(v as number), n as string]} />

@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { createTransaction } from "./actions";
 import { useKasirStore, type CartLine } from "@/lib/kasirStore";
 import { computeCart } from "@/lib/cart";
-import { Button, Card, Input, Label, Select, Table, Th, Td, Badge, Textarea, CharCounter } from "@/components/ui";
+import { Button, Card, CurrencyInput, Input, Label, Select, Table, Th, Td, Badge, Textarea, CharCounter } from "@/components/ui";
 import { formatRupiah, cn } from "@/lib/utils";
 import { FIELD_LIMITS } from "@/lib/fieldLimits";
 import {
@@ -259,7 +259,7 @@ export function KasirClient({ items }: { items: Item[] }) {
   async function handleSaveToImage() {
     const element = document.querySelector<HTMLElement>(".print-area");
     if (!element) {
-      toast.error("Elemen cetak tidak ditemukan.");
+      toast.error("Pratinjau nota belum siap. Tutup lalu buka lagi pratinjau, kemudian coba cetak/simpan ulang.");
       return;
     }
     try {
@@ -283,7 +283,7 @@ export function KasirClient({ items }: { items: Item[] }) {
       toast.success("Gambar berhasil disimpan!");
     } catch (err) {
       console.error(err);
-      toast.error("Gagal menyimpan gambar.");
+      toast.error("Gagal menyimpan gambar. Coba lagi, atau gunakan tombol Cetak untuk simpan sebagai PDF.");
     }
   }
 
@@ -562,7 +562,7 @@ export function KasirClient({ items }: { items: Item[] }) {
 
                 {/* Instant Search Bar */}
                 <div className="relative">
-                  <Search size={18} className="absolute left-3.5 top-3 text-slate-400" />
+                  <Search size={18} className="pointer-events-none absolute left-3.5 top-3 z-10 text-[var(--text-soft)]" />
                   <input
                     id="search-item"
                     ref={searchInputRef}
@@ -1018,38 +1018,32 @@ export function KasirClient({ items }: { items: Item[] }) {
                           <div className="grid grid-cols-3 gap-2">
                             <div>
                               <Label className="text-[10px] font-bold text-slate-500">Tunai</Label>
-                              <input
-                                type="number"
-                                min={0}
+                              <CurrencyInput
                                 max={FIELD_LIMITS.maxMoney}
                                 value={splitCash || ""}
-                                onChange={(e) => setSplitCash(parseInt(e.target.value) || 0)}
+                                onValueChange={(value) => setSplitCash(parseInt(value) || 0)}
                                 placeholder="0"
-                                className="h-9 w-full rounded-lg border border-border bg-card text-center text-xs font-semibold font-mono outline-none"
+                                className="h-9 text-center text-xs font-mono"
                               />
                             </div>
                             <div>
                               <Label className="text-[10px] font-bold text-slate-500">Transfer</Label>
-                              <input
-                                type="number"
-                                min={0}
+                              <CurrencyInput
                                 max={FIELD_LIMITS.maxMoney}
                                 value={splitTransfer || ""}
-                                onChange={(e) => setSplitTransfer(parseInt(e.target.value) || 0)}
+                                onValueChange={(value) => setSplitTransfer(parseInt(value) || 0)}
                                 placeholder="0"
-                                className="h-9 w-full rounded-lg border border-border bg-card text-center text-xs font-semibold font-mono outline-none"
+                                className="h-9 text-center text-xs font-mono"
                               />
                             </div>
                             <div>
                               <Label className="text-[10px] font-bold text-slate-500">Tempo</Label>
-                              <input
-                                type="number"
-                                min={0}
+                              <CurrencyInput
                                 max={FIELD_LIMITS.maxMoney}
                                 value={splitCredit || ""}
-                                onChange={(e) => setSplitCredit(parseInt(e.target.value) || 0)}
+                                onValueChange={(value) => setSplitCredit(parseInt(value) || 0)}
                                 placeholder="0"
-                                className="h-9 w-full rounded-lg border border-border bg-card text-center text-xs font-semibold font-mono outline-none"
+                                className="h-9 text-center text-xs font-mono"
                               />
                             </div>
                           </div>
@@ -1130,14 +1124,12 @@ export function KasirClient({ items }: { items: Item[] }) {
                     {(isCash || (isSplitActive && splitCash > 0)) ? (
                       <div className="space-y-2.5 rounded-xl bg-slate-50/70 dark:bg-slate-800/70 p-4 border border-border">
                         <Label className="text-xs font-bold text-slate-650">Uang Tunai Diterima</Label>
-                        <Input
-                          type="number"
-                          min={0}
+                        <CurrencyInput
                           max={FIELD_LIMITS.maxMoney}
                           value={cashReceived || ""}
-                          onChange={(e) => setCashReceived(parseInt(e.target.value) || 0)}
+                          onValueChange={(value) => setCashReceived(parseInt(value) || 0)}
                           placeholder="Nominal diterima"
-                          className="h-10 text-right text-base font-bold font-mono rounded-xl bg-card"
+                          className="h-10 rounded-xl bg-card text-right text-base font-mono font-bold"
                         />
                         <div className="flex flex-wrap gap-1 mt-1.5 select-none">
                           <button

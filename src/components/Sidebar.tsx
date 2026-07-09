@@ -38,7 +38,7 @@ const KEUANGAN: Item[] = [
   { href: "/invoice", label: "Invoice", icon: FileText, roles: ["ADMIN_KASIR", "ADMIN_GUDANG"] },
 ];
 
-// Modul Non-Gudang (trading) — hanya ADMIN_NONGUDANG. Item ditambah per fase.
+// Modul Non-Gudang (trading) — hanya ADMIN_NONGUDANG. Item ditambah bertahap.
 const NON_GUDANG: Item[] = [
   { href: "/non-gudang", label: "Dashboard", icon: LayoutDashboard, roles: ["ADMIN_NONGUDANG"] },
   { href: "/non-gudang/barang", label: "Master Barang", icon: Boxes, roles: ["ADMIN_NONGUDANG"] },
@@ -173,7 +173,7 @@ function SidebarContent({
                   className={cn(
                     "transition-colors duration-200",
                     active
-                      ? "text-sky-300"
+                      ? "text-[var(--primary-strong)] dark:text-sky-300"
                       : "text-[var(--chrome-muted)] group-hover:text-[var(--chrome-ink)]"
                   )}
                 />
@@ -238,7 +238,7 @@ function SidebarContent({
        <aside
          className={cn(
            "app-sidebar-surface app-chrome-surface no-print border-r text-[var(--chrome-ink)] backdrop-blur-2xl backdrop-saturate-150",
-           "lg:fixed lg:left-0 lg:top-0 lg:bottom-0 lg:flex lg:h-screen lg:shrink-0 lg:flex-col lg:transition-[width] lg:duration-200 lg:ease-in-out lg:z-30",
+           "lg:fixed lg:left-0 lg:top-0 lg:bottom-0 lg:flex lg:h-screen lg:shrink-0 lg:flex-col lg:transition-[width] lg:duration-200 lg:ease-in-out lg:z-50",
            isCollapsed ? "lg:w-[72px]" : "lg:w-[240px]",
            "max-lg:fixed max-lg:top-0 max-lg:left-0 max-lg:z-50 max-lg:h-[100dvh] max-lg:w-[min(374px,92vw)] flex flex-col max-lg:transition-transform max-lg:duration-200 max-lg:ease-in-out",
            isOpen ? "max-lg:translate-x-0" : "max-lg:-translate-x-full"
@@ -332,15 +332,15 @@ function SidebarContent({
               onClick={openLogoutModal}
               aria-label="Buka konfirmasi keluar"
               className={cn(
-                "group relative z-10 flex w-full cursor-pointer items-center rounded-xl text-left transition-[border-color,box-shadow] duration-200",
+                "group relative z-10 flex w-full cursor-pointer items-center rounded-xl border text-left",
                 // Collapsed: show only the avatar tile (no wrapping panel, which
                 // looked like a box-in-a-box). Expanded: full soft panel.
                 isCollapsed
-                  ? "justify-center p-0"
-                  : "chrome-soft-panel gap-3 p-2.5 backdrop-blur-xl backdrop-saturate-150 hover:border-[var(--chrome-active-border)]"
+                  ? "justify-center border-transparent bg-transparent p-0 shadow-none"
+                  : "chrome-soft-panel gap-3 p-2.5 backdrop-blur-xl backdrop-saturate-150 transition-[background-color,border-color,box-shadow] duration-150 hover:border-[var(--chrome-active-border)]"
               )}
             >
-              <div className="chrome-avatar flex h-9 w-9 shrink-0 items-center justify-center rounded-xl text-xs font-bold uppercase backdrop-blur-xl backdrop-saturate-150 transition">
+              <div className="chrome-avatar flex h-9 w-9 shrink-0 items-center justify-center rounded-xl text-xs font-bold uppercase backdrop-blur-xl backdrop-saturate-150">
                {initials}
              </div>
             <div className={cn(
@@ -356,10 +356,10 @@ function SidebarContent({
           <button
             onClick={openLogoutModal}
             className={cn(
-              "group relative flex w-full cursor-pointer items-center overflow-visible rounded-xl border text-[var(--chrome-muted)] transition-[background-color,border-color,color] duration-200 hover:text-rose-300",
+              "group relative flex w-full cursor-pointer items-center overflow-visible rounded-xl border text-[var(--chrome-muted)] hover:text-rose-600 dark:hover:text-rose-300",
               isCollapsed
                 ? "lg:justify-center lg:py-2.5 border-transparent bg-transparent"
-                : "mt-2 border-[var(--chrome-border)] bg-white/[0.035] px-3 py-2 text-xs font-semibold hover:border-rose-400/25 hover:bg-rose-500/10"
+                : "mt-2 border-[var(--chrome-border)] bg-white/55 px-3 py-2 text-xs font-semibold transition-[background-color,border-color,color] duration-150 hover:border-rose-400/35 hover:bg-rose-50 dark:bg-white/[0.035] dark:hover:border-rose-400/25 dark:hover:bg-rose-500/10"
             )}
 
           >

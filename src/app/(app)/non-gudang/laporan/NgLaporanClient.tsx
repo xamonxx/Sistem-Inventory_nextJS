@@ -2,9 +2,9 @@
 
 import { useMemo, useState, useTransition, type ElementType, type ReactNode } from "react";
 import { usePathname, useRouter } from "next/navigation";
-import { BarChart3, Check, Download, Printer, TrendingUp, UserRound, Wallet } from "lucide-react";
+import { BarChart3, Check, Download, Percent, Printer, TrendingUp, UserRound, Wallet } from "lucide-react";
 import { toast } from "sonner";
-import { Badge, Table, Td, Th } from "@/components/ui";
+import { Badge, Button, Table, Td, Th } from "@/components/ui";
 import { PeriodFilter, type ResolvedPeriodRange } from "@/components/PeriodFilter";
 import { usePagination, Pagination } from "@/components/Pagination";
 import { exportNgExcel } from "@/lib/export/exportNgExcel";
@@ -60,7 +60,8 @@ export function NgLaporanClient({
 
   const stats = [
     { icon: TrendingUp, tone: "blue" as const, label: "Total Omzet", value: formatRupiah(summary.totalOmzet), hint: `${summary.jumlahInvoice} invoice` },
-    { icon: BarChart3, tone: "emerald" as const, label: "Total Profit", value: formatRupiah(summary.totalProfit), hint: `Margin ${summary.margin.toFixed(2)}%` },
+    { icon: BarChart3, tone: "emerald" as const, label: "Total Profit", value: formatRupiah(summary.totalProfit), hint: "Omzet - modal pembelian" },
+    { icon: Percent, tone: "violet" as const, label: "Total Margin", value: `${summary.margin.toFixed(2)}%`, hint: `Markup ${summary.markup.toFixed(2)}%` },
     { icon: Wallet, tone: "amber" as const, label: "Sisa Piutang", value: formatRupiah(summary.totalPiutang), hint: "Belum tertagih" },
     { icon: UserRound, tone: "slate" as const, label: "Konsumen", value: String(perKonsumen.length), hint: "Dengan transaksi" },
   ];
@@ -98,9 +99,9 @@ export function NgLaporanClient({
 
   return (
     <div className={cn("space-y-5", filtering && "opacity-60 transition-opacity")}>
-      <header className="relative z-40 rounded-xl border border-slate-300/80 bg-white shadow-[0_18px_55px_-42px_rgba(15,23,42,0.65)] dark:border-slate-800 dark:bg-slate-900">
+      <header className="liquid-panel liquid-panel-strong dashboard-hero relative z-40 rounded-xl" style={{ overflow: "visible" }}>
         <div className="grid lg:grid-cols-[minmax(0,1fr)_420px]">
-          <div className="border-b border-slate-200 p-5 dark:border-slate-800 lg:border-b-0 lg:border-r md:p-6">
+          <div className="border-b border-slate-200/80 p-5 dark:border-slate-800/80 lg:border-b-0 lg:border-r md:p-6">
             <p className="inline-flex items-center gap-2 rounded-md border border-sky-200 bg-sky-50 px-3 py-1 text-[11px] font-black uppercase tracking-[0.18em] text-[var(--primary-strong)] dark:border-sky-900/60 dark:bg-sky-950/35">
               <span className="h-1.5 w-1.5 rounded-full bg-[var(--primary)]" />
               Laporan Non-Gudang
@@ -139,40 +140,31 @@ export function NgLaporanClient({
               )}
               <div className="flex flex-wrap gap-2">
                 {pendingRange && (
-                  <button
-                    type="button"
+                  <Button
+                    variant="outline"
                     onClick={() => pendingRange && applyRange(pendingRange)}
                     disabled={!canApply || filtering}
-                    className="inline-flex h-12 flex-1 items-center justify-center gap-2 rounded-lg border-2 border-[var(--primary)] bg-[var(--primary-soft)] px-4 text-sm font-bold text-[var(--primary-strong)] transition hover:bg-[var(--primary)]/15 disabled:opacity-50"
+                    className="h-12 flex-1 font-black"
                   >
                     <Check size={15} />
                     Terapkan
-                  </button>
+                  </Button>
                 )}
-                <button
-                  type="button"
-                  onClick={() => window.print()}
-                  className="inline-flex h-12 flex-1 items-center justify-center gap-2 rounded-lg border border-slate-300 bg-white px-4 text-sm font-bold text-slate-700 transition hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200 dark:hover:bg-slate-800"
-                >
+                <Button variant="outline" onClick={() => window.print()} className="h-12 flex-1 font-black">
                   <Printer size={15} />
                   Cetak PDF
-                </button>
-                <button
-                  type="button"
-                  onClick={handleExport}
-                  disabled={exporting}
-                  className="inline-flex h-12 flex-1 items-center justify-center gap-2 rounded-lg bg-[var(--primary)] px-4 text-sm font-bold text-white shadow-sm transition hover:bg-[var(--primary-strong)] disabled:opacity-60"
-                >
+                </Button>
+                <Button variant="primary" onClick={handleExport} disabled={exporting} className="h-12 flex-1 font-black">
                   <Download size={15} />
                   {exporting ? "Mengekspor..." : "Export Excel"}
-                </button>
+                </Button>
               </div>
             </div>
           </div>
         </div>
       </header>
 
-      <section className="relative z-0 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+      <section className="relative z-0 grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
         {stats.map((stat) => (
           <StatCard key={stat.label} {...stat} />
         ))}
@@ -204,7 +196,7 @@ export function NgLaporanClient({
             </div>
             {/* Desktop */}
             <div className="hidden overflow-x-auto md:block">
-              <Table variant="plain" className="min-w-[860px]">
+              <Table variant="plain" tableClassName="min-w-[860px]">
                 <thead>
                   <tr>
                     <Th>#</Th>
@@ -286,13 +278,14 @@ function StatCard({
   label: string;
   value: string;
   hint: string;
-  tone: "emerald" | "blue" | "amber" | "slate";
+  tone: "emerald" | "blue" | "amber" | "slate" | "violet";
 }) {
   const tones = {
     emerald: "bg-emerald-50 text-emerald-700 ring-emerald-100 dark:bg-emerald-500/10 dark:text-emerald-300 dark:ring-emerald-900/50",
     blue: "bg-sky-50 text-[var(--primary-strong)] ring-sky-100 dark:bg-sky-950/30 dark:ring-sky-900/50",
     amber: "bg-amber-50 text-amber-700 ring-amber-100 dark:bg-amber-500/10 dark:text-amber-300 dark:ring-amber-900/50",
     slate: "bg-slate-50 text-slate-600 ring-slate-200 dark:bg-slate-800 dark:text-slate-300 dark:ring-slate-700",
+    violet: "bg-violet-50 text-violet-700 ring-violet-100 dark:bg-violet-500/10 dark:text-violet-300 dark:ring-violet-900/50",
   };
   return (
     <article className="rounded-xl border border-slate-300/80 bg-white p-4 shadow-[0_18px_55px_-48px_rgba(15,23,42,0.65)] dark:border-slate-800 dark:bg-slate-900 sm:p-5">

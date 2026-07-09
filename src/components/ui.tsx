@@ -14,13 +14,12 @@ export function Button({
   size?: "sm" | "md";
 }) {
   const variants = {
-    primary:
-      "border border-sky-500/40 bg-[linear-gradient(180deg,rgba(56,189,248,0.26),transparent_42%),var(--primary)] text-white shadow-[0_16px_36px_-18px_rgba(14,165,233,0.9),inset_0_1px_0_rgba(255,255,255,0.22)] hover:border-sky-300/70 hover:bg-[var(--primary-strong)] active:scale-[0.98]",
-    outline: "border border-sky-200/80 bg-white/82 text-foreground shadow-[0_12px_28px_-24px_rgba(8,47,73,0.45),inset_0_1px_0_rgba(255,255,255,0.72)] backdrop-blur-xl hover:border-sky-300/90 hover:bg-sky-50/80 active:scale-[0.98] dark:border-sky-300/18 dark:bg-slate-900/72 dark:text-slate-100 dark:hover:border-sky-300/34 dark:hover:bg-slate-900/90",
-    ghost: "border border-transparent text-[var(--text-soft)] hover:border-sky-200/80 hover:bg-sky-50/70 hover:text-foreground active:scale-[0.98] dark:hover:border-sky-300/18 dark:hover:bg-sky-400/10 dark:hover:text-white",
-    danger: "border border-rose-500/35 bg-[linear-gradient(180deg,rgba(251,113,133,0.26),transparent_42%),var(--danger)] text-white shadow-[0_16px_36px_-18px_rgba(239,68,68,0.75),inset_0_1px_0_rgba(255,255,255,0.2)] hover:brightness-105 active:scale-[0.98]",
-    success: "border border-emerald-500/35 bg-[linear-gradient(180deg,rgba(52,211,153,0.28),transparent_42%),var(--success)] text-white shadow-[0_16px_36px_-18px_rgba(16,185,129,0.75),inset_0_1px_0_rgba(255,255,255,0.2)] hover:brightness-105 active:scale-[0.98]",
-    warning: "border border-amber-500/35 bg-[linear-gradient(180deg,rgba(251,191,36,0.3),transparent_42%),var(--warning)] text-white shadow-[0_16px_36px_-18px_rgba(245,158,11,0.8),inset_0_1px_0_rgba(255,255,255,0.2)] hover:brightness-105 active:scale-[0.98]",
+    primary: "btn-liquid-primary",
+    outline: "btn-liquid-outline",
+    ghost: "border border-transparent text-[var(--text-soft)] hover:border-sky-200/80 hover:bg-sky-50/70 hover:text-foreground dark:hover:border-sky-300/18 dark:hover:bg-sky-400/10 dark:hover:text-white",
+    danger: "btn-liquid-danger",
+    success: "btn-liquid-success",
+    warning: "btn-liquid-warning",
   };
   const sizes = {
     sm: "h-11 min-h-11 px-4 text-xs font-bold rounded-lg sm:h-9 sm:min-h-9",
@@ -30,7 +29,7 @@ export function Button({
     <button
       className={cn(
         "inline-flex items-center justify-center gap-2 outline-none select-none whitespace-nowrap",
-        "transition-[background-color,border-color,color,box-shadow,transform,filter] duration-150",
+        "transition-[background-color,border-color,color,box-shadow,transform,filter] duration-150 active:scale-[0.98]",
         "focus-visible:ring-4 focus-visible:ring-[var(--primary)]/20 disabled:opacity-50 disabled:pointer-events-none cursor-pointer",
         variants[variant],
         sizes[size],
@@ -47,8 +46,8 @@ export const Input = React.forwardRef<HTMLInputElement, React.InputHTMLAttribute
       <input
         ref={ref}
         className={cn(
-          "h-11 w-full rounded-md border border-border bg-card px-4 text-sm text-foreground outline-none transition-[background-color,border-color,color,box-shadow]",
-          "focus:border-[var(--primary)] focus:ring-4 focus:ring-[var(--primary)]/10",
+          "h-11 w-full rounded-lg border border-border bg-white/86 px-4 text-sm font-semibold text-foreground outline-none shadow-[inset_0_1px_0_rgba(255,255,255,0.72)] backdrop-blur-xl transition-[background-color,border-color,color,box-shadow]",
+          "focus:border-[var(--primary)] focus:bg-white focus:ring-4 focus:ring-[var(--primary)]/12 dark:bg-slate-950/45 dark:focus:bg-slate-950/70",
           "disabled:bg-[var(--surface-2)] disabled:text-[var(--text-muted-2)] placeholder:text-[var(--text-muted-2)]",
           className
         )}
@@ -59,14 +58,70 @@ export const Input = React.forwardRef<HTMLInputElement, React.InputHTMLAttribute
 );
 Input.displayName = "Input";
 
+function normalizeCurrencyInput(value: string | number | null | undefined): string {
+  const digits = String(value ?? "").replace(/\D/g, "");
+  if (!digits) return "";
+  return String(Number(digits));
+}
+
+function formatCurrencyDisplay(value: string | number | null | undefined): string {
+  const normalized = normalizeCurrencyInput(value);
+  return normalized ? Number(normalized).toLocaleString("id-ID") : "";
+}
+
+export const CurrencyInput = React.forwardRef<HTMLInputElement, Omit<React.InputHTMLAttributes<HTMLInputElement>, "type" | "value" | "defaultValue" | "onChange"> & {
+  value?: string | number | null;
+  defaultValue?: string | number | null;
+  onValueChange?: (value: string) => void;
+}>(({ className, name, value, defaultValue, onValueChange, max, ...props }, ref) => {
+  const isControlled = value !== undefined;
+  const [internalValue, setInternalValue] = React.useState(() => normalizeCurrencyInput(defaultValue));
+  const rawValue = isControlled ? normalizeCurrencyInput(value) : internalValue;
+
+  function commit(nextValue: string) {
+    let next = normalizeCurrencyInput(nextValue);
+    const maxNumber = max == null ? null : Number(max);
+    if (next && Number.isFinite(maxNumber) && maxNumber !== null && Number(next) > maxNumber) {
+      next = String(Math.trunc(maxNumber));
+    }
+    if (!isControlled) setInternalValue(next);
+    onValueChange?.(next);
+  }
+
+  return (
+    <div className="relative">
+      {name ? <input type="hidden" name={name} value={rawValue} /> : null}
+      <span className="pointer-events-none absolute left-4 top-1/2 z-10 -translate-y-1/2 text-sm font-extrabold text-[var(--text-soft)]">
+        Rp
+      </span>
+      <input
+        ref={ref}
+        type="text"
+        inputMode="numeric"
+        value={formatCurrencyDisplay(rawValue)}
+        onChange={(e) => commit(e.target.value)}
+        onFocus={(e) => e.currentTarget.select()}
+        className={cn(
+          "h-11 w-full rounded-lg border border-border bg-white/86 px-4 pl-12 text-sm font-semibold text-foreground outline-none shadow-[inset_0_1px_0_rgba(255,255,255,0.72)] backdrop-blur-xl transition-[background-color,border-color,color,box-shadow]",
+          "focus:border-[var(--primary)] focus:bg-white focus:ring-4 focus:ring-[var(--primary)]/12 dark:bg-slate-950/45 dark:focus:bg-slate-950/70",
+          "disabled:bg-[var(--surface-2)] disabled:text-[var(--text-muted-2)] placeholder:text-[var(--text-muted-2)]",
+          className
+        )}
+        {...props}
+      />
+    </div>
+  );
+});
+CurrencyInput.displayName = "CurrencyInput";
+
 export const Textarea = React.forwardRef<HTMLTextAreaElement, React.TextareaHTMLAttributes<HTMLTextAreaElement>>(
   ({ className, ...props }, ref) => {
     return (
       <textarea
         ref={ref}
         className={cn(
-          "w-full rounded-md border border-border bg-card px-4 py-2.5 text-sm text-foreground outline-none transition-[background-color,border-color,color,box-shadow] resize-y",
-          "focus:border-[var(--primary)] focus:ring-4 focus:ring-[var(--primary)]/10",
+          "w-full rounded-lg border border-border bg-white/86 px-4 py-2.5 text-sm font-semibold text-foreground outline-none shadow-[inset_0_1px_0_rgba(255,255,255,0.72)] backdrop-blur-xl transition-[background-color,border-color,color,box-shadow] resize-y",
+          "focus:border-[var(--primary)] focus:bg-white focus:ring-4 focus:ring-[var(--primary)]/12 dark:bg-slate-950/45 dark:focus:bg-slate-950/70",
           "disabled:bg-[var(--surface-2)] disabled:text-[var(--text-muted-2)] placeholder:text-[var(--text-muted-2)]",
           className
         )}
@@ -315,8 +370,8 @@ export function Select({
           "flex w-full items-center px-4 text-sm font-bold text-left outline-none cursor-pointer select-none",
           "transition-[background-color,border-color,color,box-shadow,transform] shadow-[0_12px_28px_-24px_rgba(8,47,73,0.45),inset_0_1px_0_rgba(255,255,255,0.72)] backdrop-blur-xl",
           hideChevron ? "justify-center" : "justify-between",
-          !hasBorder && "border border-sky-200/80 hover:border-sky-300/90 dark:border-sky-300/18 dark:hover:border-sky-300/34",
-          !hasBg && "bg-white/82 hover:bg-sky-50/80 dark:bg-slate-900/72 dark:hover:bg-slate-900/90",
+          !hasBorder && "border border-slate-200/90 hover:border-sky-300/90 dark:border-sky-300/18 dark:hover:border-sky-300/34",
+          !hasBg && "bg-white/86 hover:bg-sky-50/88 dark:bg-slate-900/72 dark:hover:bg-slate-900/90",
           "focus:border-[var(--primary)] focus:ring-4 focus:ring-[var(--primary)]/14 active:scale-[0.99]",
           isOpen && "border-[var(--primary)] ring-4 ring-[var(--primary)]/12",
           buttonClasses
@@ -329,7 +384,7 @@ export function Select({
       </button>
 
       {isOpen && (
-          <div className="absolute left-0 z-[46] mt-2 max-h-60 w-max min-w-full max-w-[calc(100vw-2rem)] overflow-y-auto rounded-lg border border-sky-200/80 bg-white/95 p-1.5 shadow-[0_22px_55px_-24px_rgba(8,47,73,0.42)] backdrop-blur-2xl animate-in fade-in duration-100 ease-out dark:border-sky-300/18 dark:bg-slate-900/95">
+          <div className="absolute left-0 z-[46] mt-2 max-h-60 w-max min-w-full max-w-[calc(100vw-2rem)] overflow-y-auto rounded-lg border border-slate-200/90 bg-white/96 p-1.5 shadow-[0_22px_55px_-24px_rgba(15,23,42,0.24)] backdrop-blur-2xl animate-in fade-in duration-100 ease-out dark:border-sky-300/18 dark:bg-slate-900/95">
           {options.length === 0 ? (
             <div className="px-3 py-2 text-xs text-slate-400 text-center">Tidak ada pilihan</div>
           ) : (
@@ -371,7 +426,7 @@ export function Card({ className, ...props }: React.HTMLAttributes<HTMLDivElemen
   return (
     <div
       className={cn(
-        "rounded-lg border border-border bg-[var(--card)] p-6 shadow-[var(--shadow-card)]",
+        "rounded-xl border border-border bg-white/86 p-6 shadow-[var(--shadow-card)] backdrop-blur-xl dark:bg-[var(--card)]",
         className
       )}
       {...props}
@@ -386,19 +441,19 @@ export function Badge({
 }: React.HTMLAttributes<HTMLSpanElement> & {
   tone?: "slate" | "green" | "red" | "amber" | "blue" | "indigo";
 }) {
-  // Pill SaaS premium — solid soft fill, no border (Stripe/Linear style)
+  // Soft status pill for dense dashboard rows.
   const tones = {
-    slate: "bg-[var(--surface-2)] text-[var(--text-soft)]",
-    green: "bg-[#DCFCE7] dark:bg-[#166534]/20 text-[#166534] dark:text-[#86efac]",
-    red: "bg-[#FEE2E2] dark:bg-[#991B1B]/20 text-[#991B1B] dark:text-[#f87171]",
-    amber: "bg-[#FEF3C7] dark:bg-[#92400E]/20 text-[#92400E] dark:text-[#fbbf24]",
-    blue: "bg-[#DBEAFE] dark:bg-[#1E40AF]/20 text-[#1E40AF] dark:text-[#60a5fa]",
-    indigo: "bg-[#E0E7FF] dark:bg-[#3730A3]/20 text-[#3730A3] dark:text-[#818cf8]",
+    slate: "border-slate-300/70 bg-slate-100/80 text-slate-700 dark:border-slate-600/35 dark:bg-slate-800/55 dark:text-slate-300",
+    green: "border-emerald-300/70 bg-emerald-50/90 text-emerald-700 dark:border-emerald-400/20 dark:bg-emerald-500/12 dark:text-emerald-300",
+    red: "border-rose-300/70 bg-rose-50/90 text-rose-700 dark:border-rose-400/20 dark:bg-rose-500/12 dark:text-rose-300",
+    amber: "border-amber-300/70 bg-amber-50/90 text-amber-700 dark:border-amber-400/20 dark:bg-amber-500/12 dark:text-amber-300",
+    blue: "border-sky-300/70 bg-sky-50/90 text-sky-700 dark:border-sky-400/20 dark:bg-sky-500/12 dark:text-sky-300",
+    indigo: "border-indigo-300/70 bg-indigo-50/90 text-indigo-700 dark:border-indigo-400/20 dark:bg-indigo-500/12 dark:text-indigo-300",
   };
   return (
     <span
       className={cn(
-        "inline-flex items-center gap-1 rounded-md px-3 py-1 text-xs font-semibold leading-none whitespace-nowrap",
+        "inline-flex min-h-6 items-center gap-1 rounded-lg border px-2.5 py-1 text-[11px] font-bold leading-none whitespace-nowrap",
         tones[tone],
         className
       )}
@@ -410,19 +465,21 @@ export function Badge({
 export function Table({
   children,
   className,
+  tableClassName,
   variant = "card",
 }: {
   children: React.ReactNode;
   className?: string;
+  tableClassName?: string;
   variant?: "card" | "plain";
 }) {
   const wrapperClass =
     variant === "plain"
-      ? "max-w-full overflow-hidden"
+      ? "max-w-full min-w-0 overflow-hidden"
       : [
-          "max-w-full overflow-hidden rounded-md border border-slate-300/80 bg-white",
-          "shadow-[0_18px_55px_-42px_rgba(15,23,42,0.65)]",
-          "dark:border-slate-700 dark:bg-slate-900",
+          "max-w-full min-w-0 overflow-hidden rounded-xl border border-sky-200/70 bg-white/82",
+          "shadow-[0_18px_55px_-42px_rgba(8,47,73,0.52)] backdrop-blur-xl",
+          "dark:border-sky-300/15 dark:bg-slate-950/52 dark:shadow-[0_22px_70px_-42px_rgba(0,0,0,0.75)]",
         ].join(" ");
 
   return (
@@ -430,11 +487,13 @@ export function Table({
       <div className="w-full overflow-x-auto overscroll-x-contain">
         <table
           className={cn(
-            "min-w-max w-full border-collapse text-sm",
+            "w-full min-w-full border-collapse text-[13px] md:text-sm",
             "[&_thead_th]:sticky [&_thead_th]:top-0 [&_thead_th]:z-10",
-            "[&_tbody_tr:nth-child(even)]:bg-slate-50/70 dark:[&_tbody_tr:nth-child(even)]:bg-slate-900/55",
-            "[&_tbody_tr]:transition-colors [&_tbody_tr:hover]:bg-sky-50/80 dark:[&_tbody_tr:hover]:bg-sky-950/25",
-            "[&_tbody_tr:last-child_td]:border-b-0"
+            "[&_tbody_tr]:transition-[background-color] [&_tbody_tr]:duration-150",
+            "[&_tbody_tr:hover]:bg-sky-50/75 dark:[&_tbody_tr:hover]:bg-cyan-400/[0.06]",
+            "[&_tbody_tr[data-selected=true]]:bg-sky-100/70 dark:[&_tbody_tr[data-selected=true]]:bg-cyan-400/[0.1]",
+            "[&_tbody_tr:last-child_td]:border-b-0",
+            tableClassName
           )}
         >
           {children}
@@ -449,12 +508,13 @@ export function Th({ className, ...props }: React.ThHTMLAttributes<HTMLTableCell
     <th
       className={cn(
         [
-          "h-[52px] border-b border-slate-300 bg-slate-100 px-5 text-left font-sans",
-          "text-xs font-black uppercase tracking-[0.08em] text-slate-600",
-          "dark:border-slate-700 dark:bg-slate-800/85 dark:text-slate-300",
+          "h-12 border-b border-slate-300/80 bg-slate-100/90 px-5 py-3 text-left font-sans",
+          "text-[11px] font-black uppercase tracking-[0.08em] text-slate-600",
+          "dark:border-slate-700/55 dark:bg-slate-800/72 dark:text-slate-300",
         ].join(" "),
         className
       )}
+      scope={props.scope ?? "col"}
       {...props}
     />
   );
@@ -465,9 +525,28 @@ export function Td({ className, ...props }: React.TdHTMLAttributes<HTMLTableCell
     <td
       className={cn(
         [
-          "h-16 border-b border-slate-200 px-5 align-middle font-sans",
-          "text-sm font-medium text-slate-900 dark:border-slate-800 dark:text-slate-100",
+          "h-[60px] border-b border-slate-200/85 px-5 py-3 align-middle font-sans",
+          "text-[13px] font-medium text-slate-800 dark:border-slate-800/70 dark:text-slate-200",
         ].join(" "),
+        className
+      )}
+      {...props}
+    />
+  );
+}
+
+export function TableActionButton({
+  className,
+  ...props
+}: React.ButtonHTMLAttributes<HTMLButtonElement>) {
+  return (
+    <button
+      className={cn(
+        "inline-flex h-9 w-9 items-center justify-center rounded-[10px] border border-slate-300/80 bg-white/70 text-slate-600",
+        "shadow-[0_10px_24px_-20px_rgba(8,47,73,0.45),inset_0_1px_0_rgba(255,255,255,0.72)] backdrop-blur-xl",
+        "transition-[background-color,border-color,color,box-shadow,transform] duration-150 hover:border-cyan-400/50 hover:bg-cyan-50/90 hover:text-cyan-700 active:scale-[0.98]",
+        "focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-cyan-400/20 disabled:cursor-not-allowed disabled:opacity-45",
+        "dark:border-slate-600/40 dark:bg-slate-900/42 dark:text-slate-300 dark:hover:border-cyan-300/45 dark:hover:bg-cyan-400/10 dark:hover:text-cyan-200",
         className
       )}
       {...props}

@@ -131,7 +131,7 @@ export function ReturClient({
         setStep(2);
       }
     } catch {
-      toast.error("Gagal melakukan pencarian.");
+      toast.error("Gagal mencari transaksi. Periksa koneksi lalu coba lagi, atau pastikan nomor transaksi/invoice sudah benar.");
     } finally {
       setSearching(false);
     }
@@ -179,7 +179,7 @@ export function ReturClient({
   async function handleSaveToImage() {
     const element = document.querySelector<HTMLElement>(".print-area");
     if (!element) {
-      toast.error("Elemen cetak tidak ditemukan.");
+      toast.error("Pratinjau nota belum siap. Tutup lalu buka lagi pratinjau, kemudian coba cetak/simpan ulang.");
       return;
     }
     try {
@@ -203,7 +203,7 @@ export function ReturClient({
       toast.success("Gambar berhasil disimpan!");
     } catch (err) {
       console.error(err);
-      toast.error("Gagal menyimpan gambar.");
+      toast.error("Gagal menyimpan gambar. Coba lagi, atau gunakan tombol Cetak untuk simpan sebagai PDF.");
     }
   }
 
@@ -411,7 +411,7 @@ export function ReturClient({
             <div className="relative" ref={suggestionRef}>
               <Label>Nomor Transaksi Asli (PCxxxxx) atau Nomor Invoice (INV-xxxxx)</Label>
               <div className="relative">
-                <Search size={18} className="absolute left-3.5 top-3 text-slate-400" />
+                <Search size={18} className="pointer-events-none absolute left-3.5 top-3 z-10 text-[var(--text-soft)]" />
                 <Input
                   value={searchCode}
                   maxLength={40}
@@ -486,7 +486,7 @@ export function ReturClient({
                   </p>
                 </div>
                 <div className="relative w-full sm:max-w-sm">
-                  <Search size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
+                  <Search size={16} className="pointer-events-none absolute left-3.5 top-1/2 z-10 -translate-y-1/2 text-[var(--text-soft)]" />
                   <Input
                     value={retItemQuery}
                     onChange={(e) => {
@@ -630,7 +630,7 @@ export function ReturClient({
             <div className="space-y-2">
               <Label>Pencarian Katalog Barang</Label>
               <div className="relative">
-                <Search size={18} className="absolute left-3.5 top-3 text-slate-400" />
+                <Search size={18} className="pointer-events-none absolute left-3.5 top-3 z-10 text-[var(--text-soft)]" />
                 <Input
                   value={repQuery}
                   onChange={(e) => setRepQuery(e.target.value)}

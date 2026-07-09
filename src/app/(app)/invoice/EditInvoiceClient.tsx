@@ -319,12 +319,12 @@ export function EditInvoiceClient({ invoice, catalogItems }: EditInvoiceClientPr
             </div>
             <div>
               <h3 className="font-extrabold text-foreground tracking-tight text-sm uppercase">Cari &amp; Tambah Barang</h3>
-              <p className="text-[10px] text-slate-450 font-semibold mt-0.5">Cari barang di katalog untuk ditambahkan ke faktur</p>
+              <p className="text-[10px] text-[var(--text-muted-2)] font-semibold mt-0.5">Cari barang di katalog untuk ditambahkan ke faktur</p>
             </div>
           </div>
           
           <div className="relative mt-4">
-            <Search size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-450" />
+            <Search size={16} className="pointer-events-none absolute left-3.5 top-1/2 z-10 -translate-y-1/2 text-[var(--text-soft)]" />
             <Input
               value={searchQuery}
               maxLength={FIELD_LIMITS.search}

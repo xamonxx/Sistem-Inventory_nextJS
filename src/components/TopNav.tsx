@@ -76,8 +76,8 @@ export function TopNav({ nama, role }: TopNavProps) {
             onClick={() => setIsProfileOpen((open) => !open)}
             className={`flex cursor-pointer items-center gap-3 rounded-2xl border px-3 py-2.5 transition-[background-color,border-color,box-shadow] ${
               isProfileOpen
-                ? "border-[var(--chrome-active-border)] bg-white/[0.055] shadow-[0_14px_32px_rgba(14,165,233,0.12)]"
-                : "border-transparent hover:border-[var(--chrome-border)] hover:bg-white/[0.035]"
+                ? "border-[var(--chrome-active-border)] bg-sky-50/85 shadow-[0_14px_32px_rgba(14,165,233,0.12)] dark:bg-white/[0.055]"
+                : "border-transparent hover:border-[var(--chrome-border)] hover:bg-slate-50/80 dark:hover:bg-white/[0.035]"
             }`}
             aria-haspopup="menu"
             aria-expanded={isProfileOpen}

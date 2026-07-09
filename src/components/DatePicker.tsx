@@ -303,8 +303,8 @@ export function DatePicker({
         disabled={disabled}
         onClick={() => setIsOpen(!isOpen)}
         className={cn(
-          "flex h-full w-full items-center justify-between px-4 text-xs font-bold text-left outline-none cursor-pointer select-none",
-          "rounded-lg border border-sky-200/80 bg-white/82 shadow-[0_12px_28px_-24px_rgba(8,47,73,0.45),inset_0_1px_0_rgba(255,255,255,0.72)] backdrop-blur-xl transition-[background-color,border-color,color,box-shadow,transform] hover:border-sky-300/90 hover:bg-sky-50/80 active:scale-[0.99] dark:border-sky-300/18 dark:bg-slate-900/72 dark:hover:border-sky-300/34 dark:hover:bg-slate-900/90",
+          "btn-liquid-outline flex h-full w-full items-center justify-between rounded-lg px-4 text-xs font-bold text-left outline-none cursor-pointer select-none",
+          "transition-[background-color,border-color,color,box-shadow,transform] active:scale-[0.99]",
           isOpen && "border-[var(--primary)] ring-4 ring-[var(--primary)]/12",
           disabled && "opacity-50 pointer-events-none bg-slate-50 dark:bg-slate-950 text-slate-400"
         )}
@@ -335,7 +335,7 @@ export function DatePicker({
             <button
               type="button"
               onClick={prevMonth}
-              className="flex h-8 w-8 cursor-pointer items-center justify-center rounded-lg border border-sky-200/80 bg-white/82 text-slate-600 shadow-[inset_0_1px_0_rgba(255,255,255,0.72)] transition-[background-color,border-color,color,transform] hover:border-sky-300/90 hover:bg-sky-50/80 active:scale-[0.98] focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[var(--primary)]/14 dark:border-sky-300/18 dark:bg-slate-900/72 dark:text-slate-300 dark:hover:bg-sky-400/10"
+              className="btn-liquid-outline flex h-8 w-8 cursor-pointer items-center justify-center rounded-lg transition-[background-color,border-color,color,transform] active:scale-[0.98] focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[var(--primary)]/14"
             >
               <ChevronLeft size={14} />
             </button>
@@ -365,7 +365,7 @@ export function DatePicker({
             <button
               type="button"
               onClick={nextMonth}
-              className="flex h-8 w-8 cursor-pointer items-center justify-center rounded-lg border border-sky-200/80 bg-white/82 text-slate-600 shadow-[inset_0_1px_0_rgba(255,255,255,0.72)] transition-[background-color,border-color,color,transform] hover:border-sky-300/90 hover:bg-sky-50/80 active:scale-[0.98] focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[var(--primary)]/14 dark:border-sky-300/18 dark:bg-slate-900/72 dark:text-slate-300 dark:hover:bg-sky-400/10"
+              className="btn-liquid-outline flex h-8 w-8 cursor-pointer items-center justify-center rounded-lg transition-[background-color,border-color,color,transform] active:scale-[0.98] focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[var(--primary)]/14"
             >
               <ChevronRight size={14} />
             </button>
@@ -389,7 +389,7 @@ export function DatePicker({
                   "flex h-8 w-8 cursor-pointer items-center justify-center rounded-lg text-[10px] font-bold select-none transition-[background-color,border-color,color,box-shadow,transform] focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[var(--primary)]/14",
                   cell.isCurrentMonth ? "text-foreground dark:text-slate-200" : "text-slate-300 dark:text-slate-700",
                   cell.isToday && !cell.isSelected && "border border-[var(--primary)] text-[var(--primary)] bg-[var(--primary)]/5",
-                  cell.isSelected && "border border-sky-400/50 bg-[linear-gradient(180deg,rgba(56,189,248,0.28),transparent_42%),var(--primary)] text-white font-extrabold shadow-[0_12px_28px_-18px_rgba(14,165,233,0.8)]",
+                  cell.isSelected && "btn-liquid-primary font-extrabold",
                   !cell.isSelected && "hover:bg-sky-50/80 dark:hover:bg-sky-400/10"
                 )}
               >
