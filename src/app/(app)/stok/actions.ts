@@ -2,9 +2,9 @@
 
 import { revalidatePath, revalidateTag } from "next/cache";
 import { z } from "zod";
+import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { requireRole } from "@/lib/auth";
-import { getStokAkhir } from "@/lib/stock";
 import { logActivity } from "@/lib/activity";
 import { FIELD_LIMITS } from "@/lib/fieldLimits";
 import { dbId, qtyPositive, boundedInt, optionalText, safeError, firstIssue, type ActionResult } from "@/lib/validation";
@@ -66,24 +66,36 @@ export async function koreksiStok(_prev: unknown, formData: FormData): Promise<A
   const d = parsed.data;
 
   try {
-    const item = await prisma.item.findUnique({ where: { id: d.itemId }, select: { id: true } });
-    if (!item) return { error: "Barang tidak ditemukan." };
+    const result = await prisma.$transaction(async (tx) => {
+      const item = await tx.item.findUnique({
+        where: { id: d.itemId },
+        select: { id: true, stokAwal: true },
+      });
+      if (!item) return { error: "Barang tidak ditemukan." };
 
-    const stokSekarang = await getStokAkhir(d.itemId);
-    const delta = d.stokSeharusnya - stokSekarang;
-    if (delta === 0) return { error: "Stok sudah sesuai, tidak ada koreksi." };
+      const ledger = await tx.stockLedger.aggregate({
+        where: { itemId: d.itemId },
+        _sum: { qty: true },
+      });
+      const stokSekarang = item.stokAwal + (ledger._sum.qty ?? 0);
+      const delta = d.stokSeharusnya - stokSekarang;
+      if (delta === 0) return { error: "Stok sudah sesuai, tidak ada koreksi." };
 
-    await prisma.stockLedger.create({
-      data: {
-        itemId: d.itemId,
-        tipe: "KOREKSI",
-        qty: delta,
-        keterangan: d.keterangan || `Koreksi stok ${stokSekarang} -> ${d.stokSeharusnya}`,
-        refType: "MANUAL",
-        userId: user.id,
-      },
-    });
-    await logActivity({ userId: user.id, aksi: "KOREKSI_STOK", entitas: "Item", entitasId: d.itemId, detail: { dari: stokSekarang, ke: d.stokSeharusnya } });
+      await tx.stockLedger.create({
+        data: {
+          itemId: d.itemId,
+          tipe: "KOREKSI",
+          qty: delta,
+          keterangan: d.keterangan || `Koreksi stok ${stokSekarang} -> ${d.stokSeharusnya}`,
+          refType: "MANUAL",
+          userId: user.id,
+        },
+      });
+      return { ok: true, stokSekarang };
+    }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable });
+
+    if (!result.ok) return result;
+    await logActivity({ userId: user.id, aksi: "KOREKSI_STOK", entitas: "Item", entitasId: d.itemId, detail: { dari: result.stokSekarang, ke: d.stokSeharusnya } });
   } catch (e) {
     return safeError(e, "Gagal melakukan koreksi stok.");
   }

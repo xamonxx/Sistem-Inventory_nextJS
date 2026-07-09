@@ -108,7 +108,7 @@ export function NgDashboardClient({
 
   return (
     <div className={cn("space-y-5", filtering && "opacity-60 transition-opacity")}>
-      <header className="liquid-panel liquid-panel-strong dashboard-hero relative z-40 rounded-xl border-sky-200/70 dark:border-sky-300/15" style={{ overflow: "visible" }}>
+      <header className="liquid-panel liquid-panel-strong dashboard-hero relative z-20 rounded-xl border-sky-200/70 dark:border-sky-300/15" style={{ overflow: "visible" }}>
         <div className="grid lg:grid-cols-[minmax(0,1fr)_420px]">
           <div className="border-b border-sky-100/80 p-5 dark:border-sky-300/10 lg:border-b-0 lg:border-r md:p-6">
             <p className="inline-flex items-center gap-2 rounded-md border border-sky-200 bg-sky-50/90 px-3 py-1 text-[11px] font-black uppercase tracking-[0.18em] text-[var(--primary-strong)] shadow-sm dark:border-sky-300/20 dark:bg-sky-400/10 dark:text-sky-200">

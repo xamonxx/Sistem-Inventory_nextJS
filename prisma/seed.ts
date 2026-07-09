@@ -7,10 +7,10 @@ const prisma = new PrismaClient();
 
 function resolveSeedPassword(): string {
   const password = process.env.SEED_DEFAULT_PASSWORD;
-  if (process.env.NODE_ENV === "production" && (!password || password.length < 12)) {
-    throw new Error("SEED_DEFAULT_PASSWORD wajib di-set minimal 12 karakter untuk seeding production.");
+  if (!password || password.length < 12) {
+    throw new Error("SEED_DEFAULT_PASSWORD wajib di-set minimal 12 karakter untuk seeding.");
   }
-  return password ?? "password";
+  return password;
 }
 
 function rand(min: number, max: number): number {
@@ -676,7 +676,7 @@ async function main() {
   console.log(`📝 Activity Logs:  ${totalLogCount}`);
   console.log("=========================================");
   console.log("Login User:");
-  const passwordLabel = seedPassword === "password" ? "password (dev default)" : "[from SEED_DEFAULT_PASSWORD]";
+  const passwordLabel = "[from SEED_DEFAULT_PASSWORD]";
   console.log(`- Kasir:     username 'kasir'     / password '${passwordLabel}'`);
   console.log(`- Gudang:    username 'gudang'    / password '${passwordLabel}'`);
   console.log(`- NonGudang: username 'nongudang' / password '${passwordLabel}'`);

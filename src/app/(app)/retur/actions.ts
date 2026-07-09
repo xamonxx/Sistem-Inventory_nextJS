@@ -50,95 +50,102 @@ export async function createReturn(payload: ReturPayload) {
   }
   const d = parsed.data;
 
-  // 1. Validasi transaksi asli ada
-  const transaction = await prisma.transaction.findUnique({
-    where: { id: d.transactionId },
-    include: {
-      items: {
-        include: { item: true },
+  try {
+  const result = await prisma.$transaction(async (tx) => {
+    const transaction = await tx.transaction.findUnique({
+      where: { id: d.transactionId },
+      include: {
+        items: {
+          include: { item: true },
+        },
       },
-    },
-  });
-  if (!transaction) {
-    return { error: "Transaksi asli tidak ditemukan." };
-  }
-
-  const txItemMap = new Map(transaction.items.map((i) => [i.id, i]));
-
-  // 2. Validasi setiap return item ada di transaksi asli
-  for (const ri of d.returnItems) {
-    const txItem = txItemMap.get(ri.transactionItemId);
-    if (!txItem) {
-      return { error: `Item "${ri.namaSnapshot}" tidak ditemukan di transaksi asli.` };
-    }
-    if (txItem.itemId !== ri.itemId) {
-      return { error: `Item "${ri.namaSnapshot}" tidak cocok dengan transaksi asli.` };
+    });
+    if (!transaction) {
+      return { ok: false, error: "Transaksi asli tidak ditemukan." };
     }
 
-    // 3. Hitung sudah berapa banyak qty item ini diretur sebelumnya
-    const previouslyReturned = await prisma.returnItem.aggregate({
+    const txItemMap = new Map(transaction.items.map((i) => [i.id, i]));
+    const requestedByTxItem = new Map<number, number>();
+
+    for (const ri of d.returnItems) {
+      const txItem = txItemMap.get(ri.transactionItemId);
+      if (!txItem) {
+        return { ok: false, error: `Item "${ri.namaSnapshot}" tidak ditemukan di transaksi asli.` };
+      }
+      if (txItem.itemId !== ri.itemId) {
+        return { ok: false, error: `Item "${ri.namaSnapshot}" tidak cocok dengan transaksi asli.` };
+      }
+      if (ri.hargaSnapshot !== Number(txItem.hargaSnapshot)) {
+        return { ok: false, error: `Harga "${ri.namaSnapshot}" tidak sesuai dengan nota asli (${Number(txItem.hargaSnapshot)}).` };
+      }
+      requestedByTxItem.set(
+        ri.transactionItemId,
+        (requestedByTxItem.get(ri.transactionItemId) ?? 0) + ri.qtyReturned
+      );
+    }
+
+    const previouslyReturned = await tx.returnItem.groupBy({
+      by: ["transactionItemId"],
       where: {
-        transactionItemId: ri.transactionItemId,
+        transactionItemId: { in: Array.from(requestedByTxItem.keys()) },
         return: { transactionId: d.transactionId },
       },
       _sum: { qtyReturned: true },
     });
-    const alreadyReturned = previouslyReturned._sum.qtyReturned ?? 0;
-    const availableForReturn = txItem.qty - alreadyReturned;
-    if (ri.qtyReturned > availableForReturn) {
-      return {
-        error: `Qty retur "${ri.namaSnapshot}" melebihi sisa (beli ${txItem.qty}, sudah diretur ${alreadyReturned}, sisa ${availableForReturn}).`,
-      };
-    }
+    const alreadyReturnedMap = new Map(
+      previouslyReturned.map((row) => [row.transactionItemId, row._sum.qtyReturned ?? 0])
+    );
 
-    // 4. Validasi harga snapshot cocok dengan transaksi asli
-    if (ri.hargaSnapshot !== Number(txItem.hargaSnapshot)) {
-      return { error: `Harga "${ri.namaSnapshot}" tidak sesuai dengan nota asli (${Number(txItem.hargaSnapshot)}).` };
-    }
-  }
-
-  // 5. Validasi barang pengganti (untuk TUKAR)
-  let replacementItems: { itemId: number; nama: string; hargaJual: number; qtyReplacement: number }[] = [];
-  if (d.tipe === "TUKAR" && d.replacementItems.length > 0) {
-    const repIds = d.replacementItems.map((r) => r.itemId);
-    const repItemsFromDb = await prisma.item.findMany({ where: { id: { in: repIds } } });
-    const repItemMap = new Map(repItemsFromDb.map((i) => [i.id, i]));
-    for (const ri of d.replacementItems) {
-      const item = repItemMap.get(ri.itemId);
-      if (!item) {
-        return { error: "Barang pengganti tidak ditemukan di database." };
+    for (const [transactionItemId, requestedQty] of requestedByTxItem) {
+      const txItem = txItemMap.get(transactionItemId)!;
+      const alreadyReturned = alreadyReturnedMap.get(transactionItemId) ?? 0;
+      const availableForReturn = txItem.qty - alreadyReturned;
+      if (requestedQty > availableForReturn) {
+        return {
+          ok: false,
+          error: `Qty retur "${txItem.namaSnapshot}" melebihi sisa (beli ${txItem.qty}, sudah diretur ${alreadyReturned}, sisa ${availableForReturn}).`,
+        };
       }
-      replacementItems.push({
-        itemId: item.id,
-        nama: item.nama,
-        hargaJual: Number(item.hargaJual),
-        qtyReplacement: ri.qtyReplacement,
-      });
     }
-  }
 
-  // 6. Hitung total nilai
-  let totalRetur = 0;
-  for (const ri of d.returnItems) {
-    totalRetur += ri.hargaSnapshot * ri.qtyReturned;
-  }
-  let totalGanti = 0;
-  for (const ri of replacementItems) {
-    totalGanti += ri.hargaJual * ri.qtyReplacement;
-  }
-  const selisih = totalGanti - totalRetur;
+    let replacementItems: { itemId: number; nama: string; hargaJual: number; qtyReplacement: number }[] = [];
+    if (d.tipe === "TUKAR" && d.replacementItems.length > 0) {
+      const repIds = d.replacementItems.map((r) => r.itemId);
+      const repItemsFromDb = await tx.item.findMany({ where: { id: { in: repIds } } });
+      const repItemMap = new Map(repItemsFromDb.map((i) => [i.id, i]));
+      for (const ri of d.replacementItems) {
+        const item = repItemMap.get(ri.itemId);
+        if (!item) {
+          return { ok: false, error: "Barang pengganti tidak ditemukan di database." };
+        }
+        replacementItems.push({
+          itemId: item.id,
+          nama: item.nama,
+          hargaJual: Number(item.hargaJual),
+          qtyReplacement: ri.qtyReplacement,
+        });
+      }
+    }
 
-  const returnItemCreate = buildReturnItemCreateData({
-    tipe: d.tipe,
-    returnItems: d.returnItems,
-    replacementItems,
-  });
-  if (!returnItemCreate.ok) {
-    return { error: returnItemCreate.error };
-  }
+    const totalRetur = d.returnItems.reduce(
+      (sum, ri) => sum + ri.hargaSnapshot * ri.qtyReturned,
+      0
+    );
+    const totalGanti = replacementItems.reduce(
+      (sum, ri) => sum + ri.hargaJual * ri.qtyReplacement,
+      0
+    );
+    const selisih = totalGanti - totalRetur;
 
-  try {
-  const result = await prisma.$transaction(async (tx) => {
+    const returnItemCreate = buildReturnItemCreateData({
+      tipe: d.tipe,
+      returnItems: d.returnItems,
+      replacementItems,
+    });
+    if (!returnItemCreate.ok) {
+      return { ok: false, error: returnItemCreate.error };
+    }
+
     const noReturn = await nextDocNumber(tx, "return");
 
     const ret = await tx.return.create({
@@ -206,8 +213,11 @@ export async function createReturn(payload: ReturPayload) {
       });
     }
 
-    return { id: ret.id, noReturn, invoiceNo, selisih, items: ret.items };
-  });
+    return { ok: true, id: ret.id, noReturn, invoiceNo, selisih, items: ret.items, replacementItems };
+  }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable });
+
+  if (result.ok !== true) return { error: result.error };
+  const replacementItems = result.replacementItems ?? [];
 
   await logActivity({
     userId: user.id,

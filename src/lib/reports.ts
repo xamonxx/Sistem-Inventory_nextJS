@@ -2,6 +2,16 @@ import { prisma } from "@/lib/prisma";
 import { getStokAkhirMap } from "@/lib/stock";
 
 export type ReportRange = { from?: Date; to?: Date };
+export type ReportPage = { take?: number; skip?: number };
+
+const DEFAULT_REPORT_TAKE = 500;
+const MAX_REPORT_TAKE = 2000;
+
+function pageArgs(page?: ReportPage) {
+  const take = Math.min(Math.max(Math.trunc(page?.take ?? DEFAULT_REPORT_TAKE), 1), MAX_REPORT_TAKE);
+  const skip = Math.max(Math.trunc(page?.skip ?? 0), 0);
+  return { take, skip };
+}
 
 function txItemDateWhere(range?: ReportRange) {
   if (!range || (!range.from && !range.to)) return undefined;
@@ -19,10 +29,13 @@ function dateWhere(range?: ReportRange) {
   return tanggal;
 }
 
-export async function laporanMargin(range?: ReportRange) {
+export async function laporanMargin(range?: ReportRange, page?: ReportPage) {
   const dateFilter = txItemDateWhere(range);
+  const pageOptions = pageArgs(page);
   const lines = await prisma.transactionItem.findMany({
     where: dateFilter,
+    orderBy: { transaction: { tanggal: "desc" } },
+    ...pageOptions,
     select: {
       itemId: true,
       namaSnapshot: true,
@@ -61,9 +74,11 @@ export async function barangTerlaris(limit = 10, range?: ReportRange) {
   return [...rows].sort((a, b) => b.qtyTerjual - a.qtyTerjual).slice(0, limit);
 }
 
-export async function laporanOmset() {
+export async function laporanOmset(page?: ReportPage) {
+  const pageOptions = pageArgs(page);
   const trx = await prisma.transaction.findMany({
     orderBy: { tanggal: "desc" },
+    ...pageOptions,
     select: { noTransaksi: true, tanggal: true, namaClient: true, namaWs: true, grandTotal: true },
   });
   return trx.map((t) => ({
@@ -75,11 +90,13 @@ export async function laporanOmset() {
   }));
 }
 
-export async function laporanPiutang(range?: ReportRange) {
+export async function laporanPiutang(range?: ReportRange, page?: ReportPage) {
   const tanggal = dateWhere(range);
+  const pageOptions = pageArgs(page);
   const inv = await prisma.invoice.findMany({
     where: tanggal ? { tanggal } : undefined,
     orderBy: { tanggal: "desc" },
+    ...pageOptions,
   });
   return inv.map((i) => ({
     noInvoice: i.noInvoice,
@@ -92,8 +109,9 @@ export async function laporanPiutang(range?: ReportRange) {
   }));
 }
 
-export async function laporanStok() {
-  const items = await prisma.item.findMany({ orderBy: { kode: "asc" } });
+export async function laporanStok(page?: ReportPage) {
+  const pageOptions = pageArgs(page);
+  const items = await prisma.item.findMany({ orderBy: { kode: "asc" }, ...pageOptions });
   const stokMap = await getStokAkhirMap(items.map((i) => i.id));
   return items.map((i) => {
     const stok = stokMap[i.id] ?? i.stokAwal;

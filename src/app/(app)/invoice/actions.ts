@@ -24,23 +24,23 @@ export async function bayarInvoice(invoiceId: number, jumlah: number, tipe: Paym
   if (!parsed.success) return { error: firstIssue(parsed.error) };
   ({ invoiceId, jumlah, tipe } = parsed.data);
 
-  const inv = await prisma.invoice.findUnique({ where: { id: invoiceId } });
-  if (!inv) return { error: "Invoice tidak ditemukan." };
-
-  const sisa = Number(inv.total) - Number(inv.totalDibayar);
-  if (sisa <= 0) return { error: "Invoice ini sudah lunas." };
-  const bayar = Math.min(jumlah, sisa);
-  const totalDibayar = new Prisma.Decimal(inv.totalDibayar).add(bayar);
-  const lunas = totalDibayar.gte(inv.total);
-
   try {
-    const newPayment = await prisma.$transaction(async (tx) => {
+    const result = await prisma.$transaction(async (tx) => {
+      const inv = await tx.invoice.findUnique({ where: { id: invoiceId } });
+      if (!inv) return { error: "Invoice tidak ditemukan." };
+
+      const sisa = Number(inv.total) - Number(inv.totalDibayar);
+      if (sisa <= 0) return { error: "Invoice ini sudah lunas." };
+      const bayar = Math.min(jumlah, sisa);
+      const totalDibayar = new Prisma.Decimal(inv.totalDibayar).add(bayar);
+      const lunas = totalDibayar.gte(inv.total);
+
       await tx.invoice.update({
         where: { id: invoiceId },
         data: { totalDibayar, status: lunas ? "LUNAS" : "PARTIAL" },
       });
 
-      return await tx.payment.create({
+      const payment = await tx.payment.create({
         data: {
           tipe,
           jumlah: bayar,
@@ -48,25 +48,28 @@ export async function bayarInvoice(invoiceId: number, jumlah: number, tipe: Paym
           keterangan: `Pembayaran cicilan untuk ${inv.noInvoice}`,
         },
       });
-    });
+      return { ok: true, payment, bayar, lunas };
+    }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable });
+
+    if (!result.ok) return result;
 
     await logActivity({
       userId: user.id,
       aksi: "BAYAR_INVOICE",
       entitas: "Invoice",
       entitasId: invoiceId,
-      detail: { bayar, lunas, tipe },
+      detail: { bayar: result.bayar, lunas: result.lunas, tipe },
     });
 
     revalidatePath("/invoice");
     return {
       ok: true,
       payment: {
-        id: newPayment.id,
-        tanggal: newPayment.tanggal.toISOString(),
-        tipe: newPayment.tipe,
-        jumlah: Number(newPayment.jumlah),
-        keterangan: newPayment.keterangan,
+        id: result.payment.id,
+        tanggal: result.payment.tanggal.toISOString(),
+        tipe: result.payment.tipe,
+        jumlah: Number(result.payment.jumlah),
+        keterangan: result.payment.keterangan,
       },
     };
   } catch (e) {

@@ -36,6 +36,12 @@ export async function submitStockIn(payload: StockInPayload) {
   try {
     const result = await prisma.$transaction(async (tx) => {
       let totalAmount = new Prisma.Decimal(0);
+      const itemIds = Array.from(new Set(d.items.map((line) => line.itemId)));
+      const items = await tx.item.findMany({ where: { id: { in: itemIds } } });
+      const itemMap = new Map(items.map((item) => [item.id, item]));
+      if (items.length !== itemIds.length) {
+        throw new Error("Salah satu barang tidak ditemukan.");
+      }
 
       // Create a unified note details string
       const supplierRef = d.supplierName ? `Supplier: ${d.supplierName}` : "";
@@ -46,10 +52,7 @@ export async function submitStockIn(payload: StockInPayload) {
       const ledgerEntries = [];
 
       for (const line of d.items) {
-        const item = await tx.item.findUnique({ where: { id: line.itemId } });
-        if (!item) {
-          throw new Error(`Barang dengan ID ${line.itemId} tidak ditemukan.`);
-        }
+        const item = itemMap.get(line.itemId)!;
 
         const lineTotal = new Prisma.Decimal(line.unitCost).mul(line.qty);
         totalAmount = totalAmount.add(lineTotal);
@@ -83,7 +86,7 @@ export async function submitStockIn(payload: StockInPayload) {
         totalAmount: Number(totalAmount),
         entries: ledgerEntries,
       };
-    });
+    }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable });
 
     await logActivity({
       userId: user.id,

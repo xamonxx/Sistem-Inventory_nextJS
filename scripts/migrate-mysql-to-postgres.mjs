@@ -4,8 +4,6 @@ import mysql from "mysql2/promise";
 import { PrismaClient } from "@prisma/client";
 import { withAccelerate } from "@prisma/extension-accelerate";
 import { readFileSync } from "fs";
-import { FUNCTIONS_CONFIG_MANIFEST } from "next/dist/shared/lib/constants";
-import { ColumnFaceting } from "@tanstack/react-table";
 
 // Ambil DATABASE_URL (Accelerate) dari .env.production
 const envProd = readFileSync(new URL("../.env.production", import.meta.url), "utf8");
@@ -35,6 +33,16 @@ const PLAN = [
   ["stock_ledger", "stockLedger", "stock_ledger", []],
   ["activity_logs", "activityLog", "activity_logs", []],
 ];
+const ALLOWED_SOURCE_TABLES = new Set(PLAN.map(([sqlTable]) => sqlTable));
+const ALLOWED_PG_TABLES = new Set(PLAN.map(([, , pgTable]) => pgTable).filter(Boolean));
+const SAFE_IDENTIFIER = /^[A-Za-z_][A-Za-z0-9_]*$/;
+
+function assertAllowedIdentifier(value, allowed, label) {
+  if (!allowed.has(value) || !SAFE_IDENTIFIER.test(value)) {
+    throw new Error(`${label} tidak diizinkan: ${value}`);
+  }
+}
+
 function fixRow(row, boolFields) {
   for (const f of boolFields) {
     if (row[f] != null) row[f] = row[f] === 1 || row[f] === true || row[f] === "1";
@@ -42,6 +50,7 @@ function fixRow(row, boolFields) {
   return row;
 }
 for (const [sqlTable, accessor, pgTable, boolFields] of PLAN) {
+  assertAllowedIdentifier(sqlTable, ALLOWED_SOURCE_TABLES, "Tabel sumber");
   const [rows] = await my.query(`SELECT * FROM \`${sqlTable}\``);
   let ok = 0;
   for (const r of rows) {
@@ -56,6 +65,7 @@ for (const [sqlTable, accessor, pgTable, boolFields] of PLAN) {
   // GES FIX TONG DI UBAH MON
   if (pgTable && rows.length > 0) {
     try {
+      assertAllowedIdentifier(pgTable, ALLOWED_PG_TABLES, "Tabel target");
       await prisma.$executeRawUnsafe(
         `SELECT setval(pg_get_serial_sequence('"${pgTable}"','id'), (SELECT COALESCE(MAX(id),1) FROM "${pgTable}"))`
       );

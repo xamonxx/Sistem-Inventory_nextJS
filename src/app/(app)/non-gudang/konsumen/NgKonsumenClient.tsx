@@ -110,7 +110,7 @@ export function NgKonsumenClient({ initialItems }: { initialItems: NgKonsumenDat
 
   return (
     <div className="space-y-5">
-      <header className="liquid-panel liquid-panel-strong dashboard-hero relative z-40 rounded-xl border-sky-200/70 dark:border-sky-300/15" style={{ overflow: "visible" }}>
+      <header className="liquid-panel liquid-panel-strong dashboard-hero relative z-20 rounded-xl border-sky-200/70 dark:border-sky-300/15" style={{ overflow: "visible" }}>
         <div className="grid lg:grid-cols-[minmax(0,1fr)_520px]">
           <div className="border-b border-sky-200/70 p-5 dark:border-sky-300/15 lg:border-b-0 lg:border-r">
             <div className="min-w-0">

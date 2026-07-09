@@ -159,28 +159,53 @@ export async function deleteItems(
   const user = await requireRole("ADMIN_GUDANG");
   const parsed = z.array(dbId).min(1).max(500).safeParse(ids);
   if (!parsed.success) return { ok: false, error: "Pilihan barang tidak valid." };
+  const selectedIds = Array.from(new Set(parsed.data));
 
   const deletable: number[] = [];
   const blocked: string[] = [];
 
-  for (const id of parsed.data) {
-    const item = await prisma.item.findUnique({
-      where: { id },
+  const [items, txCounts, retCounts, retGantiCounts, ledgerCounts] = await Promise.all([
+    prisma.item.findMany({
+      where: { id: { in: selectedIds } },
       select: { id: true, nama: true, kode: true },
-    });
-    if (!item) continue;
+    }),
+    prisma.transactionItem.groupBy({
+      by: ["itemId"],
+      where: { itemId: { in: selectedIds } },
+      _count: { id: true },
+    }),
+    prisma.returnItem.groupBy({
+      by: ["itemId"],
+      where: { itemId: { in: selectedIds } },
+      _count: { id: true },
+    }),
+    prisma.returnItem.groupBy({
+      by: ["itemGantiId"],
+      where: { itemGantiId: { in: selectedIds } },
+      _count: { id: true },
+    }),
+    prisma.stockLedger.groupBy({
+      by: ["itemId"],
+      where: { itemId: { in: selectedIds } },
+      _count: { id: true },
+    }),
+  ]);
 
-    const [tx, ret, retGanti, led] = await Promise.all([
-      prisma.transactionItem.count({ where: { itemId: id } }),
-      prisma.returnItem.count({ where: { itemId: id } }),
-      prisma.returnItem.count({ where: { itemGantiId: id } }),
-      prisma.stockLedger.count({ where: { itemId: id } }),
-    ]);
+  const txMap = new Map(txCounts.map((row) => [row.itemId, row._count.id]));
+  const retMap = new Map(retCounts.map((row) => [row.itemId, row._count.id]));
+  const retGantiMap = new Map(retGantiCounts.map((row) => [row.itemGantiId, row._count.id]));
+  const ledgerMap = new Map(ledgerCounts.map((row) => [row.itemId, row._count.id]));
+
+  for (const item of items) {
+    const tx = txMap.get(item.id) ?? 0;
+    const ret = retMap.get(item.id) ?? 0;
+    const retGanti = retGantiMap.get(item.id) ?? 0;
+    const led = ledgerMap.get(item.id) ?? 0;
 
     if (tx + ret + retGanti + led > 0) {
       blocked.push(`${item.kode} · ${item.nama}`);
     } else {
-      deletable.push(id);
+      deletable.push(item.id);
     }
   }
 
@@ -192,7 +217,7 @@ export async function deleteItems(
         aksi: "DELETE_BARANG",
         entitas: "Item",
         entitasId: deletable.join(","),
-        detail: { dihapus: deletable.length, jumlahDipilih: parsed.data.length },
+        detail: { dihapus: deletable.length, jumlahDipilih: selectedIds.length },
       });
     } catch (e) {
       return { ok: false, error: safeError(e, "Gagal menghapus barang.").error };

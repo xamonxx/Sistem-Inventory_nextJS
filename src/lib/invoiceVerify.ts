@@ -4,10 +4,10 @@ import { SignJWT, jwtVerify } from "jose";
 const PURPOSE = "invoice_verify";
 
 function getVerifySecret(): Uint8Array {
-  const secret = process.env.INVOICE_VERIFY_SECRET ?? process.env.AUTH_SECRET;
+  const secret = process.env.INVOICE_VERIFY_SECRET;
   if (process.env.NODE_ENV === "production" && (!secret || secret.length < 32)) {
     throw new Error(
-      "INVOICE_VERIFY_SECRET atau AUTH_SECRET wajib di-set minimal 32 karakter di produksi."
+      "INVOICE_VERIFY_SECRET wajib di-set terpisah minimal 32 karakter di produksi."
     );
   }
 

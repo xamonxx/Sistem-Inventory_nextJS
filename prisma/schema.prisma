@@ -31,6 +31,7 @@ model User {
   transactions Transaction[]
   ledgers      StockLedger[]
   returns      Return[]
+
   @@map("users")
 }
 
@@ -77,6 +78,8 @@ model StockLedger {
   item Item  @relation(fields: [itemId], references: [id])
   user User? @relation(fields: [userId], references: [id])
   @@index([itemId])
+  @@index([itemId, tanggal])
+  @@index([userId])
   @@index([tanggal])
   @@map("stock_ledger")
 }
@@ -178,6 +181,7 @@ model TransactionItem {
   transaction Transaction  @relation(fields: [transactionId], references: [id], onDelete: Cascade)
   item        Item         @relation(fields: [itemId], references: [id])
   returnItems ReturnItem[] // Track returns linked to this transaction item
+  @@index([transactionId])
   @@index([itemId])
   @@map("transaction_items")
 }
@@ -211,6 +215,7 @@ model Return {
   invoices    Invoice[]
   @@index([tanggal])
   @@index([transactionId])
+  @@index([transactionId, tanggal])
   @@map("returns")
 }
 
@@ -274,7 +279,9 @@ model Invoice {
   transaction Transaction? @relation(fields: [transactionId], references: [id])
   return      Return?      @relation(fields: [returnId], references: [id])
   payments    Payment[]    // Pembayaran invoice (BUG-002 fix)
+  @@index([clientId])
   @@index([status])
+  @@index([status, tanggal])
   @@index([tanggal])
   @@map("invoices")
 }
@@ -437,6 +444,7 @@ model ActivityLog {
   createdAt DateTime @default(now())
 
   user User? @relation(fields: [userId], references: [id])
+  @@index([userId])
   @@index([createdAt])
   @@map("activity_logs")
 }

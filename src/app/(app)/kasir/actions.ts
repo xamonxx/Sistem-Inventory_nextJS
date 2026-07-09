@@ -8,7 +8,7 @@ import { requireRole } from "@/lib/auth";
 import { nextDocNumber } from "@/lib/counters";
 import { logActivity } from "@/lib/activity";
 import { FIELD_LIMITS } from "@/lib/fieldLimits";
-import { dbId, money, qtyPositive } from "@/lib/validation";
+import { dbId, money, qtyPositive, safeError } from "@/lib/validation";
 import { validateCheckoutTotals } from "@/lib/checkoutRules";
 import { createInvoiceVerifyUrl } from "@/lib/invoiceVerify";
 
@@ -263,7 +263,7 @@ export async function createTransaction(payload: KasirPayload) {
       }
 
       return { id: trx.id, noTransaksi, invoiceNo, grandTotal: Number(grandTotal) };
-    });
+    }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable });
 
     await logActivity({
       userId: user.id,
@@ -285,8 +285,7 @@ export async function createTransaction(payload: KasirPayload) {
       : null;
 
     return { ok: true, ...result, verifyUrl };
-  } catch (error: any) {
-    console.error("Kasir checkout error:", error);
-    return { error: "Terjadi kesalahan internal saat memproses checkout." };
+  } catch (error) {
+    return safeError(error, "Terjadi kesalahan internal saat memproses checkout.");
   }
 }

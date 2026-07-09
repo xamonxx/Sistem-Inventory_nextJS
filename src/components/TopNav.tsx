@@ -74,6 +74,7 @@ export function TopNav({ nama, role }: TopNavProps) {
           <button
             type="button"
             onClick={() => setIsProfileOpen((open) => !open)}
+            data-testid="topnav-profile-button"
             className={`flex cursor-pointer items-center gap-3 rounded-2xl border px-3 py-2.5 transition-[background-color,border-color,box-shadow] ${
               isProfileOpen
                 ? "border-[var(--chrome-active-border)] bg-sky-50/85 shadow-[0_14px_32px_rgba(14,165,233,0.12)] dark:bg-white/[0.055]"
@@ -111,6 +112,7 @@ export function TopNav({ nama, role }: TopNavProps) {
               <div className="mt-4">
                 <a
                   href="/logout"
+                  data-testid="topnav-logout-link"
                   className="flex w-full cursor-pointer items-center justify-between rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-left text-sm font-semibold text-rose-600 transition-[background-color,border-color,color] hover:border-rose-300 hover:bg-rose-100 disabled:cursor-not-allowed disabled:opacity-60 dark:border-rose-500/25 dark:bg-rose-500/10 dark:text-rose-300 dark:hover:bg-rose-500/15"
                 >
                   <span className="flex items-center gap-2">

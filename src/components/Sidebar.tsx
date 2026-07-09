@@ -217,6 +217,7 @@ function SidebarContent({
           <button
             type="button"
             onClick={openLogoutModal}
+            data-testid="mobile-logout-button"
             className="chrome-avatar flex h-10 w-10 items-center justify-center rounded-xl text-xs font-bold uppercase backdrop-blur-xl backdrop-saturate-150"
             aria-label="Buka konfirmasi keluar"
             title="Keluar"
@@ -327,11 +328,12 @@ function SidebarContent({
             isCollapsed ? "lg:overflow-visible p-2 lg:pb-2" : "overflow-hidden p-3 lg:pb-3"
           )}
           >
-            <button
-              type="button"
-              onClick={openLogoutModal}
-              aria-label="Buka konfirmasi keluar"
-              className={cn(
+          <button
+            type="button"
+            onClick={openLogoutModal}
+            data-testid="sidebar-user-menu-button"
+            aria-label="Buka konfirmasi keluar"
+            className={cn(
                 "group relative z-10 flex w-full cursor-pointer items-center rounded-xl border text-left",
                 // Collapsed: show only the avatar tile (no wrapping panel, which
                 // looked like a box-in-a-box). Expanded: full soft panel.
@@ -355,6 +357,7 @@ function SidebarContent({
           </button>
           <button
             onClick={openLogoutModal}
+            data-testid="sidebar-logout-button"
             className={cn(
               "group relative flex w-full cursor-pointer items-center overflow-visible rounded-xl border text-[var(--chrome-muted)] hover:text-rose-600 dark:hover:text-rose-300",
               isCollapsed
@@ -429,6 +432,7 @@ function SidebarContent({
               <button
                 type="button"
                 onClick={confirmLogout}
+                data-testid="logout-confirm-button"
                 disabled={isLoggingOut}
                 className="inline-flex h-10 w-full cursor-pointer items-center justify-center gap-1.5 rounded-xl bg-rose-600 px-4 text-xs font-bold text-white transition-[background-color,box-shadow,transform] hover:bg-rose-700 hover:shadow-lg hover:shadow-rose-500/25 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-60 sm:w-auto"
               >

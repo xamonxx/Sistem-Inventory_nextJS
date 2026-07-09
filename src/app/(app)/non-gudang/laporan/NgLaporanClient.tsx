@@ -99,7 +99,7 @@ export function NgLaporanClient({
 
   return (
     <div className={cn("space-y-5", filtering && "opacity-60 transition-opacity")}>
-      <header className="liquid-panel liquid-panel-strong dashboard-hero relative z-40 rounded-xl" style={{ overflow: "visible" }}>
+      <header className="liquid-panel liquid-panel-strong dashboard-hero relative z-20 rounded-xl" style={{ overflow: "visible" }}>
         <div className="grid lg:grid-cols-[minmax(0,1fr)_420px]">
           <div className="border-b border-slate-200/80 p-5 dark:border-slate-800/80 lg:border-b-0 lg:border-r md:p-6">
             <p className="inline-flex items-center gap-2 rounded-md border border-sky-200 bg-sky-50 px-3 py-1 text-[11px] font-black uppercase tracking-[0.18em] text-[var(--primary-strong)] dark:border-sky-900/60 dark:bg-sky-950/35">
