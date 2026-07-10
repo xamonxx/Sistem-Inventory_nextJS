@@ -1548,6 +1548,14 @@ h3,
     color: #000 !important;
     border: 1px solid #000 !important;
   }
+  /* Logo pojok kiri: kotak tetap gelap, tapi IKON di dalamnya tetap PUTIH
+     (jangan ikut aturan "semua teks hitam" — kalau tidak ikon jadi hitam di
+     atas kotak gelap = tak terlihat). */
+  body.print-format-a4 .invoice-doc div[class*="1E293B"],
+  body.print-format-a4 .invoice-doc div[class*="1E293B"] * {
+    color: #fff !important;
+    fill: #fff !important;
+  }
 
   /* Bersihkan chrome layar (border/shadow/sudut membulat) dari area cetak —
      ini hanya afordansi tampilan, tidak boleh ikut tercetak di PDF. */
