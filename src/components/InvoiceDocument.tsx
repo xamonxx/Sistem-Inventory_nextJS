@@ -153,8 +153,8 @@ export function InvoiceDocument({
         <div className="inv-table-wrap mt-6">
           <table className="inv-table w-full border-collapse text-[10px]">
             <colgroup>
-              <col style={{ width: "12%" }} />
-              <col style={{ width: "37%" }} />
+              <col style={{ width: "16%" }} />
+              <col style={{ width: "33%" }} />
               <col style={{ width: "8%" }} />
               <col style={{ width: "10%" }} />
               <col style={{ width: "16.5%" }} />
@@ -173,7 +173,7 @@ export function InvoiceDocument({
             <tbody>
               {inv.items.map((it, i) => (
                 <tr key={i} className="border-b border-[#E5E7EB]">
-                  <td className="h-[28px] px-3 font-mono font-semibold text-[#0284c7]">{it.kode}</td>
+                  <td className="h-[28px] px-3 font-mono font-semibold text-[#0284c7] whitespace-nowrap">{it.kode}</td>
                   <td className="h-[28px] px-3 font-medium text-[#111827]">{renderItemName(it.nama)}</td>
                   <td className="h-[28px] px-3 text-center font-semibold tabular-nums">{it.qty}</td>
                   <td className="h-[28px] px-3 text-center text-[#475569]">{it.satuan ?? "Unit"}</td>

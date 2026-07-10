@@ -929,6 +929,14 @@ h3,
   word-break: normal;
 }
 
+/* Kolom KODE (kolom pertama) tidak boleh wrap — mis. "PC-MUP-001" wajib 1 baris. */
+.invoice-doc .inv-table th:first-child,
+.invoice-doc .inv-table td:first-child {
+  white-space: nowrap;
+  overflow-wrap: normal;
+  word-break: keep-all;
+}
+
 .invoice-doc .inv-table tr,
 .invoice-doc .inv-body > div {
   break-inside: avoid;
@@ -1508,9 +1516,37 @@ h3,
 
   body.print-format-a4 .invoice-accent-bar {
     display: block !important;
-    height: 4px !important;
+    height: 2px !important;
     width: 100% !important;
-    background: #0284c7 !important;
+    background: #000 !important;
+  }
+
+  /* ===== Invoice CETAK: hitam-putih total agar tidak "pecah"/belang di
+     printer dot-matrix. Warna abu-abu & blok gelap hanya untuk tampilan layar;
+     saat dicetak semua teks dipaksa HITAM dan blok warna dibuang. ===== */
+  body.print-format-a4 .invoice-doc,
+  body.print-format-a4 .invoice-doc * {
+    color: #000 !important;
+  }
+  /* Header tabel: latar putih, teks hitam tebal, garis hitam tegas */
+  body.print-format-a4 .invoice-doc .inv-table thead tr {
+    background: #fff !important;
+  }
+  body.print-format-a4 .invoice-doc .inv-table thead th {
+    color: #000 !important;
+    font-weight: 700 !important;
+    border-top: 1.5px solid #000 !important;
+    border-bottom: 1.5px solid #000 !important;
+  }
+  /* Garis antar-baris item jadi hitam agar tercetak jelas */
+  body.print-format-a4 .invoice-doc .inv-table tbody td {
+    border-bottom: 1px solid #000 !important;
+  }
+  /* Badge status: buang blok warna, cukup teks + kotak garis hitam */
+  body.print-format-a4 .invoice-doc [class*="rounded-full"] {
+    background: #fff !important;
+    color: #000 !important;
+    border: 1px solid #000 !important;
   }
 
   /* Bersihkan chrome layar (border/shadow/sudut membulat) dari area cetak —
