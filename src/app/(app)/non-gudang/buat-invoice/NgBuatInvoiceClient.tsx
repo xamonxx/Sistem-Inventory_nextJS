@@ -27,6 +27,7 @@ import { Nota, type NotaData } from "@/components/Nota";
 import { DatePicker } from "@/components/DatePicker";
 import { Badge, Button, Card, CurrencyInput, Input, Label, Select, Table, Td, Textarea, Th } from "@/components/ui";
 import { FIELD_LIMITS } from "@/lib/fieldLimits";
+import { PageHeader } from "@/components/page";
 import { useNgCartStore } from "@/lib/ngCartStore";
 import { computeNgCart, type NgComputedCartLine } from "@/lib/ngMargin";
 import { printArea, setPdfTitle } from "@/lib/print";
@@ -568,47 +569,32 @@ export function NgBuatInvoiceClient({
 
   return (
     <div className={`space-y-6 ${hasFloatingActions ? "pb-24 xl:pb-28" : ""}`}>
-      <header className="liquid-panel liquid-panel-strong dashboard-hero anim-rise relative overflow-hidden backdrop-blur-2xl backdrop-saturate-150">
-        <div className="grid lg:grid-cols-[minmax(0,1fr)_minmax(420px,560px)]">
-          <div className="p-5 md:p-6">
-            <p className="inline-flex items-center gap-2 rounded-md border border-sky-200 bg-sky-50 px-3 py-1 text-[11px] font-black uppercase tracking-[0.18em] text-[var(--primary-strong)] dark:border-sky-900/60 dark:bg-sky-950/35">
-              <span className="h-1.5 w-1.5 rounded-full bg-[var(--primary)]" />
-              Keranjang Invoice Non-Gudang
-            </p>
-            <h1 className="mt-5 max-w-3xl text-3xl font-black tracking-[-0.04em] text-foreground md:text-5xl">
-              Keranjang &amp; Buat Invoice
-            </h1>
-            <p className="mt-3 max-w-3xl text-sm font-medium leading-6 text-slate-600 dark:text-slate-300 md:text-base">
-              Mulai dari toko sumber, input barang, cek margin, lalu generate invoice Non-Gudang. Barang yang sama tetap bisa diperbarui lewat konfirmasi agar data invoice aman.
-            </p>
-          </div>
+      <PageHeader
+        eyebrow="Non-Gudang"
+        title="Keranjang & Buat Invoice"
+        description="Pilih toko sumber, input barang, cek margin, lalu buat invoice. Barang yang sama diperbarui lewat konfirmasi."
+      />
 
-          <div className="grid grid-cols-2 border-t border-[var(--glass-border)] bg-white/40 dark:bg-white/[0.02] lg:border-l lg:border-t-0">
-            <CheckoutHeaderMetric label="Langkah Aktif" value={`${activeStep}/3`} hint={activeStep === 1 ? "pilih toko" : activeStep === 2 ? "input barang" : "data invoice"} icon={<FileText size={18} />} />
-            <CheckoutHeaderMetric label="Toko Sumber" value={tokoSumber || "-"} hint={tokoSumber ? "siap dipakai" : "belum dipilih"} icon={<Store size={18} />} />
-            <CheckoutHeaderMetric label="Item Invoice" value={`${cart.length}`} hint={`${computedTotalQty} total qty`} icon={<ShoppingCart size={18} />} />
-            <CheckoutHeaderMetric label="Keuntungan" value={formatRupiah(computed.totalProfit)} hint={`${computed.margin}% margin`} icon={<Wallet size={18} />} accent="text-emerald-600 dark:text-emerald-300" />
-          </div>
+      {/* Langkah + ringkasan singkat */}
+      <div className="bento-card grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-stretch">
+        <nav aria-label="Langkah pembuatan invoice" className="flex items-center gap-1.5 p-2.5 sm:gap-2 sm:p-3">
+          <StepPill step={1} activeStep={activeStep} label="Toko" done={activeStep > 1} onClick={() => setActiveStep(1)} />
+          <span className={`h-px flex-1 ${activeStep > 1 ? "bg-[var(--primary)]" : "bg-border"}`} />
+          <StepPill step={2} activeStep={activeStep} label="Barang" done={activeStep > 2} onClick={() => tokoSumber && setActiveStep(2)} disabled={!tokoSumber} />
+          <span className={`h-px flex-1 ${activeStep > 2 ? "bg-[var(--primary)]" : "bg-border"}`} />
+          <StepPill step={3} activeStep={activeStep} label="Invoice" done={false} onClick={() => cart.length > 0 && setActiveStep(3)} disabled={cart.length === 0} />
+        </nav>
+        <div className="grid grid-cols-3 divide-x divide-border border-t border-border lg:border-l lg:border-t-0">
+          <SlimMetric label="Toko sumber" value={tokoSumber || "–"} hint={tokoSumber ? "Siap dipakai" : "Belum dipilih"} />
+          <SlimMetric label="Item" value={String(cart.length)} hint={`${computedTotalQty} qty`} />
+          <SlimMetric label="Keuntungan" value={formatRupiah(computed.totalProfit)} hint={`${computed.margin}% margin`} positive />
         </div>
-      </header>
-
-      <Card className="rounded-xl p-5">
-        <div className="relative mx-auto flex max-w-3xl items-center justify-between px-4">
-          <div className="absolute left-[10%] right-[10%] top-[30%] h-[3px] -translate-y-1/2 rounded-full bg-slate-100 dark:bg-slate-800" />
-          <div
-            className="absolute left-[10%] top-[30%] h-[3px] -translate-y-1/2 rounded-full bg-gradient-to-r from-[var(--primary)] to-primary-500 transition-[width,background-color] duration-500 ease-in-out"
-            style={{ width: activeStep === 1 ? "0%" : activeStep === 2 ? "40%" : "80%" }}
-          />
-          <StepDot step={1} activeStep={activeStep} label="Toko" done={activeStep > 1} onClick={() => setActiveStep(1)} />
-          <StepDot step={2} activeStep={activeStep} label="Barang Invoice" done={activeStep > 2} onClick={() => tokoSumber && setActiveStep(2)} disabled={!tokoSumber} />
-          <StepDot step={3} activeStep={activeStep} label="Invoice" done={false} onClick={() => cart.length > 0 && setActiveStep(3)} disabled={cart.length === 0} />
-        </div>
-      </Card>
+      </div>
 
       <div className="grid grid-cols-1 gap-6 xl:grid-cols-[minmax(0,1.35fr)_360px] xl:items-start">
         <div className="space-y-6">
           {activeStep === 1 && (
-            <Card className="space-y-4 rounded-2xl p-5">
+            <Card className="bento-card !overflow-visible space-y-4 !p-5">
               <div className="flex items-center justify-between gap-3">
                 <div>
                   <h2 className="text-sm font-bold text-foreground">1. Pilih Toko Sumber</h2>
@@ -692,7 +678,7 @@ export function NgBuatInvoiceClient({
 
           {activeStep === 2 && (
             <>
-              <Card className="space-y-4 rounded-2xl p-5">
+              <Card className="bento-card !overflow-visible space-y-4 !p-5">
                 <div className="flex items-center justify-between gap-3">
                   <div>
                     <h2 className="text-sm font-bold text-foreground">2. Input Barang &amp; Tambahkan ke Invoice</h2>
@@ -801,7 +787,7 @@ export function NgBuatInvoiceClient({
                   </Button>
                 </div>
 
-                <div className="rounded-2xl border border-blue-100 bg-blue-50/75 p-4 text-xs text-blue-900 dark:border-blue-900/40 dark:bg-blue-950/20 dark:text-blue-200">
+                <div className="rounded-xl border border-sky-500/20 bg-sky-500/[0.06] p-3.5 text-xs leading-relaxed text-[var(--text-soft)]">
                   <div className="flex items-start gap-2">
                     <AlertTriangle size={15} className="mt-0.5 shrink-0" />
                     <p>
@@ -819,7 +805,7 @@ export function NgBuatInvoiceClient({
                     <Search size={16} className="pointer-events-none absolute left-4 top-1/2 z-10 -translate-y-1/2 text-[var(--text-soft)]" />
                     <Input value={q} onChange={(e) => setQ(e.target.value)} maxLength={FIELD_LIMITS.search} placeholder="Cari nama barang atau kategori..." className="pl-11" disabled={!tokoSumber} />
                   </div>
-                  <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+                  <div className="grid max-h-[360px] grid-cols-1 gap-2 overflow-y-auto pr-1 md:grid-cols-2">
                     {filteredItems.map((item) => {
                       const isSelected = selectedCatalogId === item.id;
                       return (
@@ -828,24 +814,24 @@ export function NgBuatInvoiceClient({
                           type="button"
                           onClick={() => prefillDraftFromCatalog(item)}
                           className={[
-                            "relative rounded-2xl border p-4 text-left transition",
-                            "bg-white/85 hover:bg-white dark:bg-slate-800/35 dark:hover:bg-slate-800/55",
+                            "relative cursor-pointer rounded-xl border px-3 py-2.5 text-left transition",
+                            "bg-[var(--surface-2)]/40 hover:bg-[var(--surface-2)]/80",
                             isSelected
-                              ? "border-[var(--primary)] ring-4 ring-[var(--primary)]/10"
+                              ? "border-[var(--primary)] ring-2 ring-[var(--primary)]/15"
                               : "border-border hover:border-[var(--primary)]/35",
                           ].join(" ")}
                         >
                           <div className="flex items-start justify-between gap-3">
                             <div className="min-w-0">
                               <p className="truncate text-sm font-bold text-foreground">{item.nama}</p>
-                              <p className="mt-1 text-[11px] text-slate-500">
-                                {item.kategori || "Tanpa kategori"}{item.satuan ? ` - ${item.satuan}` : ""}
+                              <p className="mt-0.5 truncate text-[11px] text-[var(--text-muted-2)]">
+                                {item.kategori || "Tanpa kategori"}{item.satuan ? ` · ${item.satuan}` : ""}
                               </p>
                             </div>
                             {isSelected && <Badge tone="blue">Dipakai x{Math.max(1, Number(itemDraft.qty || 1))}</Badge>}
                           </div>
-                          <p className="mt-3 text-[11px] font-semibold text-slate-600 dark:text-slate-300">
-                            Modal {formatRupiah(item.hargaBeli)} - Jual {formatRupiah(item.hargaJual)}
+                          <p className="tnum mt-1.5 text-[11px] text-[var(--text-soft)]">
+                            Modal {formatRupiah(item.hargaBeli)} → <span className="font-semibold text-foreground">Jual {formatRupiah(item.hargaJual)}</span>
                           </p>
                         </button>
                       );
@@ -855,7 +841,7 @@ export function NgBuatInvoiceClient({
 
               </Card>
 
-              <Card className="space-y-4 rounded-2xl p-5">
+              <Card className="bento-card !overflow-visible space-y-4 !p-5">
                 <div className="flex items-center justify-between gap-3">
                   <div>
                     <h2 className="text-sm font-bold text-foreground">Keranjang Invoice</h2>
@@ -938,7 +924,7 @@ export function NgBuatInvoiceClient({
 
           {activeStep === 3 && (
             <>
-              <Card className="space-y-4 rounded-2xl p-5">
+              <Card className="bento-card !overflow-visible space-y-4 !p-5">
                 <div className="flex items-center justify-between gap-3">
                   <div>
                     <h2 className="text-sm font-bold text-foreground">Keranjang Invoice</h2>
@@ -982,7 +968,7 @@ export function NgBuatInvoiceClient({
                 </Table>
               </Card>
 
-              <Card className="space-y-5 rounded-2xl p-6">
+              <Card className="bento-card !overflow-visible space-y-5 !p-5 sm:!p-6">
                 <div className="flex items-start justify-between gap-3">
                   <div>
                     <h2 className="text-2xl font-extrabold tracking-tight text-foreground">3. Data Konsumen &amp; Pembayaran</h2>
@@ -1096,7 +1082,7 @@ export function NgBuatInvoiceClient({
 
         <div className={activeStep === 2 || activeStep === 3 ? "space-y-6 self-start xl:sticky xl:top-6" : "space-y-6"}>
           {activeStep === 1 && (
-            <Card className="space-y-4 rounded-2xl p-5">
+            <Card className="bento-card !overflow-visible space-y-4 !p-5">
               <div className="flex items-center justify-between gap-3">
                 <h2 className="text-sm font-bold text-foreground">Status Langkah</h2>
                 {tokoSumber ? <Badge tone="blue">Siap lanjut</Badge> : <Badge tone="amber">Menunggu toko</Badge>}
@@ -1468,34 +1454,22 @@ export function NgBuatInvoiceClient({
   );
 }
 
-function CheckoutHeaderMetric({
-  label,
-  value,
-  hint,
-  icon,
-  accent,
-}: {
-  label: string;
-  value: string;
-  hint: string;
-  icon: React.ReactNode;
-  accent?: string;
-}) {
+function SlimMetric({ label, value, hint, positive }: { label: string; value: string; hint: string; positive?: boolean }) {
   return (
-    <div className="flex min-h-[120px] items-start justify-between gap-4 border-b border-r border-[var(--glass-border)] p-5 last:border-r-0 even:border-r-0">
-      <div className="min-w-0">
-        <p className="text-[11px] font-black uppercase tracking-[0.14em] text-slate-500">{label}</p>
-        <p className={`mt-2 truncate text-2xl font-black tracking-tight text-foreground ${accent ?? ""}`}>{value}</p>
-        <p className="mt-2 text-xs font-semibold text-slate-500 dark:text-slate-400">{hint}</p>
-      </div>
-      <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-md bg-white text-[var(--primary-strong)] ring-1 ring-sky-200 dark:bg-slate-900 dark:ring-sky-900/60">
-        {icon}
-      </div>
+    <div className="min-w-0 px-3 py-2.5 sm:px-4 lg:min-w-[150px]">
+      <p className="truncate text-[10px] font-bold uppercase tracking-wider text-[var(--text-muted-2)]">{label}</p>
+      <p
+        className={`tnum truncate text-sm font-bold ${positive ? "text-emerald-600 dark:text-emerald-400" : "text-foreground"}`}
+        title={value}
+      >
+        {value}
+      </p>
+      <p className="truncate text-[11px] text-[var(--text-muted-2)]">{hint}</p>
     </div>
   );
 }
 
-function StepDot({
+function StepPill({
   step,
   activeStep,
   label,
@@ -1510,28 +1484,31 @@ function StepDot({
   onClick: () => void;
   disabled?: boolean;
 }) {
+  const active = activeStep === step;
   return (
     <button
       type="button"
       onClick={onClick}
       disabled={disabled}
-      className="relative z-10 flex flex-col items-center gap-1.5 focus:outline-none group cursor-pointer disabled:cursor-not-allowed"
+      aria-current={active ? "step" : undefined}
+      className={[
+        "inline-flex shrink-0 cursor-pointer items-center gap-2 rounded-xl px-2.5 py-2 text-xs font-semibold transition disabled:cursor-not-allowed disabled:opacity-50 sm:px-3",
+        active ? "bg-[var(--primary)]/12 text-[var(--primary)] dark:text-sky-300" : "text-[var(--text-soft)] hover:bg-[var(--surface-2)]",
+      ].join(" ")}
     >
-      <div
+      <span
         className={[
-          "flex h-8 w-8 items-center justify-center rounded-full border text-xs font-bold shadow-xs transition-[background-color,border-color,color,box-shadow,transform] duration-300",
-          activeStep === step
-            ? "scale-110 border-[var(--primary)] bg-[var(--primary)] text-white ring-4 ring-[var(--primary)]/15"
+          "flex h-6 w-6 items-center justify-center rounded-full text-[11px] font-bold",
+          active
+            ? "bg-[var(--primary)] text-white"
             : done
-              ? "border-primary-200 bg-primary-50 font-extrabold text-primary-600"
-              : "border-border bg-card text-slate-400",
+              ? "bg-emerald-500/15 text-emerald-600 dark:text-emerald-300"
+              : "bg-[var(--surface-2)] text-[var(--text-muted-2)]",
         ].join(" ")}
       >
-        {done ? <Check size={14} strokeWidth={3} /> : step}
-      </div>
-      <span className={activeStep === step ? "text-[10px] font-extrabold text-foreground sm:text-xs" : "text-[10px] font-bold text-slate-400 sm:text-xs"}>
-        {label}
+        {done ? <Check size={13} strokeWidth={3} /> : step}
       </span>
+      {label}
     </button>
   );
 }
@@ -1593,7 +1570,7 @@ function MarginSummaryCard({
   showReadyBadge?: boolean;
 }) {
   return (
-    <Card className="space-y-4 rounded-2xl p-5">
+    <Card className="bento-card !overflow-visible space-y-4 !p-5">
       <div className="flex items-center justify-between gap-3">
         <h2 className="text-sm font-bold text-foreground">Ringkasan Margin</h2>
         {showReadyBadge ? <Badge tone="blue">Siap invoice</Badge> : null}
@@ -1601,7 +1578,7 @@ function MarginSummaryCard({
       <div className="grid grid-cols-2 gap-3">
         <MetricCard icon={<Store size={16} />} label="Total Modal" value={formatRupiah(totalModal)} />
         <MetricCard icon={<ShoppingCart size={16} />} label="Total Penjualan" value={formatRupiah(totalPenjualan)} />
-        <MetricCard icon={<Wallet size={16} />} label="Keuntungan" value={formatRupiah(totalProfit)} accent="text-emerald-600" />
+        <MetricCard icon={<Wallet size={16} />} label="Keuntungan" value={formatRupiah(totalProfit)} accent="text-emerald-600 dark:text-emerald-400" />
         <MetricCard icon={<FileText size={16} />} label="Margin / Markup" value={`${margin}% / ${markup}%`} />
       </div>
     </Card>
@@ -1620,13 +1597,13 @@ function MetricCard({
   accent?: string;
 }) {
   return (
-    <div className="min-w-0 rounded-2xl border border-border bg-slate-50/70 p-4 dark:bg-slate-900/30">
-      <div className="flex items-center gap-2 text-slate-500">
+    <div className="min-w-0 rounded-xl border border-border bg-[var(--surface-2)]/40 p-3.5">
+      <div className="flex items-center gap-2 text-[var(--text-muted-2)]">
         <span className="shrink-0">{icon}</span>
         <span className="truncate text-xs font-semibold">{label}</span>
       </div>
       <div data-tooltip={value} className="mt-3 min-w-0">
-        <p className={`truncate text-lg font-extrabold tracking-tight tabular-nums text-foreground ${accent ?? ""}`}>{value}</p>
+        <p className={`tnum truncate text-base font-extrabold tracking-tight text-foreground ${accent ?? ""}`}>{value}</p>
       </div>
     </div>
   );
@@ -1634,9 +1611,9 @@ function MetricCard({
 
 function SummaryRow({ label, value, positive }: { label: string; value: string; positive?: boolean }) {
   return (
-    <div className="flex items-center justify-between rounded-xl border border-border bg-slate-50/70 px-4 py-3 text-sm dark:bg-slate-900/20">
-      <span className="text-slate-500">{label}</span>
-      <span className={`font-bold ${positive ? "text-emerald-600" : "text-foreground"}`}>{value}</span>
+    <div className="flex items-center justify-between rounded-xl border border-border bg-[var(--surface-2)]/40 px-4 py-3 text-sm">
+      <span className="text-[var(--text-muted-2)]">{label}</span>
+      <span className={`tnum font-bold ${positive ? "text-emerald-600 dark:text-emerald-400" : "text-foreground"}`}>{value}</span>
     </div>
   );
 }

@@ -1,12 +1,12 @@
 "use client";
 
-import { useState, useMemo, useEffect, useTransition } from "react";
+import { useState, useMemo, useEffect, useRef, useTransition } from "react";
 import { deleteNgKonsumen } from "./actions";
 import { NgKonsumenForm, type NgKonsumenRow } from "./NgKonsumenForm";
-import { Button, Card, Input, Table, TableActionButton, Th, Td, Badge } from "@/components/ui";
+import { Button, Input, Table, Th, Td } from "@/components/ui";
+import { FilterBar, IconAction, PageHeader, Panel, StatCard, StatGrid } from "@/components/page";
 import { FIELD_LIMITS } from "@/lib/fieldLimits";
 import { usePagination, Pagination } from "@/components/Pagination";
-import { Tooltip } from "@/components/Tooltip";
 import { Search, Users, UserCheck, Layers, FileText, Pencil, Trash2, AlertTriangle } from "lucide-react";
 import { toast } from "sonner";
 
@@ -51,6 +51,8 @@ export function NgKonsumenClient({ initialItems }: { initialItems: NgKonsumenDat
   const pg = usePagination(filtered, 10);
 
   const allOnPageSelected = pg.pageData.length > 0 && pg.pageData.every((i) => selectedIds.has(i.id));
+  // Status "sebagian terpilih" hanya bisa diset lewat DOM.
+  const selectAllRef = useRef<HTMLInputElement>(null);
 
   function toggleSelectAllOnPage() {
     setSelectedIds((prev) => {
@@ -101,70 +103,46 @@ export function NgKonsumenClient({ initialItems }: { initialItems: NgKonsumenDat
     });
   }
 
-  const kpi = [
-    { icon: Users, label: "Total Konsumen", value: String(stats.total), detail: "terdaftar" },
-    { icon: UserCheck, label: "Aktif Transaksi", value: String(stats.withInvoice), detail: "punya invoice" },
-    { icon: Layers, label: "Jumlah Grup", value: String(stats.grupCount), detail: "grup / proyek" },
-    { icon: FileText, label: "Total Invoice", value: String(stats.totalInvoice), detail: "dari semua konsumen" },
-  ];
+  const somePageSelected = !allOnPageSelected && pg.pageData.some((i) => selectedIds.has(i.id));
+  useEffect(() => {
+    if (selectAllRef.current) selectAllRef.current.indeterminate = somePageSelected;
+  }, [somePageSelected]);
+
+  const dash = <span className="text-[var(--text-muted-2)] opacity-60">–</span>;
 
   return (
     <div className="space-y-5">
-      <header className="liquid-panel liquid-panel-strong dashboard-hero relative z-20 rounded-xl border-sky-200/70 dark:border-sky-300/15" style={{ overflow: "visible" }}>
-        <div className="grid lg:grid-cols-[minmax(0,1fr)_520px]">
-          <div className="border-b border-sky-200/70 p-5 dark:border-sky-300/15 lg:border-b-0 lg:border-r">
-            <div className="min-w-0">
-              <span className="inline-flex items-center gap-2 rounded-md border border-sky-200/80 bg-sky-50/80 px-3 py-1.5 text-[11px] font-black uppercase tracking-[0.18em] text-[var(--primary-strong)] shadow-[inset_0_1px_0_rgba(255,255,255,0.7)] dark:border-sky-300/20 dark:bg-sky-400/10 dark:text-sky-200">
-                Master Data
-              </span>
-              <h1 className="mt-5 max-w-3xl text-3xl font-black tracking-normal text-foreground dark:text-white md:text-5xl">
-                Master Konsumen
-              </h1>
-              <p className="mt-2 max-w-2xl text-sm font-semibold leading-6 text-slate-600 dark:text-slate-200/90">
-                Data pelanggan trading non-gudang: grup/proyek, alamat, dan bengkel untuk dipakai saat membuat invoice.
-              </p>
-            </div>
-          </div>
+      <PageHeader
+        eyebrow="Master data"
+        title="Master Konsumen"
+        description="Pelanggan trading non-gudang: grup/proyek, alamat, dan bengkel untuk invoice."
+        actions={<NgKonsumenForm triggerClassName="h-10 justify-center px-4" />}
+      />
 
-          <section className="grid grid-cols-2 divide-x divide-y divide-sky-200/60 bg-sky-50/55 dark:divide-sky-300/15 dark:bg-slate-950/25">
-            {kpi.map(({ icon: Icon, label, value, detail }) => (
-              <div key={label} className="p-4">
-                <div className="flex items-start justify-between gap-3">
-                  <div>
-                    <p className="text-[10px] font-black uppercase tracking-[0.14em] text-slate-500 dark:text-slate-400">{label}</p>
-                    <p className="mt-1 text-2xl font-black tracking-normal text-foreground dark:text-white">{value}</p>
-                    <p className="mt-1 text-[11px] font-semibold text-slate-500 dark:text-slate-400">{detail}</p>
-                  </div>
-                  <div className="flex h-9 w-9 items-center justify-center rounded-md border border-sky-200/80 bg-white/80 text-[var(--primary-strong)] shadow-[inset_0_1px_0_rgba(255,255,255,0.72)] backdrop-blur-xl dark:border-sky-300/15 dark:bg-sky-400/10 dark:text-sky-200">
-                    <Icon size={17} />
-                  </div>
-                </div>
-              </div>
-            ))}
-          </section>
-        </div>
-      </header>
+      <StatGrid>
+        <StatCard icon={Users} tone="sky" label="Total Konsumen" value={String(stats.total)} hint="Terdaftar" />
+        <StatCard icon={UserCheck} tone="emerald" label="Aktif Transaksi" value={String(stats.withInvoice)} hint="Punya invoice" />
+        <StatCard icon={Layers} tone="violet" label="Jumlah Grup" value={String(stats.grupCount)} hint="Grup / proyek" />
+        <StatCard icon={FileText} tone="slate" label="Total Invoice" value={String(stats.totalInvoice)} hint="Dari semua konsumen" />
+      </StatGrid>
 
-      {/* Toolbar */}
-      <Card className="liquid-panel relative z-30 rounded-xl border-sky-200/70 p-3 dark:border-sky-300/15 md:p-4" style={{ overflow: "visible" }}>
-        <div className="grid gap-3 sm:grid-cols-[minmax(280px,1fr)_auto] sm:items-center">
-          <div className="relative w-full min-w-0">
-            <Search size={17} className="pointer-events-none absolute left-4 top-1/2 z-10 -translate-y-1/2 text-[var(--text-soft)]" />
-            <Input
-              value={q}
-              onChange={(e) => setQ(e.target.value)}
-              maxLength={FIELD_LIMITS.search}
-              placeholder="Cari nama, grup, alamat, atau workshop..."
-              className="h-12 rounded-lg border-sky-200/80 bg-white/80 pl-11 pr-4 font-semibold shadow-[inset_0_1px_0_rgba(255,255,255,0.72)] backdrop-blur-xl dark:border-sky-300/15 dark:bg-slate-950/45"
-            />
-          </div>
-          <NgKonsumenForm triggerClassName="h-12 w-full justify-center px-5 sm:w-auto sm:min-w-[190px]" />
+      <FilterBar>
+        <div className="relative">
+          <Search size={16} className="pointer-events-none absolute left-3 top-1/2 z-10 -translate-y-1/2 text-[var(--text-muted-2)]" />
+          <Input
+            value={q}
+            onChange={(e) => setQ(e.target.value)}
+            maxLength={FIELD_LIMITS.search}
+            placeholder="Cari nama, grup, alamat, atau bengkel…"
+            aria-label="Cari konsumen"
+            className="h-10 rounded-xl pl-9 text-[13px] font-medium"
+          />
         </div>
-      </Card>
+      </FilterBar>
 
       {/* Bulk delete bar */}
       {selectedIds.size > 0 && (
-        <div className="flex flex-col gap-3 rounded-lg border border-rose-200 bg-rose-50 px-4 py-3 dark:border-rose-900/50 dark:bg-rose-950/20 sm:flex-row sm:items-center sm:justify-between anim-rise">
+        <div className="anim-rise flex flex-col gap-3 rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 dark:border-rose-400/25 dark:bg-rose-500/10 sm:flex-row sm:items-center sm:justify-between">
           <p className="text-sm font-bold text-rose-700 dark:text-rose-300">{selectedIds.size} konsumen dipilih</p>
           <div className="flex items-center gap-2">
             <Button size="sm" variant="outline" onClick={() => setSelectedIds(new Set())}>Batal</Button>
@@ -175,113 +153,122 @@ export function NgKonsumenClient({ initialItems }: { initialItems: NgKonsumenDat
         </div>
       )}
 
-      {/* Table */}
-      <Card className="liquid-panel relative z-0 overflow-hidden rounded-xl border-sky-200/70 p-0 dark:border-sky-300/15">
-        <div className="flex flex-col gap-2 border-b border-sky-200/70 bg-sky-50/55 px-5 py-4 dark:border-sky-300/15 dark:bg-slate-950/25 sm:flex-row sm:items-center sm:justify-between">
-          <div>
-            <p className="text-sm font-black text-foreground">Daftar Konsumen</p>
-            <p className="mt-0.5 text-xs font-medium text-slate-500">Konsumen yang sudah punya invoice tidak bisa dihapus (histori dilindungi).</p>
+      <Panel
+        title="Daftar Konsumen"
+        description="Konsumen yang sudah punya invoice tidak bisa dihapus (histori dilindungi)"
+        icon={Users}
+        flush
+        action={<span className="tnum text-xs font-semibold text-[var(--text-muted-2)]">{filtered.length} hasil</span>}
+      >
+        {filtered.length === 0 ? (
+          <div className="flex flex-col items-center justify-center gap-2 py-16 text-center">
+            <Users size={26} className="text-[var(--text-muted-2)] opacity-70" />
+            <p className="text-sm font-semibold text-foreground">Belum ada konsumen</p>
+            <p className="text-xs text-[var(--text-muted-2)]">Tambahkan konsumen untuk mempercepat pembuatan invoice.</p>
           </div>
-          <Badge tone={selectedIds.size > 0 ? "amber" : "blue"}>{filtered.length} hasil</Badge>
-        </div>
-        <div className="hidden overflow-x-auto md:block">
-          <Table variant="plain" tableClassName="min-w-[820px]">
-            <thead>
-              <tr>
-                <Th className="w-10 text-center">
-                  <input type="checkbox" checked={allOnPageSelected} onChange={toggleSelectAllOnPage} className="h-4 w-4 rounded border-border cursor-pointer" aria-label="Pilih semua konsumen di halaman ini" />
-                </Th>
-                <Th>Konsumen</Th>
-                <Th>Alamat</Th>
-                <Th>Bengkel</Th>
-                <Th className="text-center">Invoice</Th>
-                <Th className="text-center">Aksi</Th>
-              </tr>
-            </thead>
-            <tbody>
-              {pg.pageData.map((item) => (
-                <tr key={item.id}>
-                  <Td className="text-center">
-                    <input type="checkbox" checked={selectedIds.has(item.id)} onChange={() => toggleSelect(item.id)} className="h-4 w-4 rounded border-border cursor-pointer" aria-label={`Pilih ${item.nama}`} />
-                  </Td>
-                  <Td>
-                    <div className="font-bold text-foreground text-xs sm:text-sm">{item.nama}</div>
-                    {item.namaGrup && <div className="mt-0.5 text-[10px] font-semibold text-[var(--primary-strong)]">{item.namaGrup}</div>}
-                  </Td>
-                  <Td className="max-w-[240px] truncate text-xs text-slate-500" title={item.alamat ?? ""}>{item.alamat ?? "-"}</Td>
-                  <Td className="text-xs text-slate-500">{item.namaWorkshop ?? "-"}</Td>
-                  <Td className="text-center">
-                    <Badge tone={item.invoiceCount > 0 ? "green" : "slate"} className="text-[10px]">{item.invoiceCount}</Badge>
-                  </Td>
-                  <Td className="text-center">
-                    <Tooltip label="Ubah konsumen" description="Edit nama, grup, alamat & workshop">
-                      <TableActionButton
-                        type="button"
-                        onClick={() => handleEdit(item)}
-                        aria-label={`Ubah ${item.nama}`}
-                      >
-                        <Pencil size={15} />
-                      </TableActionButton>
-                    </Tooltip>
-                  </Td>
-                </tr>
-              ))}
-              {filtered.length === 0 && (
-                <tr>
-                  <Td colSpan={6} className="py-16 text-center text-slate-400 select-none">
-                    <Users className="mx-auto mb-2 text-slate-200 dark:text-slate-700" size={32} />
-                    <p className="text-sm font-semibold">Belum ada konsumen</p>
-                    <p className="text-xs">Tambahkan konsumen untuk mempercepat pembuatan invoice.</p>
-                  </Td>
-                </tr>
-              )}
-            </tbody>
-          </Table>
-        </div>
-        {/* Mobile (<768px): kartu per konsumen, aksi terjangkau tanpa scroll samping */}
-        <div className="md:hidden">
-          {filtered.length === 0 ? (
-            <div className="py-12 text-center text-slate-400 select-none">
-              <Users className="mx-auto mb-2 text-slate-200 dark:text-slate-700" size={32} />
-              <p className="text-sm font-semibold">Belum ada konsumen</p>
-              <p className="text-xs">Tambahkan konsumen untuk mempercepat pembuatan invoice.</p>
+        ) : (
+          <>
+            <div className="hidden lg:block">
+              <Table variant="plain" tableClassName="[&_th]:px-4 [&_td]:px-4">
+                <thead>
+                  <tr>
+                    <Th className="w-10 text-center">
+                      <input
+                        ref={selectAllRef}
+                        type="checkbox"
+                        checked={allOnPageSelected}
+                        onChange={toggleSelectAllOnPage}
+                        className="h-4 w-4 cursor-pointer"
+                        aria-label="Pilih semua konsumen di halaman ini"
+                      />
+                    </Th>
+                    <Th>Konsumen</Th>
+                    <Th>Alamat</Th>
+                    <Th>Bengkel</Th>
+                    <Th className="w-24 text-center">Invoice</Th>
+                    <Th className="w-14 text-center">Aksi</Th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {pg.pageData.map((item) => {
+                    const selected = selectedIds.has(item.id);
+                    return (
+                      <tr key={item.id} className={selected ? "bg-rose-50/70 dark:bg-rose-500/[0.07]" : undefined}>
+                        <Td className="text-center">
+                          <input
+                            type="checkbox"
+                            checked={selected}
+                            onChange={() => toggleSelect(item.id)}
+                            className="h-4 w-4 cursor-pointer"
+                            aria-label={`Pilih ${item.nama}`}
+                          />
+                        </Td>
+                        <Td className="min-w-[180px]">
+                          <p className="font-semibold text-foreground">{item.nama}</p>
+                          {item.namaGrup && <p className="text-[11px] text-[var(--text-muted-2)]">{item.namaGrup}</p>}
+                        </Td>
+                        <Td className="max-w-[280px] truncate text-xs text-[var(--text-soft)]" title={item.alamat ?? ""}>
+                          {item.alamat || dash}
+                        </Td>
+                        <Td className="whitespace-nowrap text-xs text-[var(--text-soft)]">{item.namaWorkshop || dash}</Td>
+                        <Td className="text-center">
+                          {item.invoiceCount > 0 ? (
+                            <span className="tnum inline-flex min-w-7 justify-center rounded-full bg-emerald-500/12 px-2 py-0.5 text-[11px] font-bold text-emerald-700 dark:text-emerald-300">
+                              {item.invoiceCount}
+                            </span>
+                          ) : (
+                            <span className="tnum text-xs text-[var(--text-muted-2)] opacity-60">0</span>
+                          )}
+                        </Td>
+                        <Td className="text-center">
+                          <IconAction title="Ubah konsumen" onClick={() => handleEdit(item)}>
+                            <Pencil size={15} />
+                          </IconAction>
+                        </Td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </Table>
             </div>
-          ) : (
-            <ul className="divide-y divide-sky-200/70 dark:divide-sky-300/15">
-              {pg.pageData.map((item) => (
-                <li key={item.id} className="space-y-3 px-4 py-4">
-                  <div className="flex items-start gap-3">
-                    <input type="checkbox" checked={selectedIds.has(item.id)} onChange={() => toggleSelect(item.id)} className="mt-1 h-5 w-5 shrink-0 rounded border-border cursor-pointer" aria-label={`Pilih ${item.nama}`} />
+
+            {/* Di bawah lg: daftar ringkas */}
+            <ul className="divide-y divide-border lg:hidden">
+              {pg.pageData.map((item) => {
+                const selected = selectedIds.has(item.id);
+                return (
+                  <li key={item.id} className={selected ? "flex items-start gap-3 bg-rose-50/70 px-4 py-3 dark:bg-rose-500/[0.07]" : "flex items-start gap-3 px-4 py-3"}>
+                    <input
+                      type="checkbox"
+                      checked={selected}
+                      onChange={() => toggleSelect(item.id)}
+                      className="mt-0.5 h-4 w-4 shrink-0 cursor-pointer"
+                      aria-label={`Pilih ${item.nama}`}
+                    />
                     <div className="min-w-0 flex-1">
-                      <p className="break-words text-sm font-bold text-foreground">{item.nama}</p>
-                      {item.namaGrup && <p className="mt-0.5 text-xs font-semibold text-[var(--primary-strong)]">{item.namaGrup}</p>}
+                      <div className="flex items-center justify-between gap-2">
+                        <p className="truncate text-sm font-semibold text-foreground">{item.nama}</p>
+                        <span className="tnum shrink-0 text-[11px] font-semibold text-[var(--text-muted-2)]">{item.invoiceCount} invoice</span>
+                      </div>
+                      {item.namaGrup && <p className="truncate text-[11px] text-[var(--text-muted-2)]">{item.namaGrup}</p>}
+                      <p className="mt-1 truncate text-xs text-[var(--text-soft)]">
+                        {[item.alamat, item.namaWorkshop].filter(Boolean).join(" · ") || "Alamat & bengkel belum diisi"}
+                      </p>
                     </div>
-                    <Badge tone={item.invoiceCount > 0 ? "green" : "slate"} className="shrink-0 text-[10px]">{item.invoiceCount} invoice</Badge>
-                  </div>
-                  <dl className="space-y-2 rounded-lg border border-sky-200/60 bg-sky-50/40 p-3 text-xs dark:border-sky-300/15 dark:bg-slate-950/25">
-                    <div>
-                      <dt className="text-[10px] font-bold uppercase tracking-wide text-slate-400">Alamat</dt>
-                      <dd className="mt-0.5 break-words text-slate-600 dark:text-slate-300">{item.alamat ?? "-"}</dd>
-                    </div>
-                    <div>
-                      <dt className="text-[10px] font-bold uppercase tracking-wide text-slate-400">Bengkel</dt>
-                      <dd className="mt-0.5 break-words text-slate-600 dark:text-slate-300">{item.namaWorkshop ?? "-"}</dd>
-                    </div>
-                  </dl>
-                  <Button size="sm" variant="outline" onClick={() => handleEdit(item)} className="min-h-10 w-full" aria-label={`Ubah ${item.nama}`}>
-                    <Pencil size={15} /> Ubah
-                  </Button>
-                </li>
-              ))}
+                    <IconAction title="Ubah konsumen" onClick={() => handleEdit(item)}>
+                      <Pencil size={15} />
+                    </IconAction>
+                  </li>
+                );
+              })}
             </ul>
-          )}
-        </div>
-        {filtered.length > 0 && (
-          <div className="border-t border-sky-200/70 bg-white/55 px-4 py-3 backdrop-blur-xl dark:border-sky-300/15 dark:bg-slate-950/25">
-            <Pagination page={pg.page} perPage={pg.perPage} total={pg.total} onPage={pg.setPage} />
-          </div>
+
+            <div className="border-t border-border px-4 py-3 sm:px-5">
+              <Pagination page={pg.page} perPage={pg.perPage} total={pg.total} onPage={pg.setPage} />
+            </div>
+          </>
         )}
-      </Card>
+      </Panel>
 
       {/* Delete confirm */}
       {showDeleteConfirm && (

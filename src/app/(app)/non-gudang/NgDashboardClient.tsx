@@ -1,7 +1,7 @@
 "use client";
 
 import dynamic from "next/dynamic";
-import { useState, useTransition, type ElementType, type ReactNode } from "react";
+import { useState, useTransition } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import {
   AlertTriangle,
@@ -9,24 +9,30 @@ import {
   Check,
   Download,
   FileText,
-  Percent,
+  LineChart,
   ShoppingBag,
   Store,
   TrendingUp,
   Wallet,
 } from "lucide-react";
 import { toast } from "sonner";
-import { Badge, Button, Table, Td, Th } from "@/components/ui";
+import { Button, Table, Td, Th } from "@/components/ui";
+import { PageHeader, Panel, StatCard, StatGrid, TonePill } from "@/components/page";
 import { PeriodFilter, type ResolvedPeriodRange } from "@/components/PeriodFilter";
 import { exportNgExcel } from "@/lib/export/exportNgExcel";
 import { cn, formatRupiah } from "@/lib/utils";
 import type { NgAnalisa } from "@/lib/ngReports";
 
-const NgDashboardCharts = dynamic(() => import("./NgDashboardCharts").then((m) => ({ default: m.NgDashboardCharts })), {
-  ssr: false,
-});
+// Recharts hanya di client; skeleton mengisi tinggi kontainer.
+const chartLoading = () => <div className="h-full w-full animate-pulse rounded-xl bg-[var(--surface-2)] opacity-50" />;
+const NgTrendChart = dynamic(() => import("./NgDashboardCharts").then((m) => m.NgTrendChart), { ssr: false, loading: chartLoading });
+const NgRankBarChart = dynamic(() => import("./NgDashboardCharts").then((m) => m.NgRankBarChart), { ssr: false, loading: chartLoading });
 
-const BAR_COLORS = ["#0284c7", "#10b981", "#f97316", "#8b5cf6", "#ef4444", "#eab308", "#14b8a6", "#ec4899"];
+const SERIES = [
+  { label: "Pembelian", color: "#0ea5e9" },
+  { label: "Omzet", color: "#10b981" },
+  { label: "Keuntungan", color: "#f59e0b" },
+];
 
 function splitPeriodLabel(label: string) {
   const match = label.match(/^(.+?)\s*\((.+)\)$/);
@@ -56,19 +62,8 @@ export function NgDashboardClient({
   const { summary, perToko, topProduk, tren } = analisa;
   const periodDisplay = splitPeriodLabel(periodeLabel);
 
-  const primaryStats = [
-    { icon: TrendingUp, tone: "blue" as const, label: "Total Omzet", value: formatRupiah(summary.totalOmzet), hint: "Penjualan ke konsumen" },
-    { icon: BarChart3, tone: "emerald" as const, label: "Total Keuntungan", value: formatRupiah(summary.totalProfit), hint: "Omzet - pembelian" },
-    { icon: Percent, tone: "amber" as const, label: "Margin", value: `${summary.margin.toFixed(2)}%`, hint: `Markup ${summary.markup.toFixed(2)}%` },
-    { icon: Wallet, tone: "amber" as const, label: "Sisa Piutang", value: formatRupiah(summary.totalPiutang), hint: "Belum tertagih" },
-  ];
-
-  const secondaryStats = [
-    { icon: ShoppingBag, tone: "slate" as const, label: "Total Pembelian", value: formatRupiah(summary.totalPembelian), hint: "Modal beli seluruh toko" },
-    { icon: FileText, tone: "blue" as const, label: "Jumlah Invoice", value: String(summary.jumlahInvoice), hint: `Lunas ${summary.jumlahLunas} | Tempo ${summary.jumlahTempo} | Sebagian ${summary.jumlahPartial}` },
-    { icon: Store, tone: "emerald" as const, label: "Toko Sumber Aktif", value: String(perToko.length), hint: "Toko dengan transaksi" },
-    { icon: AlertTriangle, tone: summary.jumlahTerlambat > 0 ? ("amber" as const) : ("slate" as const), label: "Invoice Terlambat", value: String(summary.jumlahTerlambat), hint: "Belum lunas dan lewat tempo" },
-  ];
+  const tokoChart = perToko.slice(0, 8).map((t) => ({ name: t.namaToko, pembelian: t.totalPembelian }));
+  const produkChart = topProduk.slice(0, 8).map((p) => ({ name: p.nama, omzet: p.omzet }));
 
   function applyRange(range: ResolvedPeriodRange) {
     const params = new URLSearchParams();
@@ -108,344 +103,269 @@ export function NgDashboardClient({
 
   return (
     <div className={cn("space-y-5", filtering && "opacity-60 transition-opacity")}>
-      <header className="liquid-panel liquid-panel-strong dashboard-hero relative z-20 rounded-xl border-sky-200/70 dark:border-sky-300/15" style={{ overflow: "visible" }}>
-        <div className="grid lg:grid-cols-[minmax(0,1fr)_420px]">
-          <div className="border-b border-sky-100/80 p-5 dark:border-sky-300/10 lg:border-b-0 lg:border-r md:p-6">
-            <p className="inline-flex items-center gap-2 rounded-md border border-sky-200 bg-sky-50/90 px-3 py-1 text-[11px] font-black uppercase tracking-[0.18em] text-[var(--primary-strong)] shadow-sm dark:border-sky-300/20 dark:bg-sky-400/10 dark:text-sky-200">
-              <span className="h-1.5 w-1.5 rounded-full bg-[var(--primary)] shadow-[0_0_14px_rgba(14,165,233,0.85)]" />
-              Dashboard Non-Gudang
-            </p>
-            <h1 className="mt-5 max-w-3xl text-3xl font-black tracking-normal text-foreground dark:text-white md:text-5xl">
-              Dashboard Analisa Margin
-            </h1>
-            <p className="mt-3 max-w-2xl text-sm font-semibold leading-6 text-slate-600 dark:text-slate-200/90 md:text-base">
-              Pantau omzet, profit, piutang, performa toko sumber, dan produk paling kuat dalam satu layar analisa.
-            </p>
-          </div>
+      <PageHeader
+        eyebrow="Non-Gudang"
+        title="Dashboard Analisa Margin"
+        description="Omzet, keuntungan, piutang, performa toko sumber, dan produk terkuat."
+        actions={
+          <>
+            <PeriodFilter
+              onChange={handlePeriodChange}
+              defaultPreset={initialFrom || initialTo ? "custom" : "all"}
+              defaultFrom={initialFrom}
+              defaultTo={initialTo}
+              align="right"
+            />
+            {pendingRange && (
+              <Button size="sm" variant="outline" onClick={() => pendingRange && applyRange(pendingRange)} disabled={!canApply || filtering}>
+                <Check size={14} /> Terapkan
+              </Button>
+            )}
+            <Button size="sm" variant="success" onClick={handleExport} disabled={exporting}>
+              <Download size={14} /> {exporting ? "Mengunduh..." : "Unduh Excel"}
+            </Button>
+          </>
+        }
+      />
 
-          <div className="relative z-40 flex flex-col justify-between gap-4 bg-sky-50/55 p-5 backdrop-blur-xl dark:bg-slate-950/30 md:p-6">
-            <div>
-              <p className="text-[11px] font-black uppercase tracking-[0.16em] text-slate-500 dark:text-sky-200/60">Periode aktif</p>
-              <p className="mt-2 truncate text-xl font-black tracking-tight text-foreground dark:text-white sm:text-2xl" title={periodeLabel}>
-                {periodDisplay.title}
-              </p>
-              {periodDisplay.range && (
-                <p className="mt-1 truncate text-sm font-bold text-slate-600 dark:text-slate-200" title={periodDisplay.range}>
-                  {periodDisplay.range}
-                </p>
-              )}
-              <p className="mt-1 text-xs font-semibold text-slate-500 dark:text-slate-300">{summary.jumlahInvoice} invoice dianalisa</p>
-            </div>
-            <div className="flex flex-col gap-2">
-              <PeriodFilter
-                onChange={handlePeriodChange}
-                defaultPreset={initialFrom || initialTo ? "custom" : "all"}
-                defaultFrom={initialFrom}
-                defaultTo={initialTo}
-              />
-              {pendingRange && (
-                <p className="text-[11px] font-semibold text-amber-600 dark:text-amber-300">
-                  Rentang custom belum diterapkan - klik <span className="font-bold">Terapkan</span>.
-                </p>
-              )}
-              <div className="flex flex-wrap gap-2">
-                {pendingRange && (
-                  <Button
-                    variant="outline"
-                    onClick={() => pendingRange && applyRange(pendingRange)}
-                    disabled={!canApply || filtering}
-                    className="h-12 flex-1 font-black"
-                  >
-                    <Check size={15} />
-                    Terapkan
-                  </Button>
-                )}
-                <Button
-                  variant="primary"
-                  onClick={handleExport}
-                  disabled={exporting}
-                  className="h-12 flex-1 font-black"
-                >
-                  <Download size={15} />
-                  {exporting ? "Mengunduh..." : "Unduh Excel"}
-                </Button>
-              </div>
-            </div>
+      <p className="-mt-2 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-[var(--text-muted-2)]">
+        <span className="font-semibold text-[var(--text-soft)]">{periodDisplay.title}</span>
+        {periodDisplay.range && <span>· {periodDisplay.range}</span>}
+        <span>· {summary.jumlahInvoice} invoice dianalisa</span>
+        {pendingRange && <span className="font-semibold text-amber-600 dark:text-amber-300">· rentang custom belum diterapkan</span>}
+      </p>
+
+      <StatGrid>
+        <StatCard icon={TrendingUp} tone="sky" label="Total Omzet" value={formatRupiah(summary.totalOmzet)} hint="Penjualan ke konsumen" />
+        <StatCard
+          icon={BarChart3}
+          tone="emerald"
+          label="Total Keuntungan"
+          value={formatRupiah(summary.totalProfit)}
+          badge={`${summary.margin.toFixed(2)}%`}
+          hint={`Margin · markup ${summary.markup.toFixed(2)}%`}
+        />
+        <StatCard
+          icon={Wallet}
+          tone="amber"
+          label="Sisa Piutang"
+          value={formatRupiah(summary.totalPiutang)}
+          hint={summary.jumlahTerlambat > 0 ? `${summary.jumlahTerlambat} invoice terlambat` : "Belum tertagih"}
+        />
+        <StatCard icon={ShoppingBag} tone="slate" label="Total Pembelian" value={formatRupiah(summary.totalPembelian)} hint="Modal beli seluruh toko" />
+      </StatGrid>
+
+      {/* Ringkasan sekunder dalam satu strip */}
+      <div className="bento-card grid grid-cols-1 divide-y divide-border sm:grid-cols-3 sm:divide-x sm:divide-y-0">
+        <MiniStat icon={FileText} label="Jumlah invoice" value={String(summary.jumlahInvoice)} hint={`Lunas ${summary.jumlahLunas} · Tempo ${summary.jumlahTempo} · Sebagian ${summary.jumlahPartial}`} />
+        <MiniStat icon={Store} label="Toko sumber aktif" value={String(perToko.length)} hint="Toko dengan transaksi" />
+        <MiniStat
+          icon={AlertTriangle}
+          label="Invoice terlambat"
+          value={String(summary.jumlahTerlambat)}
+          hint="Belum lunas & lewat tempo"
+          warn={summary.jumlahTerlambat > 0}
+        />
+      </div>
+
+      <Panel
+        title="Tren Bulanan"
+        description="Pembelian, omzet, dan keuntungan per bulan"
+        icon={LineChart}
+        action={
+          <div className="flex flex-wrap items-center gap-3">
+            {SERIES.map((s) => (
+              <span key={s.label} className="inline-flex items-center gap-1.5 text-[11px] font-semibold text-[var(--text-soft)]">
+                <span className="h-2 w-2 rounded-full" style={{ backgroundColor: s.color }} />
+                {s.label}
+              </span>
+            ))}
           </div>
+        }
+      >
+        <div className="h-[260px] sm:h-[300px]">
+          {tren.length === 0 ? <EmptyBlock text="Belum ada data pada periode ini." /> : <NgTrendChart tren={tren} />}
         </div>
-      </header>
-
-      <section className="relative z-0 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-        {primaryStats.map((stat) => (
-          <StatCard key={stat.label} {...stat} priority />
-        ))}
-      </section>
-
-      <section className="relative z-0 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-        {secondaryStats.map((stat) => (
-          <StatCard key={stat.label} {...stat} />
-        ))}
-      </section>
-
-      <NgDashboardCharts tren={tren} perToko={perToko} topProduk={topProduk} />
-
-      <Panel title="Rincian Pembelian per Toko" icon={<Store size={16} />}>
-        {perToko.length === 0 ? (
-          <EmptyChart h={120} text="Belum ada data." />
-        ) : (
-          <>
-            <TokoMobileList rows={perToko} />
-            <div className="hidden overflow-x-auto md:block">
-              <Table variant="plain" tableClassName="min-w-[900px]">
-                <thead>
-                  <tr>
-                    <Th>#</Th>
-                    <Th>Toko Sumber</Th>
-                    <Th className="text-right">Invoice</Th>
-                    <Th className="text-right">Qty</Th>
-                    <Th className="text-right">Pembelian</Th>
-                    <Th className="text-right">Omzet</Th>
-                    <Th className="text-right">Margin</Th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {perToko.map((row, index) => (
-                    <tr key={row.namaToko}>
-                      <Td className="text-xs text-slate-400">{index + 1}</Td>
-                      <Td className="text-xs font-semibold">
-                        <div className="flex items-center gap-2">
-                          <span
-                            className="h-2 w-2 shrink-0 rounded-full"
-                            style={{ backgroundColor: BAR_COLORS[index % BAR_COLORS.length] }}
-                          />
-                          <span>{row.namaToko}</span>
-                        </div>
-                      </Td>
-                      <Td className="text-right text-xs">{row.jumlahInvoice}</Td>
-                      <Td className="text-right text-xs">{row.totalQty}</Td>
-                      <Td className="whitespace-nowrap text-right text-xs font-bold">{formatRupiah(row.totalPembelian)}</Td>
-                      <Td className="whitespace-nowrap text-right text-xs">{formatRupiah(row.totalOmzet)}</Td>
-                      <Td className="text-right">
-                        <Badge tone={row.margin >= 15 ? "green" : row.margin >= 8 ? "blue" : "amber"}>{row.margin.toFixed(1)}%</Badge>
-                      </Td>
-                    </tr>
-                  ))}
-                </tbody>
-              </Table>
-            </div>
-          </>
-        )}
       </Panel>
 
-      <Panel title="Top Produk" icon={<BarChart3 size={16} />}>
-        {topProduk.length === 0 ? (
-          <EmptyChart h={120} text="Belum ada data." />
-        ) : (
-          <>
-            <ProdukMobileList rows={topProduk} />
-            <div className="hidden overflow-x-auto md:block">
-              <Table variant="plain" tableClassName="min-w-[780px]">
-                <thead>
-                  <tr>
-                    <Th>#</Th>
-                    <Th>Nama Barang</Th>
-                    <Th className="text-right">Qty</Th>
-                    <Th className="text-right">Omzet</Th>
-                    <Th className="text-right">Keuntungan</Th>
-                    <Th className="text-right">Margin</Th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {topProduk.map((row, index) => (
-                    <tr key={row.nama}>
-                      <Td className="text-xs text-slate-400">{index + 1}</Td>
-                      <Td className="text-xs font-semibold">
-                        <div className="flex items-center gap-2">
-                          <span
-                            className="h-2 w-2 shrink-0 rounded-full"
-                            style={{ backgroundColor: BAR_COLORS[index % BAR_COLORS.length] }}
-                          />
-                          <span>{row.nama}</span>
-                        </div>
-                      </Td>
-                      <Td className="text-right text-xs">{row.qty}</Td>
-                      <Td className="whitespace-nowrap text-right text-xs font-bold">{formatRupiah(row.omzet)}</Td>
-                      <Td className="whitespace-nowrap text-right text-xs font-semibold text-emerald-600 dark:text-emerald-400">{formatRupiah(row.profit)}</Td>
-                      <Td className="text-right">
-                        <Badge tone={row.margin >= 15 ? "green" : row.margin >= 8 ? "blue" : "amber"}>{row.margin.toFixed(1)}%</Badge>
-                      </Td>
+      <div className="grid grid-cols-1 gap-5 xl:grid-cols-2">
+        <Panel title="Pembelian per Toko Sumber" description="Top 8 toko berdasarkan modal beli" icon={Store}>
+          <div className="h-[300px]">
+            {tokoChart.length === 0 ? (
+              <EmptyBlock text="Belum ada data toko." />
+            ) : (
+              <NgRankBarChart data={tokoChart} dataKey="pembelian" label="Pembelian" gradientId="ngTokoBar" from="#0284c7" to="#38bdf8" />
+            )}
+          </div>
+        </Panel>
+        <Panel title="Top Produk (Omzet)" description="Produk penyumbang omzet terbesar" icon={BarChart3} tone="emerald">
+          <div className="h-[300px]">
+            {produkChart.length === 0 ? (
+              <EmptyBlock text="Belum ada data produk." />
+            ) : (
+              <NgRankBarChart data={produkChart} dataKey="omzet" label="Omzet" gradientId="ngProdukBar" from="#059669" to="#34d399" />
+            )}
+          </div>
+        </Panel>
+      </div>
+
+      <div className="grid grid-cols-1 gap-5 2xl:grid-cols-2">
+        <Panel title="Rincian Pembelian per Toko" description={`${perToko.length} toko sumber`} icon={Store} flush>
+          {perToko.length === 0 ? (
+            <div className="p-4"><EmptyBlock text="Belum ada data." h={120} /></div>
+          ) : (
+            <>
+              <ul className="divide-y divide-border md:hidden">
+                {perToko.map((row, index) => (
+                  <li key={row.namaToko} className="flex items-center gap-3 px-4 py-3">
+                    <Rank n={index + 1} />
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate text-sm font-semibold text-foreground">{row.namaToko}</p>
+                      <p className="tnum text-[11px] text-[var(--text-muted-2)]">
+                        {row.jumlahInvoice} invoice · {row.totalQty} qty · omzet {formatRupiah(row.totalOmzet)}
+                      </p>
+                    </div>
+                    <div className="shrink-0 text-right">
+                      <p className="tnum text-sm font-semibold text-foreground">{formatRupiah(row.totalPembelian)}</p>
+                      <TonePill value={row.margin} />
+                    </div>
+                  </li>
+                ))}
+              </ul>
+              <div className="hidden md:block">
+                <Table variant="plain" tableClassName="[&_td]:whitespace-nowrap [&_th]:px-4 [&_td]:px-4">
+                  <thead>
+                    <tr>
+                      <Th className="w-12 text-center">#</Th>
+                      <Th>Toko Sumber</Th>
+                      <Th className="text-right">Invoice</Th>
+                      <Th className="text-right">Qty</Th>
+                      <Th className="text-right">Pembelian</Th>
+                      <Th className="text-right">Omzet</Th>
+                      <Th className="text-right">Margin</Th>
                     </tr>
-                  ))}
-                </tbody>
-              </Table>
-            </div>
-          </>
-        )}
-      </Panel>
+                  </thead>
+                  <tbody>
+                    {perToko.map((row, index) => (
+                      <tr key={row.namaToko}>
+                        <Td className="text-center"><Rank n={index + 1} /></Td>
+                        <Td className="font-semibold text-foreground">{row.namaToko}</Td>
+                        <Td className="tnum text-right text-[var(--text-soft)]">{row.jumlahInvoice}</Td>
+                        <Td className="tnum text-right text-[var(--text-soft)]">{row.totalQty}</Td>
+                        <Td className="tnum text-right font-semibold text-foreground">{formatRupiah(row.totalPembelian)}</Td>
+                        <Td className="tnum text-right text-[var(--text-soft)]">{formatRupiah(row.totalOmzet)}</Td>
+                        <Td className="text-right"><TonePill value={row.margin} /></Td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </Table>
+              </div>
+            </>
+          )}
+        </Panel>
+
+        <Panel title="Top Produk" description="Berdasarkan omzet pada periode aktif" icon={BarChart3} tone="emerald" flush>
+          {topProduk.length === 0 ? (
+            <div className="p-4"><EmptyBlock text="Belum ada data." h={120} /></div>
+          ) : (
+            <>
+              <ul className="divide-y divide-border md:hidden">
+                {topProduk.map((row, index) => (
+                  <li key={row.nama} className="flex items-center gap-3 px-4 py-3">
+                    <Rank n={index + 1} />
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate text-sm font-semibold text-foreground">{row.nama}</p>
+                      <p className="tnum text-[11px] text-[var(--text-muted-2)]">
+                        {row.qty} qty · untung <span className="text-emerald-600 dark:text-emerald-400">{formatRupiah(row.profit)}</span>
+                      </p>
+                    </div>
+                    <div className="shrink-0 text-right">
+                      <p className="tnum text-sm font-semibold text-foreground">{formatRupiah(row.omzet)}</p>
+                      <TonePill value={row.margin} />
+                    </div>
+                  </li>
+                ))}
+              </ul>
+              <div className="hidden md:block">
+                <Table variant="plain" tableClassName="[&_td]:whitespace-nowrap [&_th]:px-4 [&_td]:px-4">
+                  <thead>
+                    <tr>
+                      <Th className="w-12 text-center">#</Th>
+                      <Th>Nama Barang</Th>
+                      <Th className="text-right">Qty</Th>
+                      <Th className="text-right">Omzet</Th>
+                      <Th className="text-right">Keuntungan</Th>
+                      <Th className="text-right">Margin</Th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {topProduk.map((row, index) => (
+                      <tr key={row.nama}>
+                        <Td className="text-center"><Rank n={index + 1} /></Td>
+                        <Td className="max-w-[280px] truncate font-semibold text-foreground" title={row.nama}>{row.nama}</Td>
+                        <Td className="tnum text-right text-[var(--text-soft)]">{row.qty}</Td>
+                        <Td className="tnum text-right font-semibold text-foreground">{formatRupiah(row.omzet)}</Td>
+                        <Td className="tnum text-right text-emerald-600 dark:text-emerald-400">{formatRupiah(row.profit)}</Td>
+                        <Td className="text-right"><TonePill value={row.margin} /></Td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </Table>
+              </div>
+            </>
+          )}
+        </Panel>
+      </div>
     </div>
   );
 }
 
-function Panel({ title, desc, icon, children }: { title: string; desc?: string; icon?: ReactNode; children: ReactNode }) {
-  return (
-    <section className="overflow-hidden rounded-xl border border-sky-200/70 bg-white/85 shadow-[0_22px_60px_-46px_rgba(8,47,73,0.75)] backdrop-blur-xl dark:border-sky-300/15 dark:bg-slate-900/80">
-      <header className="flex items-center gap-2.5 border-b border-sky-100/80 bg-sky-50/60 px-4 py-3.5 dark:border-sky-300/10 dark:bg-slate-950/30 sm:px-5">
-        {icon && <span className="flex h-8 w-8 items-center justify-center rounded-md bg-sky-50 text-[var(--primary-strong)] ring-1 ring-sky-100 dark:bg-sky-400/15 dark:text-sky-200 dark:ring-sky-300/20">{icon}</span>}
-        <div className="min-w-0">
-          <h2 className="text-sm font-black leading-tight text-foreground dark:text-white">{title}</h2>
-          {desc && <p className="mt-0.5 text-xs font-semibold text-slate-500 dark:text-slate-300">{desc}</p>}
-        </div>
-      </header>
-      <div className="p-4 sm:p-5">{children}</div>
-    </section>
-  );
-}
-
-function StatCard({
+function MiniStat({
   icon: Icon,
   label,
   value,
   hint,
-  tone,
-  priority = false,
+  warn = false,
 }: {
-  icon: ElementType;
+  icon: React.ElementType;
   label: string;
   value: string;
   hint: string;
-  tone: "emerald" | "blue" | "amber" | "slate";
-  priority?: boolean;
+  warn?: boolean;
 }) {
-  const tones = {
-    emerald: {
-      icon: "bg-emerald-50 text-emerald-700 ring-emerald-100 dark:bg-emerald-400/20 dark:text-emerald-100 dark:ring-emerald-300/25",
-      glow: "from-emerald-400/10 via-transparent to-transparent dark:from-emerald-400/20",
-      rail: "bg-emerald-400",
-    },
-    blue: {
-      icon: "bg-sky-50 text-[var(--primary-strong)] ring-sky-100 dark:bg-sky-400/20 dark:text-sky-100 dark:ring-sky-300/25",
-      glow: "from-sky-400/10 via-transparent to-transparent dark:from-sky-400/20",
-      rail: "bg-sky-400",
-    },
-    amber: {
-      icon: "bg-amber-50 text-amber-700 ring-amber-100 dark:bg-amber-400/20 dark:text-amber-100 dark:ring-amber-300/25",
-      glow: "from-amber-300/8 via-transparent to-transparent dark:from-amber-400/20",
-      rail: "bg-amber-400",
-    },
-    slate: {
-      icon: "bg-slate-50 text-slate-600 ring-slate-200 dark:bg-slate-300/15 dark:text-slate-100 dark:ring-slate-300/20",
-      glow: "from-sky-200/10 via-transparent to-transparent dark:from-slate-300/15",
-      rail: "bg-slate-300",
-    },
-  };
-  const toneClass = tones[tone];
-
   return (
-    <article className="group relative overflow-hidden rounded-xl border border-sky-200/80 bg-[rgba(255,255,255,0.94)] p-4 shadow-[0_18px_45px_-34px_rgba(8,47,73,0.32),inset_0_1px_0_rgba(255,255,255,0.78)] backdrop-blur-2xl transition hover:border-sky-300/90 hover:bg-white dark:border-sky-300/20 dark:bg-slate-900/75 dark:shadow-[0_24px_70px_-50px_rgba(8,47,73,0.95)] dark:hover:border-sky-300/30 dark:hover:bg-slate-900/90 sm:p-5">
-      <span className={cn("pointer-events-none absolute inset-x-5 top-0 h-px bg-gradient-to-r", toneClass.glow)} />
-      <span className={cn("pointer-events-none absolute left-0 top-5 h-10 w-1 rounded-r-full opacity-80 shadow-[0_0_18px_currentColor]", toneClass.rail)} />
-      <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(135deg,rgba(255,255,255,0.68),transparent_42%),radial-gradient(circle_at_92%_16%,rgba(14,165,233,0.045),transparent_30%),radial-gradient(circle_at_94%_92%,rgba(245,158,11,0.035),transparent_26%)] dark:bg-none" />
-      <div className={cn("pointer-events-none absolute -right-12 -top-16 h-28 w-28 rounded-full bg-gradient-to-br blur-3xl", toneClass.glow)} />
-      <div className="relative z-10 flex items-start justify-between gap-3">
-        <div className="min-w-0">
-          <p className="text-[11px] font-black uppercase tracking-[0.12em] text-slate-500 dark:text-sky-100/70">{label}</p>
-          <p className={cn("mt-3 truncate font-black tracking-tight text-foreground dark:text-white", priority ? "text-2xl" : "text-xl")}>{value}</p>
-          <p className="mt-1 truncate text-xs font-bold text-slate-500 dark:text-slate-200/90" title={hint}>{hint}</p>
-        </div>
-        <div className={cn("flex h-10 w-10 shrink-0 items-center justify-center rounded-lg ring-1 shadow-[inset_0_1px_0_rgba(255,255,255,0.25),0_12px_30px_-18px_currentColor] transition group-hover:scale-[1.04]", toneClass.icon)}>
-          <Icon size={18} />
-        </div>
+    <div className="flex items-center gap-3 px-4 py-3.5 sm:px-5">
+      <Icon size={18} className={warn ? "shrink-0 text-amber-500" : "shrink-0 text-[var(--text-muted-2)]"} />
+      <div className="min-w-0">
+        <p className="text-[11px] font-semibold uppercase tracking-wider text-[var(--text-muted-2)]">{label}</p>
+        <p className="mt-0.5 flex items-baseline gap-2">
+          <span className={cn("tnum font-display text-lg font-extrabold text-foreground", warn && "text-amber-600 dark:text-amber-300")}>{value}</span>
+          <span className="truncate text-[11px] text-[var(--text-muted-2)]" title={hint}>{hint}</span>
+        </p>
       </div>
-    </article>
-  );
-}
-
-function TokoMobileList({ rows }: { rows: NgAnalisa["perToko"] }) {
-  return (
-    <div className="space-y-3 md:hidden">
-      {rows.map((row, index) => (
-        <article key={row.namaToko} className="rounded-lg border border-sky-100 bg-white/80 p-3 shadow-sm backdrop-blur-md dark:border-sky-300/15 dark:bg-slate-900/75">
-          <div className="flex items-start justify-between gap-3">
-            <div className="min-w-0">
-              <p className="text-[11px] font-black text-slate-400 dark:text-sky-200/50">#{index + 1}</p>
-              <p className="mt-1 flex items-center gap-1.5 min-w-0 text-sm font-black text-foreground dark:text-white">
-                <span
-                  className="h-2.5 w-2.5 shrink-0 rounded-full"
-                  style={{ backgroundColor: BAR_COLORS[index % BAR_COLORS.length] }}
-                />
-                <span className="truncate">{row.namaToko}</span>
-              </p>
-              <p className="mt-1 text-xs font-semibold text-slate-500 dark:text-slate-300">{row.jumlahInvoice} invoice | {row.totalQty} qty</p>
-            </div>
-            <Badge tone={row.margin >= 15 ? "green" : row.margin >= 8 ? "blue" : "amber"}>{row.margin.toFixed(1)}%</Badge>
-          </div>
-          <div className="mt-3 grid grid-cols-2 gap-2 text-xs">
-            <MiniValue label="Pembelian" value={formatRupiah(row.totalPembelian)} />
-            <MiniValue label="Omzet" value={formatRupiah(row.totalOmzet)} />
-          </div>
-        </article>
-      ))}
     </div>
   );
 }
 
-function ProdukMobileList({ rows }: { rows: NgAnalisa["topProduk"] }) {
+function Rank({ n }: { n: number }) {
   return (
-    <div className="space-y-3 md:hidden">
-      {rows.map((row, index) => (
-        <article key={row.nama} className="rounded-lg border border-sky-100 bg-white/80 p-3 shadow-sm backdrop-blur-md dark:border-sky-300/15 dark:bg-slate-900/75">
-          <div className="flex items-start justify-between gap-3">
-            <div className="min-w-0">
-              <p className="text-[11px] font-black text-slate-400 dark:text-sky-200/50">#{index + 1}</p>
-              <p className="mt-1 flex items-center gap-1.5 min-w-0 text-sm font-black text-foreground dark:text-white">
-                <span
-                  className="h-2.5 w-2.5 shrink-0 rounded-full"
-                  style={{ backgroundColor: BAR_COLORS[index % BAR_COLORS.length] }}
-                />
-                <span className="truncate">{row.nama}</span>
-              </p>
-              <p className="mt-1 text-xs font-semibold text-slate-500 dark:text-slate-300">{row.qty} qty terjual</p>
-            </div>
-            <Badge tone={row.margin >= 15 ? "green" : row.margin >= 8 ? "blue" : "amber"}>{row.margin.toFixed(1)}%</Badge>
-          </div>
-          <div className="mt-3 grid grid-cols-2 gap-2 text-xs">
-            <MiniValue label="Omzet" value={formatRupiah(row.omzet)} />
-            <MiniValue label="Keuntungan" value={formatRupiah(row.profit)} accent />
-          </div>
-        </article>
-      ))}
-    </div>
+    <span
+      className={cn(
+        "tnum inline-flex h-6 min-w-6 items-center justify-center rounded-full px-1.5 text-[11px] font-bold",
+        n <= 3 ? "bg-sky-500/15 text-sky-700 dark:text-sky-300" : "text-[var(--text-muted-2)]"
+      )}
+    >
+      {n}
+    </span>
   );
 }
 
-function MiniValue({ label, value, accent }: { label: string; value: string; accent?: boolean }) {
+function EmptyBlock({ text, h }: { text: string; h?: number }) {
   return (
-    <div className="rounded-md bg-white/85 px-3 py-2 ring-1 ring-sky-100 dark:bg-slate-950/40 dark:ring-sky-300/15">
-      <p className="font-semibold text-slate-500 dark:text-slate-300">{label}</p>
-      <p className={cn("mt-1 truncate font-black text-foreground dark:text-white", accent && "text-emerald-600 dark:text-emerald-200")}>{value}</p>
-    </div>
-  );
-}
-
-function ChartLegend({ items }: { items: Array<{ label: string; color: string }> }) {
-  return (
-    <div className="flex flex-wrap items-center gap-2">
-      {items.map((item) => (
-        <span
-          key={item.label}
-          className="inline-flex items-center gap-2 rounded-md border border-sky-100 bg-white/85 px-2.5 py-1 text-[11px] font-bold text-slate-600 dark:border-sky-300/15 dark:bg-slate-950/40 dark:text-slate-200"
-        >
-          <span className="h-2.5 w-2.5 rounded-sm" style={{ backgroundColor: item.color }} />
-          {item.label}
-        </span>
-      ))}
-    </div>
-  );
-}
-
-function EmptyChart({ h = 240, text }: { h?: number; text: string }) {
-  return (
-    <div className="flex items-center justify-center rounded-lg border border-dashed border-sky-200 bg-sky-50/60 px-4 text-center text-sm font-semibold text-slate-500 dark:border-sky-300/20 dark:bg-slate-950/25 dark:text-slate-300" style={{ height: h }}>
+    <div
+      className="flex h-full min-h-28 items-center justify-center rounded-xl border border-dashed border-border px-4 text-center text-xs font-medium text-[var(--text-muted-2)]"
+      style={h ? { height: h } : undefined}
+    >
       {text}
     </div>
   );

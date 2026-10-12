@@ -1,5 +1,11 @@
 # Progress
 
+## 2026-10-13 — Non-Gudang UI/UX overhaul
+- [x] Shared page primitives in `src/components/page/index.tsx`.
+- [x] Dashboard + charts, Master Barang, Buat Invoice, Riwayat Invoice, Riwayat Pembelian, Master Konsumen, Laporan.
+- [x] Browser verification as Admin Non-Gudang at 1440/1100/768/375px; KPI values unchanged.
+- [ ] Manual click test of Non-Gudang Excel/PDF/print and a full invoice create/payment flow on a disposable database.
+
 ## 2026-10-13 — UI/UX modernization pass
 - [x] WhatsApp number dialog replaces `window.prompt` (Invoice list/detail, Retur).
 - [x] Desktop navbar 76px → 64px; mobile notification bell (single polling instance).

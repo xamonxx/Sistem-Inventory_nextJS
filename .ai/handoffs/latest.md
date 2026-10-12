@@ -15,6 +15,11 @@ Fix and retest the two receipt-payment defects before push/deploy:
 
 After those fixes, improve the losing concurrent checkout response so it reports a stock conflict instead of `Terjadi kesalahan internal saat memproses checkout.`
 
+## Latest source change (Non-Gudang overhaul, committed 2026-10-13)
+- All seven Non-Gudang pages rebuilt on `src/components/page` primitives (`PageHeader`, `StatCard`/`StatGrid`, `Panel`, `StatusDot`, `TonePill`, `IconAction`, `FilterBar`). Logic, actions, exports, and print untouched.
+- Gotcha: unlayered global `h1`/`h2`/`h3` rules in `globals.css` override Tailwind text sizes; use `!text-*` on headings inside components.
+- Pending: Non-Gudang Excel/PDF click test and a full create/payment/print walkthrough on a disposable database.
+
 ## Latest source change (UI/UX pass, committed 2026-10-13)
 - App-wide modernization: navbar 64px, `GlobalTooltip`, `WhatsAppDialog`, `.field-surface` for Input/Select/DatePicker, global checkbox style, calmer `Th`/`Td`, redesigned Barang/Stok/Laporan, sidebar collapsed-state fix, mobile notification bell via `useMediaQuery`, theme-aware 404.
 - Gotchas: `Select` forwards only un-prefixed `col-*`/`w-*` classes to its wrapper; `chrome-soft-panel` and `btn-liquid-*` are unlayered CSS and beat Tailwind utilities; never put `opacity` on `<td>`.

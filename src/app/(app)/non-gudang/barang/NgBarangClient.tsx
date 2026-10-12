@@ -1,14 +1,14 @@
 "use client";
 
-import { useState, useMemo, useEffect, useTransition } from "react";
+import { useState, useMemo, useEffect, useRef, useTransition } from "react";
 import { toggleNgProdukAktif, deleteNgProduk } from "./actions";
 import { NgBarangForm, type NgProdukRow } from "./NgBarangForm";
-import { Button, Card, Input, Select, Table, TableActionButton, Th, Td, Badge } from "@/components/ui";
+import { Button, Input, Select, Table, Th, Td } from "@/components/ui";
+import { FilterBar, IconAction, PageHeader, Panel, StatCard, StatGrid, StatusDot, TonePill } from "@/components/page";
 import { FIELD_LIMITS } from "@/lib/fieldLimits";
 import { formatRupiah } from "@/lib/utils";
 import { usePagination, Pagination } from "@/components/Pagination";
-import { Tooltip } from "@/components/Tooltip";
-import { Search, Boxes, Store, Percent, Pencil, Trash2, AlertTriangle } from "lucide-react";
+import { Search, Boxes, Store, Percent, Pencil, Trash2, AlertTriangle, CheckCircle2 } from "lucide-react";
 import { toast } from "sonner";
 
 export type NgProdukData = {
@@ -71,6 +71,8 @@ export function NgBarangClient({ initialItems }: { initialItems: NgProdukData[] 
   const pg = usePagination(filtered, 10);
 
   const allOnPageSelected = pg.pageData.length > 0 && pg.pageData.every((i) => selectedIds.has(i.id));
+  // Status "sebagian terpilih" hanya bisa diset lewat DOM.
+  const selectAllRef = useRef<HTMLInputElement>(null);
 
   function toggleSelectAllOnPage() {
     setSelectedIds((prev) => {
@@ -129,93 +131,67 @@ export function NgBarangClient({ initialItems }: { initialItems: NgProdukData[] 
     });
   }
 
-  const kpi = [
-    { icon: Boxes, label: "Total Barang", value: String(stats.total), detail: "Kode barang non-gudang" },
-    { icon: Store, label: "Toko Sumber", value: String(stats.tokoCount), detail: "supplier aktif" },
-    { icon: Boxes, label: "Barang Aktif", value: String(stats.active), detail: "siap dijual" },
-    { icon: Percent, label: "Rata-rata Margin", value: `${stats.avgMargin.toFixed(1)}%`, detail: "gross margin" },
-  ];
+  const somePageSelected = !allOnPageSelected && pg.pageData.some((i) => selectedIds.has(i.id));
+  useEffect(() => {
+    if (selectAllRef.current) selectAllRef.current.indeterminate = somePageSelected;
+  }, [somePageSelected]);
 
   return (
     <div className="space-y-5">
-      <header className="liquid-panel liquid-panel-strong dashboard-hero relative z-20 rounded-xl border-sky-200/70 dark:border-sky-300/15" style={{ overflow: "visible" }}>
-        <div className="grid lg:grid-cols-[minmax(0,1fr)_520px]">
-          <div className="border-b border-sky-200/70 p-5 dark:border-sky-300/15 lg:border-b-0 lg:border-r">
-            <div className="grid gap-4">
-              <div className="min-w-0">
-                <span className="inline-flex items-center gap-2 rounded-md border border-sky-200/80 bg-sky-50/80 px-3 py-1.5 text-[11px] font-black uppercase tracking-[0.18em] text-[var(--primary-strong)] shadow-[inset_0_1px_0_rgba(255,255,255,0.7)] dark:border-sky-300/20 dark:bg-sky-400/10 dark:text-sky-200">
-                  Master Data
-                </span>
-                <h1 className="mt-5 max-w-3xl text-3xl font-black tracking-normal text-foreground dark:text-white md:text-5xl">
-                  Master Barang Non-Gudang
-                </h1>
-                <p className="mt-2 max-w-2xl text-sm font-semibold leading-6 text-slate-600 dark:text-slate-200/90">
-                  Pusat data barang trading: toko sumber, harga modal, harga jual, dan margin operasional.
-                </p>
-              </div>
-            </div>
-          </div>
+      <PageHeader
+        eyebrow="Master data"
+        title="Master Barang Non-Gudang"
+        description="Barang trading dari toko sumber: harga modal, harga jual, dan margin."
+        actions={<NgBarangForm triggerClassName="h-10 justify-center px-4" />}
+      />
 
-          <section className="grid grid-cols-2 divide-x divide-y divide-sky-200/60 bg-sky-50/55 dark:divide-sky-300/15 dark:bg-slate-950/25">
-            {kpi.map(({ icon: Icon, label, value, detail }) => (
-              <div key={label} className="p-4">
-                <div className="flex items-start justify-between gap-3">
-                  <div>
-                    <p className="text-[10px] font-black uppercase tracking-[0.14em] text-slate-500 dark:text-slate-400">{label}</p>
-                    <p className="mt-1 text-2xl font-black tracking-normal text-foreground dark:text-white">{value}</p>
-                    <p className="mt-1 text-[11px] font-semibold text-slate-500 dark:text-slate-400">{detail}</p>
-                  </div>
-                  <div className="flex h-9 w-9 items-center justify-center rounded-md border border-sky-200/80 bg-white/80 text-[var(--primary-strong)] shadow-[inset_0_1px_0_rgba(255,255,255,0.72)] backdrop-blur-xl dark:border-sky-300/15 dark:bg-sky-400/10 dark:text-sky-200">
-                    <Icon size={17} />
-                  </div>
-                </div>
-              </div>
-            ))}
-          </section>
-        </div>
-      </header>
+      <StatGrid>
+        <StatCard icon={Boxes} tone="sky" label="Total Barang" value={String(stats.total)} hint="Kode barang non-gudang" />
+        <StatCard icon={Store} tone="violet" label="Toko Sumber" value={String(stats.tokoCount)} hint="Supplier aktif" />
+        <StatCard icon={CheckCircle2} tone="emerald" label="Barang Aktif" value={String(stats.active)} hint="Siap dijual" />
+        <StatCard icon={Percent} tone="amber" label="Rata-rata Margin" value={`${stats.avgMargin.toFixed(1)}%`} hint="Gross margin" />
+      </StatGrid>
 
-      {/* Toolbar */}
-      <Card className="liquid-panel relative z-30 rounded-xl border-sky-200/70 p-3 dark:border-sky-300/15 md:p-4" style={{ overflow: "visible" }}>
-        <div className="grid gap-3 xl:grid-cols-[minmax(320px,1fr)_auto_auto] xl:items-center">
-          <div className="relative w-full min-w-0">
-            <Search size={17} className="pointer-events-none absolute left-4 top-1/2 z-10 -translate-y-1/2 text-[var(--text-soft)]" />
+      <FilterBar>
+        <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2 lg:grid-cols-[minmax(0,1fr)_180px_220px]">
+          <div className="relative sm:col-span-2 lg:col-span-1">
+            <Search size={16} className="pointer-events-none absolute left-3 top-1/2 z-10 -translate-y-1/2 text-[var(--text-muted-2)]" />
             <Input
               value={q}
               onChange={(e) => setQ(e.target.value)}
               maxLength={FIELD_LIMITS.search}
-              placeholder="Cari nama, toko, atau kategori..."
-              className="h-12 rounded-lg border-sky-200/80 bg-white/80 pl-11 pr-4 font-semibold shadow-[inset_0_1px_0_rgba(255,255,255,0.72)] backdrop-blur-xl dark:border-sky-300/15 dark:bg-slate-950/45"
+              placeholder="Cari nama, toko, atau kategori…"
+              aria-label="Cari barang"
+              className="h-10 rounded-xl pl-9 text-[13px] font-medium"
             />
           </div>
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:flex lg:flex-nowrap lg:items-center">
-            <Select
-              value={statusFilter}
-              onChange={(e) => setStatusFilter(e.target.value as "ALL" | "ACTIVE" | "INACTIVE")}
-              className="h-12 w-full rounded-lg text-xs font-bold sm:w-[180px] xl:shrink-0"
-            >
-              <option value="ALL">Semua Status</option>
-              <option value="ACTIVE">Aktif</option>
-              <option value="INACTIVE">Nonaktif</option>
-            </Select>
-            <Select
-              value={tokoFilter}
-              onChange={(e) => setTokoFilter(e.target.value)}
-              className="h-12 w-full rounded-lg text-xs font-bold sm:w-[220px] xl:shrink-0"
-            >
-              <option value="ALL">Semua Toko</option>
-              {tokoList.map((t) => (
-                <option key={t} value={t}>{t}</option>
-              ))}
-            </Select>
-          </div>
-          <NgBarangForm triggerClassName="h-12 w-full justify-center px-5 sm:w-auto xl:min-w-[180px]" />
+          <Select
+            value={statusFilter}
+            onChange={(e) => setStatusFilter(e.target.value as "ALL" | "ACTIVE" | "INACTIVE")}
+            className="h-10 w-full rounded-xl px-3.5 text-[13px] font-medium"
+            aria-label="Filter status"
+          >
+            <option value="ALL">Semua status</option>
+            <option value="ACTIVE">Aktif</option>
+            <option value="INACTIVE">Nonaktif</option>
+          </Select>
+          <Select
+            value={tokoFilter}
+            onChange={(e) => setTokoFilter(e.target.value)}
+            className="h-10 w-full rounded-xl px-3.5 text-[13px] font-medium"
+            aria-label="Filter toko sumber"
+          >
+            <option value="ALL">Semua toko</option>
+            {tokoList.map((t) => (
+              <option key={t} value={t}>{t}</option>
+            ))}
+          </Select>
         </div>
-      </Card>
+      </FilterBar>
 
       {/* Bulk delete bar */}
       {selectedIds.size > 0 && (
-        <div className="flex flex-col gap-3 rounded-lg border border-rose-200 bg-rose-50 px-4 py-3 dark:border-rose-900/50 dark:bg-rose-950/20 sm:flex-row sm:items-center sm:justify-between anim-rise">
+        <div className="anim-rise flex flex-col gap-3 rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 dark:border-rose-400/25 dark:bg-rose-500/10 sm:flex-row sm:items-center sm:justify-between">
           <p className="text-sm font-bold text-rose-700 dark:text-rose-300">{selectedIds.size} barang dipilih</p>
           <div className="flex items-center gap-2">
             <Button size="sm" variant="outline" onClick={() => setSelectedIds(new Set())}>Batal</Button>
@@ -226,154 +202,141 @@ export function NgBarangClient({ initialItems }: { initialItems: NgProdukData[] 
         </div>
       )}
 
-      {/* Table */}
-      <Card className="liquid-panel relative z-0 overflow-hidden rounded-xl border-sky-200/70 p-0 dark:border-sky-300/15">
-        <div className="flex flex-col gap-2 border-b border-sky-200/70 bg-sky-50/55 px-5 py-4 dark:border-sky-300/15 dark:bg-slate-950/25 sm:flex-row sm:items-center sm:justify-between">
-          <div>
-            <p className="text-sm font-black text-foreground">Daftar Barang</p>
-            <p className="mt-0.5 text-xs font-medium text-slate-500">Data barang dari toko sumber yang bisa dipakai untuk invoice non-gudang.</p>
+      <Panel
+        title="Daftar Barang"
+        description="Barang dari toko sumber untuk invoice non-gudang"
+        icon={Boxes}
+        flush
+        action={<span className="tnum text-xs font-semibold text-[var(--text-muted-2)]">{filtered.length} hasil</span>}
+      >
+        {filtered.length === 0 ? (
+          <div className="flex flex-col items-center justify-center gap-2 py-16 text-center">
+            <Boxes size={26} className="text-[var(--text-muted-2)] opacity-70" />
+            <p className="text-sm font-semibold text-foreground">Belum ada barang</p>
+            <p className="text-xs text-[var(--text-muted-2)]">Tambahkan barang dari toko sumber atau ubah filter.</p>
           </div>
-          <Badge tone={selectedIds.size > 0 ? "amber" : "blue"}>{filtered.length} hasil</Badge>
-        </div>
-        <div className="hidden overflow-x-auto md:block">
-          <Table variant="plain" tableClassName="min-w-[980px]">
-            <thead>
-              <tr>
-                <Th className="w-10 text-center">
-                  <input type="checkbox" checked={allOnPageSelected} onChange={toggleSelectAllOnPage} className="h-4 w-4 rounded border-border cursor-pointer" aria-label="Pilih semua barang di halaman ini" />
-                </Th>
-                <Th>Barang</Th>
-                <Th>Toko Sumber</Th>
-                <Th>Satuan</Th>
-                <Th className="text-right">Harga Beli</Th>
-                <Th className="text-right">Harga Jual</Th>
-                <Th className="text-right">Margin</Th>
-                <Th className="text-center">Status</Th>
-                <Th className="text-center">Aksi</Th>
-              </tr>
-            </thead>
-            <tbody>
-              {pg.pageData.map((item) => {
-                const m = marginPct(item.hargaBeli, item.hargaJual);
-                return (
-                  <tr key={item.id}>
-                    <Td className="text-center">
-                      <input type="checkbox" checked={selectedIds.has(item.id)} onChange={() => toggleSelect(item.id)} className="h-4 w-4 rounded border-border cursor-pointer" aria-label={`Pilih ${item.nama}`} />
-                    </Td>
-                    <Td>
-                      <div className="font-bold text-foreground text-xs sm:text-sm">{item.nama}</div>
-                      {item.kategori && <div className="mt-0.5 text-[10px] text-slate-450">{item.kategori}</div>}
-                    </Td>
-                    <Td className="text-xs font-semibold text-slate-600 dark:text-slate-300">{item.namaToko}</Td>
-                    <Td className="text-xs text-slate-500">{item.satuan ?? "-"}</Td>
-                    <Td className="text-right font-mono text-xs">{formatRupiah(item.hargaBeli)}</Td>
-                    <Td className="text-right font-mono text-xs font-bold text-foreground">{formatRupiah(item.hargaJual)}</Td>
-                    <Td className="text-right">
-                      <Badge tone={m >= 15 ? "green" : m > 0 ? "amber" : "red"} className="text-[10px]">{m.toFixed(1)}%</Badge>
-                    </Td>
-                    <Td className="text-center">
-                      <Tooltip label="Ubah status" description="Klik untuk aktif / nonaktifkan barang">
-                        <button
-                          type="button"
-                          onClick={() => handleToggleAktif(item)}
-                          disabled={pending}
-                          className="cursor-pointer disabled:opacity-50"
-                          aria-label={`Ubah status ${item.nama}`}
-                        >
-                          <Badge tone={item.aktif ? "green" : "slate"} className="text-[10px]">{item.aktif ? "Aktif" : "Nonaktif"}</Badge>
-                        </button>
-                      </Tooltip>
-                    </Td>
-                    <Td className="text-center">
-                      <Tooltip label="Ubah barang" description="Edit nama, toko, harga & margin">
-                        <TableActionButton
-                          type="button"
-                          onClick={() => handleEdit(item)}
-                          aria-label={`Ubah ${item.nama}`}
-                        >
-                          <Pencil size={15} />
-                        </TableActionButton>
-                      </Tooltip>
-                    </Td>
+        ) : (
+          <>
+            <div className="hidden xl:block">
+              <Table variant="plain" tableClassName="[&_td]:whitespace-nowrap [&_th]:px-4 [&_td]:px-4">
+                <thead>
+                  <tr>
+                    <Th className="w-10 text-center">
+                      <input
+                        ref={selectAllRef}
+                        type="checkbox"
+                        checked={allOnPageSelected}
+                        onChange={toggleSelectAllOnPage}
+                        className="h-4 w-4 cursor-pointer"
+                        aria-label="Pilih semua barang di halaman ini"
+                      />
+                    </Th>
+                    <Th>Barang</Th>
+                    <Th>Toko Sumber</Th>
+                    <Th>Satuan</Th>
+                    <Th className="text-right">Harga Beli</Th>
+                    <Th className="text-right">Harga Jual</Th>
+                    <Th className="text-right">Margin</Th>
+                    <Th>Status</Th>
+                    <Th className="w-14 text-center">Aksi</Th>
                   </tr>
-                );
-              })}
-              {filtered.length === 0 && (
-                <tr>
-                  <Td colSpan={9} className="py-16 text-center text-slate-400 select-none">
-                    <Boxes className="mx-auto mb-2 text-slate-200 dark:text-slate-700" size={32} />
-                    <p className="text-sm font-semibold">Belum ada barang</p>
-                    <p className="text-xs">Tambahkan barang dari toko sumber untuk mulai.</p>
-                  </Td>
-                </tr>
-              )}
-            </tbody>
-          </Table>
-        </div>
-        {/* Mobile (<768px): kartu per barang, semua aksi terjangkau tanpa scroll samping */}
-        <div className="md:hidden">
-          {filtered.length === 0 ? (
-            <div className="py-12 text-center text-slate-400 select-none">
-              <Boxes className="mx-auto mb-2 text-slate-200 dark:text-slate-700" size={32} />
-              <p className="text-sm font-semibold">Belum ada barang</p>
-              <p className="text-xs">Tambahkan barang dari toko sumber untuk mulai.</p>
+                </thead>
+                <tbody>
+                  {pg.pageData.map((item) => {
+                    const m = marginPct(item.hargaBeli, item.hargaJual);
+                    const selected = selectedIds.has(item.id);
+                    return (
+                      <tr key={item.id} className={selected ? "bg-rose-50/70 dark:bg-rose-500/[0.07]" : undefined}>
+                        <Td className="text-center">
+                          <input
+                            type="checkbox"
+                            checked={selected}
+                            onChange={() => toggleSelect(item.id)}
+                            className="h-4 w-4 cursor-pointer"
+                            aria-label={`Pilih ${item.nama}`}
+                          />
+                        </Td>
+                        <Td className="max-w-[280px]">
+                          <p className="truncate font-semibold text-foreground" title={item.nama}>{item.nama}</p>
+                          <p className="text-[11px] text-[var(--text-muted-2)]">{item.kategori ?? "Tanpa kategori"}</p>
+                        </Td>
+                        <Td className="text-xs text-[var(--text-soft)]">{item.namaToko}</Td>
+                        <Td className="text-xs text-[var(--text-muted-2)]">{item.satuan ?? "–"}</Td>
+                        <Td className="tnum text-right text-xs text-[var(--text-soft)]">{formatRupiah(item.hargaBeli)}</Td>
+                        <Td className="tnum text-right font-semibold text-foreground">{formatRupiah(item.hargaJual)}</Td>
+                        <Td className="text-right"><TonePill value={m} /></Td>
+                        <Td>
+                          <button
+                            type="button"
+                            onClick={() => handleToggleAktif(item)}
+                            disabled={pending}
+                            title="Klik untuk mengaktifkan / menonaktifkan"
+                            className="cursor-pointer rounded-md px-1 py-0.5 transition hover:bg-[var(--surface-2)] disabled:opacity-50"
+                          >
+                            <StatusDot tone={item.aktif ? "emerald" : "slate"}>{item.aktif ? "Aktif" : "Nonaktif"}</StatusDot>
+                          </button>
+                        </Td>
+                        <Td className="text-center">
+                          <IconAction title="Ubah barang" onClick={() => handleEdit(item)}>
+                            <Pencil size={15} />
+                          </IconAction>
+                        </Td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </Table>
             </div>
-          ) : (
-            <ul className="divide-y divide-sky-200/70 dark:divide-sky-300/15">
+
+            {/* Di bawah xl: daftar ringkas */}
+            <ul className="divide-y divide-border xl:hidden">
               {pg.pageData.map((item) => {
                 const m = marginPct(item.hargaBeli, item.hargaJual);
+                const selected = selectedIds.has(item.id);
                 return (
-                  <li key={item.id} className="space-y-3 px-4 py-4">
-                    <div className="flex items-start gap-3">
-                      <input type="checkbox" checked={selectedIds.has(item.id)} onChange={() => toggleSelect(item.id)} className="mt-1 h-5 w-5 shrink-0 rounded border-border cursor-pointer" aria-label={`Pilih ${item.nama}`} />
-                      <div className="min-w-0 flex-1">
-                        <p className="break-words text-sm font-bold text-foreground">{item.nama}</p>
-                        <p className="mt-0.5 text-xs text-slate-500">
-                          {[item.kategori, item.namaToko].filter(Boolean).join(" • ") || "-"}
-                        </p>
+                  <li key={item.id} className={selected ? "flex items-start gap-3 bg-rose-50/70 px-4 py-3 dark:bg-rose-500/[0.07]" : "flex items-start gap-3 px-4 py-3"}>
+                    <input
+                      type="checkbox"
+                      checked={selected}
+                      onChange={() => toggleSelect(item.id)}
+                      className="mt-0.5 h-4 w-4 shrink-0 cursor-pointer"
+                      aria-label={`Pilih ${item.nama}`}
+                    />
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center justify-between gap-2">
+                        <p className="truncate text-sm font-semibold text-foreground">{item.nama}</p>
+                        <TonePill value={m} />
                       </div>
-                      <Badge tone={m >= 15 ? "green" : m > 0 ? "amber" : "red"} className="shrink-0 text-[10px]">{m.toFixed(1)}%</Badge>
-                    </div>
-                    <dl className="grid grid-cols-3 gap-2 rounded-lg border border-sky-200/60 bg-sky-50/40 p-3 text-xs dark:border-sky-300/15 dark:bg-slate-950/25">
-                      <div>
-                        <dt className="text-[10px] font-bold uppercase tracking-wide text-slate-400">Satuan</dt>
-                        <dd className="mt-0.5 font-semibold text-slate-600 dark:text-slate-300">{item.satuan ?? "-"}</dd>
-                      </div>
-                      <div>
-                        <dt className="text-[10px] font-bold uppercase tracking-wide text-slate-400">Beli</dt>
-                        <dd className="mt-0.5 font-mono font-semibold">{formatRupiah(item.hargaBeli)}</dd>
-                      </div>
-                      <div>
-                        <dt className="text-[10px] font-bold uppercase tracking-wide text-slate-400">Jual</dt>
-                        <dd className="mt-0.5 font-mono font-bold text-foreground">{formatRupiah(item.hargaJual)}</dd>
-                      </div>
-                    </dl>
-                    <div className="flex items-center gap-2">
+                      <p className="truncate text-[11px] text-[var(--text-muted-2)]">
+                        {[item.kategori, item.namaToko, item.satuan].filter(Boolean).join(" · ")}
+                      </p>
+                      <p className="tnum mt-1 text-xs text-[var(--text-soft)]">
+                        Beli {formatRupiah(item.hargaBeli)} · <span className="font-semibold text-foreground">Jual {formatRupiah(item.hargaJual)}</span>
+                      </p>
                       <button
                         type="button"
                         onClick={() => handleToggleAktif(item)}
                         disabled={pending}
-                        className="flex min-h-10 flex-1 cursor-pointer items-center justify-center rounded-lg border border-border disabled:opacity-50"
-                        aria-label={`Ubah status ${item.nama}`}
+                        className="mt-1.5 cursor-pointer disabled:opacity-50"
+                        title="Klik untuk mengaktifkan / menonaktifkan"
                       >
-                        <Badge tone={item.aktif ? "green" : "slate"} className="text-[10px]">{item.aktif ? "Aktif" : "Nonaktif"}</Badge>
+                        <StatusDot tone={item.aktif ? "emerald" : "slate"}>{item.aktif ? "Aktif" : "Nonaktif"}</StatusDot>
                       </button>
-                      <Button size="sm" variant="outline" onClick={() => handleEdit(item)} className="min-h-10 flex-1" aria-label={`Ubah ${item.nama}`}>
-                        <Pencil size={15} /> Ubah
-                      </Button>
                     </div>
+                    <IconAction title="Ubah barang" onClick={() => handleEdit(item)}>
+                      <Pencil size={15} />
+                    </IconAction>
                   </li>
                 );
               })}
             </ul>
-          )}
-        </div>
-        {filtered.length > 0 && (
-          <div className="border-t border-sky-200/70 bg-white/55 px-4 py-3 backdrop-blur-xl dark:border-sky-300/15 dark:bg-slate-950/25">
-            <Pagination page={pg.page} perPage={pg.perPage} total={pg.total} onPage={pg.setPage} />
-          </div>
+
+            <div className="border-t border-border px-4 py-3 sm:px-5">
+              <Pagination page={pg.page} perPage={pg.perPage} total={pg.total} onPage={pg.setPage} />
+            </div>
+          </>
         )}
-      </Card>
+      </Panel>
 
       {/* Delete confirm */}
       {showDeleteConfirm && (

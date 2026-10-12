@@ -1,5 +1,10 @@
 # Operational Tasks
 
+## Non-Gudang UI follow-ups
+- [ ] Click Unduh Excel / Cetak PDF on Non-Gudang Dashboard and Laporan once.
+- [ ] Walk through create invoice → payment → print on a disposable database to confirm modals after the restyle.
+- [ ] Optionally migrate Gudang Laporan local `Panel`/`StatCard` to `src/components/page`.
+
 ## UI/UX modernization follow-ups
 - [ ] Check Kasir and Non-Gudang pages for regressions from shared changes (field surface, checkbox, tooltip, table primitives).
 - [ ] Click Laporan "Unduh Excel" / "Unduh PDF A4" once and confirm output.

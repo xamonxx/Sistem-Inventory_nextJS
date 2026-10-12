@@ -1,11 +1,10 @@
 "use client";
 
-import { useMemo, useState, useTransition, type ComponentType } from "react";
+import { useMemo, useState, useTransition } from "react";
 import {
   AlertTriangle,
   Camera,
   CalendarDays,
-  CheckCircle2,
   CircleDollarSign,
   Clock3,
   FileText,
@@ -17,7 +16,6 @@ import {
   Store,
   Trash2,
   TrendingUp,
-  UserRound,
   Wallet,
   X,
 } from "lucide-react";
@@ -25,9 +23,9 @@ import { toast } from "sonner";
 import { bayarNgInvoice, updateNgInvoice } from "./actions";
 import { Nota, type NotaData } from "@/components/Nota";
 import { DatePicker } from "@/components/DatePicker";
-import { Tooltip } from "@/components/Tooltip";
 import { PeriodFilter, type ResolvedPeriodRange } from "@/components/PeriodFilter";
-import { Badge, Button, Card, CurrencyInput, Input, QtyInput, Label, Select, Table, TableActionButton, Td, Th } from "@/components/ui";
+import { Badge, Button, Card, CurrencyInput, Input, QtyInput, Label, Select, Table, Td, Th } from "@/components/ui";
+import { FilterBar, IconAction, PageHeader, Panel, StatCard, StatGrid, StatusDot } from "@/components/page";
 import { FIELD_LIMITS } from "@/lib/fieldLimits";
 import { computeNgCart } from "@/lib/ngMargin";
 import { printArea, setPdfTitle } from "@/lib/print";
@@ -266,159 +264,175 @@ export function NgInvoiceClient({
   }
 
   return (
-    <div className="space-y-6">
-      <header className="liquid-panel liquid-panel-strong dashboard-hero anim-rise relative overflow-hidden backdrop-blur-2xl backdrop-saturate-150">
-        <div className="grid lg:grid-cols-[minmax(0,1fr)_minmax(420px,600px)]">
-          <div className="p-5 md:p-6">
-            <p className="inline-flex items-center gap-2 rounded-md border border-sky-200 bg-sky-50 px-3 py-1 text-[11px] font-black uppercase tracking-[0.18em] text-[var(--primary-strong)] dark:border-sky-900/60 dark:bg-sky-950/35">
-              <span className="h-1.5 w-1.5 rounded-full bg-[var(--primary)]" />
-              Invoice Non-Gudang
-            </p>
-            <h1 className="mt-5 max-w-3xl text-3xl font-black tracking-[-0.04em] text-foreground md:text-5xl">
-              Riwayat Invoice &amp; Piutang
-            </h1>
-            <p className="mt-3 max-w-3xl text-sm font-medium leading-6 text-slate-600 dark:text-slate-300 md:text-base">
-              Kelola invoice non-gudang, pantau sisa piutang, cek margin internal, lalu cetak struk dari satu meja kerja yang padat dan mudah dibaca.
-            </p>
-          </div>
+    <div className="space-y-5">
+      <PageHeader
+        eyebrow="Non-Gudang"
+        title="Riwayat Invoice & Piutang"
+        description="Kelola invoice, pantau sisa piutang, cek margin internal, dan cetak struk."
+      />
 
-          <div className="grid grid-cols-2 border-t border-[var(--glass-border)] bg-white/40 dark:bg-white/[0.02] lg:border-l lg:border-t-0">
-            <HeaderMetric label="Invoice" value={String(kpi.jumlah)} hint="sesuai filter" tone="slate" icon={ReceiptText} />
-            <HeaderMetric label="Omzet" value={formatRupiah(kpi.omzet)} hint="nilai penjualan" tone="blue" icon={TrendingUp} />
-            <HeaderMetric label="Piutang" value={formatRupiah(kpi.piutang)} hint="belum tertagih" tone="amber" icon={Wallet} />
-            <HeaderMetric label="Belum Lunas" value={String(kpi.belumLunas)} hint="perlu follow-up" tone="red" icon={Clock3} />
-          </div>
-        </div>
-      </header>
+      <StatGrid>
+        <StatCard icon={ReceiptText} tone="slate" label="Invoice" value={String(kpi.jumlah)} hint="Sesuai filter" />
+        <StatCard icon={TrendingUp} tone="sky" label="Omzet" value={formatRupiah(kpi.omzet)} hint="Nilai penjualan" />
+        <StatCard icon={Wallet} tone="amber" label="Piutang" value={formatRupiah(kpi.piutang)} hint="Belum tertagih" />
+        <StatCard
+          icon={Clock3}
+          tone={kpi.belumLunas > 0 ? "rose" : "emerald"}
+          label="Belum Lunas"
+          value={String(kpi.belumLunas)}
+          hint={kpi.belumLunas > 0 ? "Perlu follow-up" : "Semua lunas"}
+        />
+      </StatGrid>
 
-      <Card className="liquid-panel relative z-30 rounded-xl border-sky-200/70 p-3 dark:border-sky-300/15 md:p-4" style={{ overflow: "visible" }}>
-        <div className="grid gap-3 lg:grid-cols-[1fr_auto] lg:items-center">
-          <div className="grid gap-3 md:grid-cols-[minmax(280px,1fr)_220px]">
-            <div className="relative">
-              <Search size={18} className="pointer-events-none absolute left-4 top-1/2 z-10 -translate-y-1/2 text-[var(--text-soft)]" />
-              <Input
-                value={q}
-                onChange={(e) => {
-                  setQ(e.target.value);
-                  setPage(1);
-                }}
-                maxLength={FIELD_LIMITS.search}
-                placeholder="Cari no invoice, konsumen, atau toko sumber..."
-                className="h-12 rounded-lg border-sky-200/80 bg-white/80 pl-12 pr-4 font-semibold shadow-[inset_0_1px_0_rgba(255,255,255,0.72)] backdrop-blur-xl dark:border-sky-300/15 dark:bg-slate-950/45"
-              />
-            </div>
-            <Select
-              value={statusFilter}
+      <FilterBar>
+        <div className="grid grid-cols-1 gap-2.5 md:grid-cols-[minmax(0,1fr)_200px] xl:grid-cols-[minmax(0,1fr)_220px_auto] xl:items-center">
+          <div className="relative">
+            <Search size={16} className="pointer-events-none absolute left-3 top-1/2 z-10 -translate-y-1/2 text-[var(--text-muted-2)]" />
+            <Input
+              value={q}
               onChange={(e) => {
-                setStatusFilter(e.target.value as StatusFilter);
+                setQ(e.target.value);
                 setPage(1);
               }}
-              className="h-12 rounded-lg border-sky-200/80 bg-white/80 shadow-[inset_0_1px_0_rgba(255,255,255,0.72)] backdrop-blur-xl dark:border-sky-300/15 dark:bg-slate-950/45"
-            >
-              <option value="ALL">Semua Status</option>
-              <option value="PENDING">Tempo (Belum Bayar)</option>
-              <option value="PARTIAL">Sebagian</option>
-              <option value="LUNAS">Lunas</option>
-            </Select>
+              maxLength={FIELD_LIMITS.search}
+              placeholder="Cari no. invoice, konsumen, atau toko sumber…"
+              aria-label="Cari invoice"
+              className="h-10 rounded-xl pl-9 text-[13px] font-medium"
+            />
           </div>
-          <PeriodFilter
-            defaultPreset="all"
-            onChange={(nextRange) => {
-              setRange(nextRange);
+          <Select
+            value={statusFilter}
+            onChange={(e) => {
+              setStatusFilter(e.target.value as StatusFilter);
               setPage(1);
             }}
-          />
-        </div>
-      </Card>
-
-      <Card className="liquid-panel relative z-0 overflow-hidden rounded-xl border-sky-200/70 p-0 dark:border-sky-300/15">
-        <div className="flex flex-col gap-2 border-b border-sky-200/70 bg-sky-50/55 px-5 py-4 dark:border-sky-300/15 dark:bg-slate-950/25 sm:flex-row sm:items-center sm:justify-between">
-          <div>
-            <p className="text-sm font-black text-foreground">Daftar Invoice</p>
-            <p className="mt-0.5 text-xs font-medium text-slate-500">Klik detail untuk melihat margin, pembayaran, edit, atau cetak struk.</p>
+            className="h-10 w-full rounded-xl px-3.5 text-[13px] font-medium"
+            aria-label="Filter status"
+          >
+            <option value="ALL">Semua status</option>
+            <option value="PENDING">Tempo (belum bayar)</option>
+            <option value="PARTIAL">Sebagian</option>
+            <option value="LUNAS">Lunas</option>
+          </Select>
+          <div className="md:col-span-2 xl:col-span-1">
+            <PeriodFilter
+              defaultPreset="all"
+              align="right"
+              onChange={(nextRange) => {
+                setRange(nextRange);
+                setPage(1);
+              }}
+            />
           </div>
-          <Badge tone={kpi.belumLunas > 0 ? "amber" : "green"}>{kpi.belumLunas > 0 ? `${kpi.belumLunas} belum lunas` : "Semua lunas"}</Badge>
         </div>
+      </FilterBar>
+
+      <Panel
+        title="Daftar Invoice"
+        description="Klik nomor invoice untuk margin, pembayaran, edit, atau cetak."
+        icon={FileText}
+        flush
+        action={
+          <StatusDot tone={kpi.belumLunas > 0 ? "amber" : "emerald"}>
+            {kpi.belumLunas > 0 ? `${kpi.belumLunas} belum lunas` : "Semua lunas"}
+          </StatusDot>
+        }
+      >
         {filtered.length === 0 ? (
           <div className="flex flex-col items-center justify-center gap-2 py-16 text-center">
-            <FileText size={28} className="text-slate-300" />
-            <p className="text-sm font-semibold text-slate-500">Tidak ada invoice yang cocok.</p>
+            <FileText size={26} className="text-[var(--text-muted-2)] opacity-70" />
+            <p className="text-sm font-semibold text-foreground">Tidak ada invoice yang cocok</p>
+            <p className="text-xs text-[var(--text-muted-2)]">Ubah kata kunci, status, atau periode.</p>
           </div>
         ) : (
-          <Table variant="plain" tableClassName="min-w-[940px]">
-            <thead>
-              <tr>
-                <Th>No Invoice</Th>
-                <Th>Tanggal</Th>
-                <Th>Toko Sumber</Th>
-                <Th>Konsumen</Th>
-                <Th className="text-right">Total</Th>
-                <Th className="text-right">Sisa</Th>
-                <Th>Status</Th>
-                <Th className="text-right">Aksi</Th>
-              </tr>
-            </thead>
-            <tbody>
+          <>
+            {/* Di bawah xl: daftar ringkas */}
+            <ul className="divide-y divide-border xl:hidden">
               {paginated.map((row) => {
                 const meta = statusMeta(row);
                 return (
-                  <tr key={row.id} className="group">
-                    <Td>
-                      <button
-                        type="button"
-                        onClick={() => setDetailId(row.id)}
-                        className="font-mono text-sm font-black text-[var(--primary-strong)] underline-offset-4 transition group-hover:underline"
-                      >
-                        {row.noInvoice}
-                      </button>
-                    </Td>
-                    <Td className="whitespace-nowrap text-xs font-semibold">{formatTanggal(row.tanggal)}</Td>
-                    <Td className="text-xs">
-                      <span className="inline-flex items-center gap-1.5 rounded-md bg-sky-50 px-2.5 py-1 font-semibold text-slate-700 ring-1 ring-sky-100 dark:bg-sky-950/30 dark:text-slate-300 dark:ring-sky-900/40">
-                        <Store size={12} className="text-[var(--primary-strong)]" />
-                        {row.namaToko}
-                      </span>
-                    </Td>
-                    <Td className="text-xs">
-                      <div className="flex items-center gap-2">
-                        <span className="flex h-7 w-7 items-center justify-center rounded-md bg-slate-100 text-slate-500 ring-1 ring-slate-200 dark:bg-slate-800 dark:ring-slate-700">
-                          <UserRound size={13} />
-                        </span>
-                        <span className="font-semibold text-foreground">{row.namaKonsumen || "Konsumen"}</span>
+                  <li key={row.id} className="flex items-start gap-3 px-4 py-3">
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center justify-between gap-2">
+                        <button
+                          type="button"
+                          onClick={() => setDetailId(row.id)}
+                          className="tnum cursor-pointer text-sm font-bold text-[var(--primary)] hover:underline dark:text-sky-300"
+                        >
+                          {row.noInvoice}
+                        </button>
+                        <StatusDot tone={STATUS_DOT[meta.tone]}>{meta.label}</StatusDot>
                       </div>
-                    </Td>
-                    <Td className="whitespace-nowrap text-right text-xs font-black">{formatRupiah(row.totalPenjualan)}</Td>
-                    <Td className="whitespace-nowrap text-right text-xs font-semibold">
-                      {row.sisa > 0 ? formatRupiah(row.sisa) : "-"}
-                    </Td>
-                    <Td>
-                      <Badge tone={meta.tone}>
-                        {meta.tone === "red" && <AlertTriangle size={11} />}
-                        {meta.tone === "green" && <CheckCircle2 size={11} />}
-                        {meta.label}
-                      </Badge>
-                    </Td>
-                    <Td className="text-right">
-                      <div className="inline-flex items-center justify-end gap-1.5">
-                        <IconActionButton label="Detail invoice" desc="Lihat rincian margin & pembayaran" onClick={() => setDetailId(row.id)}>
-                          <FileText size={15} />
-                        </IconActionButton>
-                        <IconActionButton label="Edit invoice" desc="Ubah data & item invoice" onClick={() => setEditId(row.id)}>
-                          <Pencil size={15} />
-                        </IconActionButton>
-                        <IconActionButton label="Struk thermal" desc="Cetak struk kecil (80mm)" onClick={() => openNota(row.id, "thermal")}>
-                          <ReceiptText size={15} />
-                        </IconActionButton>
-                        <IconActionButton label="Invoice A4" desc="Cetak invoice ukuran A4" onClick={() => openNota(row.id, "a4")}>
-                          <Printer size={15} />
-                        </IconActionButton>
-                      </div>
-                    </Td>
-                  </tr>
+                      <p className="mt-0.5 truncate text-sm font-semibold text-foreground">{row.namaKonsumen || "Konsumen"}</p>
+                      <p className="truncate text-[11px] text-[var(--text-muted-2)]">
+                        {formatTanggal(row.tanggal)} · {row.namaToko}
+                      </p>
+                      <p className="tnum mt-1 text-xs text-[var(--text-soft)]">
+                        <span className="font-semibold text-foreground">{formatRupiah(row.totalPenjualan)}</span>
+                        {row.sisa > 0 && <span className="text-amber-600 dark:text-amber-300"> · sisa {formatRupiah(row.sisa)}</span>}
+                      </p>
+                    </div>
+                    <RowActions row={row} onDetail={setDetailId} onEdit={setEditId} onNota={openNota} />
+                  </li>
                 );
               })}
-            </tbody>
-          </Table>
+            </ul>
+
+            <div className="hidden xl:block">
+              <Table variant="plain" tableClassName="[&_td]:whitespace-nowrap [&_th]:px-4 [&_td]:px-4">
+                <thead>
+                  <tr>
+                    <Th>No. Invoice</Th>
+                    <Th>Tanggal</Th>
+                    <Th>Konsumen</Th>
+                    <Th>Toko Sumber</Th>
+                    <Th className="text-right">Total</Th>
+                    <Th className="text-right">Sisa</Th>
+                    <Th>Status</Th>
+                    <Th className="text-right">Aksi</Th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {paginated.map((row) => {
+                    const meta = statusMeta(row);
+                    return (
+                      <tr key={row.id}>
+                        <Td>
+                          <button
+                            type="button"
+                            onClick={() => setDetailId(row.id)}
+                            className="tnum cursor-pointer font-bold text-[var(--primary)] underline-offset-4 hover:underline dark:text-sky-300"
+                          >
+                            {row.noInvoice}
+                          </button>
+                        </Td>
+                        <Td className="text-xs text-[var(--text-muted-2)]">{formatTanggal(row.tanggal)}</Td>
+                        <Td className="max-w-[240px] truncate font-semibold text-foreground" title={row.namaKonsumen}>
+                          {row.namaKonsumen || "Konsumen"}
+                        </Td>
+                        <Td className="text-xs text-[var(--text-soft)]">
+                          <span className="inline-flex items-center gap-1.5">
+                            <Store size={13} className="text-[var(--text-muted-2)]" />
+                            {row.namaToko}
+                          </span>
+                        </Td>
+                        <Td className="tnum text-right font-semibold text-foreground">{formatRupiah(row.totalPenjualan)}</Td>
+                        <Td className={row.sisa > 0 ? "tnum text-right text-amber-600 dark:text-amber-300" : "tnum text-right text-[var(--text-muted-2)]"}>
+                          {row.sisa > 0 ? formatRupiah(row.sisa) : "–"}
+                        </Td>
+                        <Td>
+                          <StatusDot tone={STATUS_DOT[meta.tone]}>{meta.label}</StatusDot>
+                        </Td>
+                        <Td className="text-right">
+                          <RowActions row={row} onDetail={setDetailId} onEdit={setEditId} onNota={openNota} />
+                        </Td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </Table>
+            </div>
+          </>
         )}
         {filtered.length > TABLE_PAGE_SIZE && (
           <PaginationBar
@@ -429,7 +443,7 @@ export function NgInvoiceClient({
             onPageChange={setPage}
           />
         )}
-      </Card>
+      </Panel>
 
       {/* Detail drawer */}
       {detail && (
@@ -552,51 +566,6 @@ export function NgInvoiceClient({
   );
 }
 
-function HeaderMetric({
-  label,
-  value,
-  tone,
-  icon: Icon,
-  hint,
-}: {
-  label: string;
-  value: string;
-  tone: "slate" | "blue" | "amber" | "red";
-  icon: ComponentType<{ size?: number; className?: string }>;
-  hint: string;
-}) {
-  const styles = {
-    slate: {
-      accent: "text-slate-950 dark:text-slate-100",
-      icon: "bg-white text-slate-600 ring-slate-200 dark:bg-slate-900 dark:text-slate-300 dark:ring-slate-700",
-    },
-    blue: {
-      accent: "text-[var(--primary-strong)]",
-      icon: "bg-white text-[var(--primary-strong)] ring-sky-200 dark:bg-slate-900 dark:ring-sky-900/60",
-    },
-    amber: {
-      accent: "text-[#92400E] dark:text-[#fbbf24]",
-      icon: "bg-white text-amber-700 ring-amber-200 dark:bg-slate-900 dark:text-amber-300 dark:ring-amber-900/60",
-    },
-    red: {
-      accent: "text-[#991B1B] dark:text-[#f87171]",
-      icon: "bg-white text-rose-700 ring-rose-200 dark:bg-slate-900 dark:text-rose-300 dark:ring-rose-900/60",
-    },
-  }[tone];
-  return (
-    <div className="flex min-h-[128px] items-start justify-between gap-4 border-b border-r border-[var(--glass-border)] p-5 last:border-r-0 even:border-r-0">
-      <div className="min-w-0">
-        <p className="text-[11px] font-black uppercase tracking-[0.14em] text-slate-500">{label}</p>
-        <p className={`mt-2 truncate text-2xl font-black tracking-tight ${styles.accent}`}>{value}</p>
-        <p className="mt-2 text-xs font-semibold text-slate-500 dark:text-slate-400">{hint}</p>
-      </div>
-      <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-md ring-1 ${styles.icon}`}>
-        <Icon size={18} />
-      </div>
-    </div>
-  );
-}
-
 function PaginationBar({
   page,
   totalPages,
@@ -618,8 +587,8 @@ function PaginationBar({
   });
 
   return (
-    <div className="flex flex-col gap-3 border-t border-border bg-white px-5 py-4 text-xs dark:bg-slate-900 sm:flex-row sm:items-center sm:justify-between">
-      <p className="font-semibold text-slate-500">
+    <div className="flex flex-col gap-3 border-t border-border px-4 py-3.5 text-xs sm:flex-row sm:items-center sm:justify-between sm:px-5">
+      <p className="font-medium text-[var(--text-muted-2)]">
         Menampilkan <span className="text-foreground">{start}-{end}</span> dari <span className="text-foreground">{totalItems}</span> data
       </p>
       <div className="flex flex-wrap items-center gap-1.5">
@@ -638,15 +607,15 @@ function PaginationBar({
           const showGap = prev && p - prev > 1;
           return (
             <span key={p} className="inline-flex items-center gap-1.5">
-              {showGap && <span className="px-1 font-bold text-slate-400">...</span>}
+              {showGap && <span className="px-1 font-bold text-[var(--text-muted-2)]">…</span>}
               <button
                 type="button"
                 onClick={() => onPageChange(p)}
                 className={[
-                  "h-8 min-w-8 rounded-md border px-2 text-xs font-black transition",
+                  "tnum h-8 min-w-8 cursor-pointer rounded-lg px-2 text-xs font-bold transition",
                   p === page
-                    ? "border-[var(--primary)] bg-[var(--primary)] text-white shadow-sm"
-                    : "border-border bg-white text-slate-600 hover:bg-slate-50 dark:bg-slate-950 dark:text-slate-300 dark:hover:bg-slate-800",
+                    ? "bg-[var(--primary)] text-white shadow-sm"
+                    : "text-[var(--text-soft)] hover:bg-[var(--surface-2)] hover:text-foreground",
                 ].join(" ")}
                 aria-current={p === page ? "page" : undefined}
               >
@@ -670,30 +639,34 @@ function PaginationBar({
   );
 }
 
-function IconActionButton({
-  label,
-  desc,
-  onClick,
-  children,
+const STATUS_DOT = { green: "emerald", red: "rose", blue: "sky", amber: "amber" } as const;
+
+function RowActions({
+  row,
+  onDetail,
+  onEdit,
+  onNota,
 }: {
-  label: string;
-  desc?: string;
-  onClick: () => void;
-  children: React.ReactNode;
+  row: NgInvoiceRow;
+  onDetail: (id: number) => void;
+  onEdit: (id: number) => void;
+  onNota: (id: number, format: "a4" | "thermal") => void;
 }) {
   return (
-    <Tooltip label={label} description={desc}>
-      <TableActionButton
-        type="button"
-        onClick={(e) => {
-          e.stopPropagation();
-          onClick();
-        }}
-        aria-label={label}
-      >
-        {children}
-      </TableActionButton>
-    </Tooltip>
+    <div className="inline-flex shrink-0 items-center justify-end gap-0.5">
+      <IconAction title="Detail invoice" onClick={(e) => { e.stopPropagation(); onDetail(row.id); }}>
+        <FileText size={15} />
+      </IconAction>
+      <IconAction title="Edit invoice" onClick={(e) => { e.stopPropagation(); onEdit(row.id); }}>
+        <Pencil size={15} />
+      </IconAction>
+      <IconAction title="Struk thermal (80mm)" onClick={(e) => { e.stopPropagation(); onNota(row.id, "thermal"); }}>
+        <ReceiptText size={15} />
+      </IconAction>
+      <IconAction title="Invoice A4" onClick={(e) => { e.stopPropagation(); onNota(row.id, "a4"); }}>
+        <Printer size={15} />
+      </IconAction>
+    </div>
   );
 }
 

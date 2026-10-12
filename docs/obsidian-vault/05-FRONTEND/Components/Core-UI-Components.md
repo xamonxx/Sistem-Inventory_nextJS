@@ -2,7 +2,7 @@
 type: frontend-components
 status: verified
 last_verified: 2026-10-13
-source_files: [src/components/ui.tsx, src/components/Drawer.tsx, src/components/ModernDialog.tsx, src/components/DatePicker.tsx, src/components/GlobalTooltip.tsx, src/components/Tooltip.tsx, src/components/WhatsAppDialog.tsx, src/lib/useMediaQuery.ts, src/app/globals.css]
+source_files: [src/components/ui.tsx, src/components/Drawer.tsx, src/components/ModernDialog.tsx, src/components/DatePicker.tsx, src/components/GlobalTooltip.tsx, src/components/Tooltip.tsx, src/components/WhatsAppDialog.tsx, src/lib/useMediaQuery.ts, src/app/globals.css, src/components/page/index.tsx]
 related: ["[[Frontend-Architecture]]", "[[Business-Components]]"]
 tags: [frontend, components]
 ---
@@ -19,6 +19,10 @@ tags: [frontend, components]
 - `Tooltip`: portal fixed dan pointer-events none; memakai gaya bersama `.app-tooltip`.
 - `GlobalTooltip` (di-mount sekali di `src/app/layout.tsx`): merender atribut `data-tooltip` dan `title` lewat portal bergaya `.app-tooltip` (balik ke bawah bila mepet, dibatasi viewport, hanya perangkat hover). `title` dipindah ke `data-tip` saat hover pertama agar tooltip OS tidak ganda; `aria-label` ditambahkan bila elemen tak punya nama aksesibel.
 - `WhatsAppDialog` + `normalizeWhatsAppNumber`: pengganti `window.prompt` untuk nomor WhatsApp (validasi, normalisasi ke `62…`, Escape fase capture agar tidak menutup Drawer di belakang).
+
+## Primitif halaman (`src/components/page/index.tsx`, 2026-10-13)
+`PageHeader` (eyebrow, judul, deskripsi, slot aksi), `StatCard` + `StatGrid` (2 kolom di HP; 4 atau 5 kolom di desktop, kartu ke-5 melebar di bawah `lg`), `Panel` (kartu bento dengan header ikon; `flush` untuk tabel), `IconChip`, `StatusDot`, `TonePill` (margin ≥20 hijau, ≥15 biru, selain itu kuning), `IconAction` (tombol ikon tanpa border, tooltip via `title`), `FilterBar`. Dipakai seluruh halaman Non-Gudang.
+- `globals.css` punya aturan `h1`/`h2`/`h3` tanpa layer yang menimpa utilitas ukuran teks; `Panel` memakai `!text-sm` untuk judul `h2`.
 
 ## Konvensi gaya bersama (2026-10-13)
 - `.field-surface` + token `--field-*` (layer components): permukaan yang sama untuk `Input`, tombol `Select`, dan `DatePicker` (latar, garis, hover, fokus). `DatePicker` mewarisi ukuran/ketebalan teks dari wrapper (bawaan `text-xs font-semibold`) dan mengikuti `rounded-*` pemanggil.
