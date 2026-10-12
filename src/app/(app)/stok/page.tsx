@@ -111,19 +111,18 @@ export default async function StokPage({
   }));
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-        <div>
+    <div className="space-y-5">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+        <div className="min-w-0">
           <h1 className="text-2xl font-bold tracking-tight">Kartu Stok &amp; Riwayat Pergerakan</h1>
-          <p className="text-sm text-muted">Lihat pergerakan persediaan barang masuk, penjualan, retur, dan penyesuaian.</p>
+          <p className="mt-1 text-sm text-muted">Pergerakan barang masuk, penjualan, retur, dan penyesuaian stok.</p>
         </div>
+        {canEdit && <StokForm items={items} />}
       </div>
 
-      {canEdit ? (
-        <StokForm items={items} />
-      ) : (
-        <div className="rounded-xl bg-blue-50 p-4 border border-blue-200 text-xs text-blue-800">
-          <strong>ℹ️ Mode Lihat Saja:</strong> Hanya akun <strong>Admin Gudang</strong> yang memiliki wewenang untuk memasukkan restok barang baru atau melakukan penyesuaian manual.
+      {!canEdit && (
+        <div className="rounded-xl border border-sky-200 bg-sky-50 p-4 text-xs text-sky-800 dark:border-sky-400/20 dark:bg-sky-500/10 dark:text-sky-200">
+          <strong>Mode lihat saja:</strong> hanya akun <strong>Admin Gudang</strong> yang dapat mencatat barang masuk atau melakukan koreksi stok.
         </div>
       )}
 

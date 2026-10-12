@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { Search, Keyboard, ChevronDown, LogOut } from "lucide-react";
 import { NotificationCenter } from "./NotificationCenter";
 import { ThemeToggle } from "./ThemeToggle";
+import { useMediaQuery, DESKTOP_QUERY } from "@/lib/useMediaQuery";
 
 interface TopNavProps {
   nama: string;
@@ -12,6 +13,8 @@ interface TopNavProps {
 
 export function TopNav({ nama, role }: TopNavProps) {
   const [isProfileOpen, setIsProfileOpen] = useState(false);
+  // Satu instance NotificationCenter saja (ia polling); header mobile memegang yang lain.
+  const isDesktop = useMediaQuery(DESKTOP_QUERY);
   const profileRef = useRef<HTMLDivElement>(null);
   const initials = nama
     .split(" ")
@@ -52,22 +55,22 @@ export function TopNav({ nama, role }: TopNavProps) {
   }
 
   return (
-     <nav className="app-chrome-surface chrome-hairline no-print relative z-30 hidden h-[76px] w-full shrink-0 items-center justify-between border-b px-6 shadow-[0_16px_38px_-32px_rgba(14,165,233,0.55),0_1px_0_rgba(255,255,255,0.06)_inset] backdrop-blur-2xl backdrop-saturate-150 transition-[background-color,border-color,box-shadow] duration-200 lg:flex xl:px-8">
+     <nav className="app-chrome-surface chrome-hairline no-print relative z-30 hidden h-16 w-full shrink-0 items-center justify-between border-b px-6 shadow-[0_16px_38px_-32px_rgba(14,165,233,0.55),0_1px_0_rgba(255,255,255,0.06)_inset] backdrop-blur-2xl backdrop-saturate-150 transition-[background-color,border-color,box-shadow] duration-200 lg:flex xl:px-8">
        <button
          onClick={triggerSearch}
-         className="chrome-soft-panel flex w-full max-w-[420px] cursor-pointer items-center justify-between rounded-2xl px-4 py-2.5 text-[var(--chrome-muted)] backdrop-blur-xl backdrop-saturate-150 transition-[border-color,color,box-shadow] hover:border-[var(--chrome-active-border)] hover:text-[var(--chrome-ink)]"
+         className="chrome-soft-panel flex w-full h-10 max-w-[420px] cursor-pointer items-center justify-between rounded-xl px-3.5 text-[var(--chrome-muted)] backdrop-blur-xl backdrop-saturate-150 transition-[border-color,color,box-shadow] hover:border-[var(--chrome-active-border)] hover:text-[var(--chrome-ink)]"
        >
          <span className="flex items-center gap-2.5 text-[13px] font-semibold">
            <Search size={16} strokeWidth={2.5} /> Cari barang, invoice, pelanggan...
          </span>
-         <span className="flex items-center gap-0.5 rounded-md border border-[var(--chrome-active-border)] bg-sky-500/10 px-2 py-1 font-mono text-[10px] font-bold text-[var(--primary)] shadow-[0_8px_18px_rgba(14,165,233,0.12)]">
+         <span className="flex items-center gap-0.5 rounded-md border border-[var(--chrome-active-border)] bg-sky-500/10 px-1.5 py-0.5 font-mono text-[10px] font-bold text-[var(--primary)] shadow-[0_8px_18px_rgba(14,165,233,0.12)]">
            <Keyboard size={11} /> Ctrl+K
          </span>
        </button>
 
-      <div className="flex items-center gap-3 xl:gap-4">
+      <div className="flex items-center gap-2.5 xl:gap-3 [&_.chrome-icon-button]:size-[38px]">
         <ThemeToggle />
-        <NotificationCenter role={role} />
+        {isDesktop && <NotificationCenter role={role} />}
         <span className="h-6 w-px bg-[var(--chrome-border)]" />
 
         <div ref={profileRef} className="relative">
@@ -75,7 +78,7 @@ export function TopNav({ nama, role }: TopNavProps) {
             type="button"
             onClick={() => setIsProfileOpen((open) => !open)}
             data-testid="topnav-profile-button"
-            className={`flex cursor-pointer items-center gap-3 rounded-2xl border px-3 py-2.5 transition-[background-color,border-color,box-shadow] ${
+            className={`flex cursor-pointer items-center gap-2.5 rounded-xl border px-2 py-1 transition-[background-color,border-color,box-shadow] ${
               isProfileOpen
                 ? "border-[var(--chrome-active-border)] bg-sky-50/85 shadow-[0_14px_32px_rgba(14,165,233,0.12)] dark:bg-white/[0.055]"
                 : "border-transparent hover:border-[var(--chrome-border)] hover:bg-slate-50/80 dark:hover:bg-white/[0.035]"
@@ -83,7 +86,7 @@ export function TopNav({ nama, role }: TopNavProps) {
             aria-haspopup="menu"
             aria-expanded={isProfileOpen}
           >
-            <div className="chrome-avatar flex h-10 w-10 items-center justify-center rounded-xl text-xs font-bold uppercase select-none">
+            <div className="chrome-avatar flex h-9 w-9 items-center justify-center rounded-[10px] text-xs font-bold uppercase select-none">
               {initials}
             </div>
             <div className="leading-tight text-left select-none">

@@ -3,7 +3,7 @@
 import { useMemo, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { barangMasuk, koreksiStok } from "./actions";
-import { Button, Card, Input, Label, CharCounter } from "@/components/ui";
+import { Button, Input, Label, CharCounter } from "@/components/ui";
 import { FIELD_LIMITS } from "@/lib/fieldLimits";
 import { toast } from "sonner";
 import { X, ArrowDownCircle, RefreshCcw, Check } from "lucide-react";
@@ -109,21 +109,15 @@ export function StokForm({ items }: { items: Item[] }) {
 
   return (
     <>
-      {/* Action bar — hanya tombol, form muncul di modal */}
-      <Card className="flex flex-col gap-4 p-5 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <h2 className="font-semibold text-foreground">Manajemen Persediaan</h2>
-          <p className="text-xs text-muted">Catat barang masuk/restock atau lakukan koreksi penyesuaian stok.</p>
-        </div>
-        <div className="grid grid-cols-1 gap-2.5 sm:flex sm:flex-wrap sm:items-center">
-          <Button variant="success" onClick={() => openStokModal("MASUK")} className="w-full sm:w-auto">
-            <ArrowDownCircle size={16} /> Barang Masuk
-          </Button>
-          <Button onClick={() => openStokModal("KOREKSI")} className="w-full sm:w-auto">
-            <RefreshCcw size={16} /> Koreksi Stok
-          </Button>
-        </div>
-      </Card>
+      {/* Tombol aksi di header halaman — form muncul di modal */}
+      <div className="grid grid-cols-2 gap-2.5 sm:flex sm:items-center">
+        <Button variant="success" onClick={() => openStokModal("MASUK")} className="w-full sm:w-auto">
+          <ArrowDownCircle size={16} /> Barang Masuk
+        </Button>
+        <Button variant="outline" onClick={() => openStokModal("KOREKSI")} className="w-full sm:w-auto">
+          <RefreshCcw size={16} /> Koreksi Stok
+        </Button>
+      </div>
 
       {/* Modal Aksi Stok (tabbed: Masuk / Koreksi) */}
       {isStokOpen && (

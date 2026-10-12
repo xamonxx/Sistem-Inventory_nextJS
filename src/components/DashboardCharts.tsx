@@ -1,148 +1,232 @@
 "use client";
 
-import { useEffect, useState } from "react";
 import {
   ResponsiveContainer,
   AreaChart,
   Area,
   BarChart,
   Bar,
-  LineChart,
-  Line,
+  Cell,
+  LabelList,
+  PieChart,
+  Pie,
   XAxis,
   YAxis,
   Tooltip,
   CartesianGrid,
-  Legend,
+  ReferenceLine,
 } from "recharts";
 import { formatRupiah } from "@/lib/utils";
 
-type ChartProps = {
-  revenueTrend: { tanggal: string; omset: number; margin: number }[];
-  topItems: { nama: string; qty: number }[];
-  projectSales: { nama: string; total: number }[];
-  showMargin?: boolean;
+type TrendPoint = { tanggal: string; omset: number; margin: number };
+
+const AXIS_TICK = { fontSize: 10, fill: "var(--text-muted-2)" };
+
+const TOOLTIP_STYLE = {
+  backgroundColor: "var(--card)",
+  border: "1px solid var(--border)",
+  borderRadius: "12px",
+  boxShadow: "0 18px 40px -20px rgba(2, 6, 23, 0.45)",
+  color: "var(--foreground)",
+  fontSize: "12px",
+  padding: "8px 12px",
 };
 
-export function DashboardCharts({ revenueTrend, topItems, projectSales, showMargin = true }: ChartProps) {
-  const [mounted, setMounted] = useState(false);
+const TOOLTIP_LABEL_STYLE = { fontWeight: 700, color: "var(--foreground)", marginBottom: 4 };
 
-  useEffect(() => {
-    setMounted(true);
-  }, []);
+const PROJECT_COLORS = ["#0ea5e9", "#8b5cf6", "#10b981", "#f59e0b", "#f43f5e"];
 
-  if (!mounted) {
-    return <div className="h-64 flex items-center justify-center text-sm text-muted">Memuat grafik...</div>;
-  }
+function compactRupiah(v: number) {
+  if (Math.abs(v) >= 1_000_000_000) return `${(v / 1_000_000_000).toFixed(1)}M`;
+  if (Math.abs(v) >= 1_000_000) return `${(v / 1_000_000).toFixed(1)}jt`;
+  if (Math.abs(v) >= 1_000) return `${Math.round(v / 1_000)}rb`;
+  return String(v);
+}
 
-  const cardClass = "liquid-panel chart-glass-card p-5 backdrop-blur-2xl backdrop-saturate-150 md:p-6";
+function truncate(text: string, max: number) {
+  return text.length > max ? `${text.slice(0, max - 1)}…` : text;
+}
+
+export function RevenueTrendChart({ data, showMargin = true }: { data: TrendPoint[]; showMargin?: boolean }) {
+  return (
+    <ResponsiveContainer width="100%" height="100%">
+      <AreaChart data={data} margin={{ top: 8, right: 8, left: -8, bottom: 0 }}>
+        <defs>
+          <linearGradient id="bentoOmset" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stopColor="#0ea5e9" stopOpacity={0.35} />
+            <stop offset="100%" stopColor="#0ea5e9" stopOpacity={0} />
+          </linearGradient>
+          <linearGradient id="bentoMargin" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stopColor="#10b981" stopOpacity={0.3} />
+            <stop offset="100%" stopColor="#10b981" stopOpacity={0} />
+          </linearGradient>
+        </defs>
+        <CartesianGrid strokeDasharray="4 6" stroke="var(--border)" vertical={false} />
+        <XAxis dataKey="tanggal" tick={AXIS_TICK} axisLine={false} tickLine={false} minTickGap={18} />
+        <YAxis tick={AXIS_TICK} axisLine={false} tickLine={false} width={48} tickFormatter={compactRupiah} />
+        <Tooltip
+          contentStyle={TOOLTIP_STYLE}
+          labelStyle={TOOLTIP_LABEL_STYLE}
+          cursor={{ stroke: "var(--line-strong)", strokeDasharray: "3 3" }}
+          formatter={(v: unknown, name: unknown) => [formatRupiah(v as number), name as string]}
+        />
+        <Area
+          name="Omzet"
+          type="monotoneX"
+          dataKey="omset"
+          stroke="#0ea5e9"
+          strokeWidth={2.25}
+          fill="url(#bentoOmset)"
+          activeDot={{ r: 4, strokeWidth: 0 }}
+        />
+        {showMargin && (
+          <Area
+            name="Margin"
+            type="monotoneX"
+            dataKey="margin"
+            stroke="#10b981"
+            strokeWidth={2}
+            fill="url(#bentoMargin)"
+            activeDot={{ r: 4, strokeWidth: 0 }}
+          />
+        )}
+      </AreaChart>
+    </ResponsiveContainer>
+  );
+}
+
+export function MarginPctChart({ data }: { data: TrendPoint[] }) {
+  // Hari tanpa omzet tidak punya persentase margin; null agar garis tidak jatuh ke 0%.
+  const points = data.map((d) => ({
+    tanggal: d.tanggal,
+    marginPct: d.omset > 0 ? Math.round((d.margin / d.omset) * 1000) / 10 : null,
+  }));
+  const valid = points.map((p) => p.marginPct).filter((v): v is number => v !== null);
+  const avg = valid.length > 0 ? Math.round((valid.reduce((a, b) => a + b, 0) / valid.length) * 10) / 10 : null;
 
   return (
-    <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-      {/* Revenue & Margin Trend */}
-      <div className={`${cardClass} ${!showMargin ? "lg:col-span-2" : ""}`}>
-        <h3 className="mb-4 text-xs font-bold text-foreground uppercase tracking-wider">
-          {showMargin ? "Tren Omzet & Margin Kotor" : "Tren Omzet"}
-        </h3>
-        <div className="h-72">
-          <ResponsiveContainer width="100%" height="100%">
-            <AreaChart data={revenueTrend} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
-              <defs>
-                <linearGradient id="colorOmset" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor="#0284c7" stopOpacity={0.22} />
-                  <stop offset="95%" stopColor="#0284c7" stopOpacity={0} />
-                </linearGradient>
-                {showMargin && (
-                  <linearGradient id="colorMargin" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#10b981" stopOpacity={0.18} />
-                    <stop offset="95%" stopColor="#10b981" stopOpacity={0} />
-                  </linearGradient>
-                )}
-              </defs>
-              <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
-              <XAxis dataKey="tanggal" tick={{ fontSize: 10, fill: "#94a3b8" }} />
-              <YAxis
-                tick={{ fontSize: 10, fill: "#94a3b8" }}
-                tickFormatter={(v) => (v >= 1_000_000 ? `${(v / 1_000_000).toFixed(1)}jt` : `${v / 1000}rb`)}
-              />
-              <Tooltip
-                contentStyle={{ backgroundColor: "var(--glass-bg-strong)", border: "1px solid var(--glass-border)", borderRadius: "12px", boxShadow: "var(--glass-shadow)", color: "var(--foreground)", backdropFilter: "blur(18px) saturate(160%)" }}
-                labelStyle={{ fontWeight: "bold", color: "var(--foreground)" }}
-                formatter={(v: unknown) => [formatRupiah(v as number), undefined]}
-              />
-              <Legend verticalAlign="top" height={36} iconType="circle" />
-              <Area name="Omzet" type="monotone" dataKey="omset" stroke="#0284c7" strokeWidth={2.5} fillOpacity={1} fill="url(#colorOmset)" />
-              {showMargin && (
-                <Area name="Margin" type="monotone" dataKey="margin" stroke="#10b981" strokeWidth={2} fillOpacity={1} fill="url(#colorMargin)" />
-              )}
-            </AreaChart>
-          </ResponsiveContainer>
+    <ResponsiveContainer width="100%" height="100%">
+      <AreaChart data={points} margin={{ top: 12, right: 8, left: -14, bottom: 0 }}>
+        <defs>
+          <linearGradient id="bentoMarginPct" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stopColor="#f59e0b" stopOpacity={0.28} />
+            <stop offset="100%" stopColor="#f59e0b" stopOpacity={0} />
+          </linearGradient>
+        </defs>
+        <CartesianGrid strokeDasharray="4 6" stroke="var(--border)" vertical={false} />
+        <XAxis dataKey="tanggal" tick={AXIS_TICK} axisLine={false} tickLine={false} minTickGap={18} />
+        <YAxis tick={AXIS_TICK} axisLine={false} tickLine={false} width={44} tickFormatter={(v) => `${v}%`} />
+        <Tooltip
+          contentStyle={TOOLTIP_STYLE}
+          labelStyle={TOOLTIP_LABEL_STYLE}
+          cursor={{ stroke: "var(--line-strong)", strokeDasharray: "3 3" }}
+          formatter={(v: unknown) => [`${v as number}%`, "Margin"]}
+        />
+        {avg !== null && (
+          <ReferenceLine
+            y={avg}
+            stroke="#f59e0b"
+            strokeOpacity={0.55}
+            strokeDasharray="5 5"
+            label={{ value: `Rata-rata ${avg}%`, position: "insideTopRight", fontSize: 10, fill: "#f59e0b" }}
+          />
+        )}
+        <Area
+          name="Margin %"
+          type="monotoneX"
+          dataKey="marginPct"
+          stroke="#f59e0b"
+          strokeWidth={2}
+          fill="url(#bentoMarginPct)"
+          connectNulls
+          dot={{ r: 2.5, strokeWidth: 0, fill: "#f59e0b" }}
+          activeDot={{ r: 4.5, strokeWidth: 0 }}
+        />
+      </AreaChart>
+    </ResponsiveContainer>
+  );
+}
+
+/** Tick nama barang satu baris (tick bawaan Recharts membungkus teks panjang). */
+function ItemTick({ x, y, payload }: { x?: number | string; y?: number | string; payload?: { value?: string } }) {
+  const name = String(payload?.value ?? "");
+  return (
+    <text x={Number(x) - 8} y={Number(y)} dy={4} textAnchor="end" fontSize={11} fill="var(--text-soft)">
+      <title>{name}</title>
+      {truncate(name, 21)}
+    </text>
+  );
+}
+
+export function TopItemsChart({ data }: { data: { nama: string; qty: number }[] }) {
+  return (
+    <ResponsiveContainer width="100%" height="100%">
+      <BarChart data={data} layout="vertical" margin={{ top: 0, right: 36, left: 0, bottom: 0 }} barCategoryGap={6}>
+        <defs>
+          <linearGradient id="bentoTopBar" x1="0" y1="0" x2="1" y2="0">
+            <stop offset="0%" stopColor="#0284c7" />
+            <stop offset="100%" stopColor="#22d3ee" />
+          </linearGradient>
+        </defs>
+        <XAxis type="number" hide />
+        <YAxis
+          type="category"
+          dataKey="nama"
+          width={140}
+          axisLine={false}
+          tickLine={false}
+          tick={ItemTick}
+        />
+        <Tooltip
+          contentStyle={TOOLTIP_STYLE}
+          labelStyle={TOOLTIP_LABEL_STYLE}
+          cursor={{ fill: "var(--surface-2)", fillOpacity: 0.5 }}
+          // Fill bar berupa gradient (url(#...)), bukan warna; tanpa ini teks item jatuh ke hitam.
+          itemStyle={{ color: "var(--foreground)" }}
+          formatter={(v: unknown) => [`${v as number} unit`, "Terjual"]}
+        />
+        <Bar dataKey="qty" radius={[0, 8, 8, 0]} background={{ fill: "var(--surface-2)", fillOpacity: 0.45, radius: 8 }}>
+          {data.map((_, i) => (
+            <Cell key={i} fill="url(#bentoTopBar)" fillOpacity={i < 3 ? 1 : 0.55} />
+          ))}
+          <LabelList dataKey="qty" position="right" style={{ fontSize: 11, fontWeight: 700, fill: "var(--foreground)" }} />
+        </Bar>
+      </BarChart>
+    </ResponsiveContainer>
+  );
+}
+
+export function ProjectSalesChart({ data }: { data: { nama: string; total: number }[] }) {
+  const total = data.reduce((a, d) => a + d.total, 0);
+  return (
+    <div className="flex h-full flex-col items-center gap-4 sm:flex-row">
+      <div className="relative h-44 w-44 shrink-0">
+        <ResponsiveContainer width="100%" height="100%">
+          <PieChart>
+            <Pie data={data} dataKey="total" nameKey="nama" innerRadius="68%" outerRadius="100%" paddingAngle={2} stroke="none">
+              {data.map((_, i) => (
+                <Cell key={i} fill={PROJECT_COLORS[i % PROJECT_COLORS.length]} />
+              ))}
+            </Pie>
+            <Tooltip contentStyle={TOOLTIP_STYLE} formatter={(v: unknown) => [formatRupiah(v as number), undefined]} />
+          </PieChart>
+        </ResponsiveContainer>
+        <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center">
+          <span className="text-[10px] font-bold uppercase tracking-wider text-[var(--text-muted-2)]">Total</span>
+          <span className="tnum text-sm font-extrabold text-foreground">{compactRupiah(total)}</span>
         </div>
       </div>
-
-      {/* Sales by Project */}
-      <div className={cardClass}>
-        <h3 className="mb-4 text-xs font-bold text-foreground uppercase tracking-wider">Omzet Berdasarkan Proyek</h3>
-        <div className="h-72">
-          {projectSales.length === 0 ? (
-            <div className="h-full flex items-center justify-center text-xs text-slate-400">Belum ada data penjualan proyek.</div>
-          ) : (
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={projectSales} layout="vertical" margin={{ top: 10, right: 10, left: 10, bottom: 5 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" horizontal={false} />
-                <XAxis type="number" tick={{ fontSize: 10, fill: "#94a3b8" }} tickFormatter={(v) => `${v / 1_000_000}jt`} />
-                <YAxis type="category" dataKey="nama" width={80} tick={{ fontSize: 10, fill: "#94a3b8" }} />
-                <Tooltip
-                  contentStyle={{ backgroundColor: "var(--glass-bg-strong)", border: "1px solid var(--glass-border)", borderRadius: "12px", boxShadow: "var(--glass-shadow)", color: "var(--foreground)", backdropFilter: "blur(18px) saturate(160%)" }}
-                  formatter={(v: unknown) => [formatRupiah(v as number), undefined]}
-                />
-                <Bar name="Omzet" dataKey="total" fill="#0284c7" radius={[0, 6, 6, 0]} />
-              </BarChart>
-            </ResponsiveContainer>
-          )}
-        </div>
-      </div>
-
-      {/* Top Selling Items */}
-      <div className={cardClass}>
-        <h3 className="mb-4 text-xs font-bold text-foreground uppercase tracking-wider">10 Barang Terlaris (Jumlah)</h3>
-        <div className="h-72 ">
-          {topItems.length === 0 ? (
-            <div className="h-full flex items-center justify-center text-xs text-slate-400">Belum ada data penjualan.</div>
-          ) : (
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={topItems} margin={{ top: 10, right: 10, left: 0, bottom: 5 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" vertical={false} />
-                <XAxis dataKey="nama" tick={{ fontSize: 9, fill: "#94a3b8" }} />
-                <YAxis tick={{ fontSize: 10, fill: "#94a3b8" }} />
-                <Tooltip contentStyle={{ backgroundColor: "var(--glass-bg-strong)", border: "1px solid var(--glass-border)", borderRadius: "12px", boxShadow: "var(--glass-shadow)", color: "var(--foreground)", backdropFilter: "blur(18px) saturate(160%)" }} />
-                <Bar name="Jumlah Terjual" dataKey="qty" fill="#0284c7" radius={[6, 6, 0, 0]} />
-              </BarChart>
-            </ResponsiveContainer>
-          )}
-        </div>
-      </div>
-
-      {/* Margin Trend (%) */}
-      {showMargin && (
-        <div className={cardClass}>
-          <h3 className="mb-4 text-xs font-bold text-foreground uppercase tracking-wider">Tren Persentase Margin Kotor (%)</h3>
-          <div className="h-72">
-            <ResponsiveContainer width="100%" height="100%">
-              <LineChart data={revenueTrend.map(d => ({ ...d, marginPct: d.omset > 0 ? Math.round((d.margin / d.omset) * 100) : 0 }))} margin={{ top: 10, right: 10, left: 0, bottom: 5 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
-                <XAxis dataKey="tanggal" tick={{ fontSize: 10, fill: "#94a3b8" }} />
-                <YAxis tick={{ fontSize: 10, fill: "#94a3b8" }} tickFormatter={(v) => `${v}%`} />
-                <Tooltip
-                  contentStyle={{ backgroundColor: "var(--glass-bg-strong)", border: "1px solid var(--glass-border)", borderRadius: "12px", boxShadow: "var(--glass-shadow)", color: "var(--foreground)", backdropFilter: "blur(18px) saturate(160%)" }}
-                  formatter={(v: unknown) => [`${v as number}%`, "Margin (%)"]}
-                />
-                <Line name="Margin %" type="monotone" dataKey="marginPct" stroke="#f59e0b" strokeWidth={2.5} activeDot={{ r: 6 }} />
-              </LineChart>
-            </ResponsiveContainer>
-          </div>
-        </div>
-      )}
+      <ul className="w-full min-w-0 space-y-2.5">
+        {data.map((d, i) => (
+          <li key={d.nama} className="flex items-center gap-2.5 text-xs">
+            <span className="h-2.5 w-2.5 shrink-0 rounded-full" style={{ background: PROJECT_COLORS[i % PROJECT_COLORS.length] }} />
+            <span className="min-w-0 flex-1 truncate font-semibold text-[var(--text-soft)]" title={d.nama}>
+              {d.nama}
+            </span>
+            <span className="tnum shrink-0 font-bold text-foreground">{formatRupiah(d.total)}</span>
+          </li>
+        ))}
+      </ul>
     </div>
   );
 }

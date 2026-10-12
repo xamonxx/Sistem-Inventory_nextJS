@@ -15,6 +15,14 @@ Fix and retest the two receipt-payment defects before push/deploy:
 
 After those fixes, improve the losing concurrent checkout response so it reports a stock conflict instead of `Terjadi kesalahan internal saat memproses checkout.`
 
+## Latest source change (UI/UX pass, committed 2026-10-13)
+- App-wide modernization: navbar 64px, `GlobalTooltip`, `WhatsAppDialog`, `.field-surface` for Input/Select/DatePicker, global checkbox style, calmer `Th`/`Td`, redesigned Barang/Stok/Laporan, sidebar collapsed-state fix, mobile notification bell via `useMediaQuery`, theme-aware 404.
+- Gotchas: `Select` forwards only un-prefixed `col-*`/`w-*` classes to its wrapper; `chrome-soft-panel` and `btn-liquid-*` are unlayered CSS and beat Tailwind utilities; never put `opacity` on `<td>`.
+- Pending: Kasir/Non-Gudang regression check, Laporan Excel/PDF click test, Retur WhatsApp path.
+
+## Latest source change (dashboard)
+- `/` dashboard redesigned in a bento layout; charts split in `DashboardChartsWrapper` (`RevenueTrendChart`, `MarginPctChart`, `TopItemsChart`, `ProjectSalesChart`); new `bento-*` CSS. 30-day trend keys now use local dates. Admin Kasir layout still needs a browser check. Not committed yet.
+
 ## Latest source change
 - Excel export headers now use semantic per-column-group colors via `HEADER_TONES` in `src/lib/export/excelStyles.ts`; header text must be written before `applyHeaderStyle`. Type-check and lint passed; a visual check in Excel is still pending.
 

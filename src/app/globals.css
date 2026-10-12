@@ -299,6 +299,49 @@ h3,
   font-feature-settings: "tnum" 1 !important;
 }
 
+/* ============================================================
+   Permukaan field bersama — Input, Select, dan DatePicker memakai
+   tampilan yang sama (latar, garis, hover, fokus). Di layer components
+   sehingga utilitas pemanggil (bg-*, border-*) tetap bisa menimpa.
+   ============================================================ */
+:root {
+  --field-bg: rgba(255, 255, 255, 0.92);
+  --field-border: rgba(15, 23, 42, 0.14);
+  --field-border-hover: rgba(2, 132, 199, 0.45);
+  --field-ring: rgba(14, 165, 233, 0.16);
+}
+
+.dark {
+  --field-bg: rgba(2, 6, 23, 0.4);
+  --field-border: rgba(148, 163, 184, 0.2);
+  --field-border-hover: rgba(56, 189, 248, 0.42);
+  --field-ring: rgba(56, 189, 248, 0.16);
+}
+
+@layer components {
+  .field-surface {
+    border: 1px solid var(--field-border);
+    background-color: var(--field-bg);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.55);
+  }
+
+  .dark .field-surface {
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.03);
+  }
+
+  .field-surface:hover:not(:disabled) {
+    border-color: var(--field-border-hover);
+  }
+
+  .field-surface:focus,
+  .field-surface:focus-visible,
+  .field-surface[aria-expanded="true"] {
+    outline: none;
+    border-color: var(--primary);
+    box-shadow: 0 0 0 4px var(--field-ring);
+  }
+}
+
 /* Modern Pill Badge / Micro-label */
 @layer components {
   .u-label {
@@ -726,6 +769,104 @@ h3,
   box-shadow: 0 10px 24px rgba(8, 47, 73, 0.06);
   backdrop-filter: blur(14px) saturate(160%);
   -webkit-backdrop-filter: blur(14px) saturate(160%);
+}
+
+/* ============================================================
+   Bento dashboard surfaces (Gudang/Kasir dashboard at `/`).
+   Solid, crisp cards without heavy backdrop blur. Per-card accent
+   color is passed through the `--tone` custom property.
+   ============================================================ */
+
+.bento-card {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+  min-width: 0;
+  border-radius: 20px;
+  border: 1px solid var(--border);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.7), rgba(255, 255, 255, 0) 42%),
+    var(--card);
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04), 0 14px 34px -22px rgba(15, 23, 42, 0.22);
+}
+
+.dark .bento-card {
+  border-color: rgba(148, 179, 214, 0.14);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.04), rgba(255, 255, 255, 0) 45%),
+    rgba(var(--card-rgb), 0.86);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.05), 0 22px 44px -28px rgba(0, 0, 0, 0.7);
+}
+
+.bento-hero {
+  background:
+    radial-gradient(48rem 18rem at 0% 0%, var(--dashboard-hero-a), transparent 62%),
+    radial-gradient(36rem 16rem at 100% 100%, var(--dashboard-hero-c), transparent 60%),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.6), rgba(255, 255, 255, 0) 50%),
+    var(--card);
+}
+
+.dark .bento-hero {
+  background:
+    radial-gradient(48rem 18rem at 0% 0%, var(--dashboard-hero-a), transparent 62%),
+    radial-gradient(36rem 16rem at 100% 100%, var(--dashboard-hero-c), transparent 60%),
+    rgba(var(--card-rgb), 0.9);
+}
+
+/* Soft corner glow + top accent line in the card's tone color. */
+.bento-tone::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background: radial-gradient(120% 90% at 100% 0%, color-mix(in srgb, var(--tone) 15%, transparent), transparent 62%);
+}
+
+.bento-tone::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 22px;
+  right: 22px;
+  height: 2px;
+  border-radius: 0 0 2px 2px;
+  pointer-events: none;
+  background: linear-gradient(90deg, transparent, var(--tone), transparent);
+  opacity: 0.75;
+}
+
+.bento-icon {
+  display: inline-flex;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 12px;
+  color: var(--tone);
+  background: color-mix(in srgb, var(--tone) 13%, transparent);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--tone) 26%, transparent);
+}
+
+.bento-interactive {
+  transition: transform 0.18s ease, border-color 0.18s ease, box-shadow 0.18s ease;
+}
+
+.bento-interactive:hover {
+  transform: translateY(-2px);
+  border-color: color-mix(in srgb, var(--tone, var(--primary)) 45%, var(--border));
+}
+
+.bento-segment {
+  border: 1px solid var(--border);
+  background: color-mix(in srgb, var(--surface-2) 70%, transparent);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .bento-interactive:hover {
+    transform: none;
+  }
 }
 
 .app-chrome-surface {
@@ -1746,10 +1887,6 @@ body.print-format-a4 .a4-print-layout {
     font-size: 16px !important;
   }
 
-  [data-tooltip]::before,
-  [data-tooltip]::after {
-    display: none;
-  }
 }
 
 /* Keterbacaan HP: naikkan teks 8-10px ke 11px (layar saja; cetak nota/invoice tidak berubah). */
@@ -1784,54 +1921,163 @@ body:has(#search-item) .no-print.fixed.bottom-6.right-6 {
 }
 
 /* ============================================================
-   Premium CSS Tooltip Utility
+   Checkbox modern (seluruh aplikasi). Ukuran/bentuk di layer base agar
+   utilitas (h-5 w-5, rounded, dll.) tetap bisa menimpa; warna status di
+   luar layer supaya tidak tertimpa border-border / text-* dari Tailwind.
+   Checkbox tersembunyi (sr-only / peer toggle) tidak terpengaruh.
    ============================================================ */
-[data-tooltip] {
-  position: relative;
+@layer base {
+  input[type="checkbox"]:not(.sr-only) {
+    -webkit-appearance: none;
+    appearance: none;
+    display: inline-grid;
+    place-content: center;
+    flex-shrink: 0;
+    width: 1rem;
+    height: 1rem;
+    margin: 0;
+    border-radius: 5px;
+    border: 1.5px solid rgba(100, 116, 139, 0.55);
+    background-color: var(--card);
+    cursor: pointer;
+    vertical-align: middle;
+    transition: background-color 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease;
+  }
+
+  input[type="checkbox"]:not(.sr-only)::before {
+    content: "";
+    width: 0.6em;
+    height: 0.6em;
+    background-color: #fff;
+    clip-path: polygon(12% 48%, 0 64%, 40% 100%, 100% 22%, 86% 8%, 40% 70%);
+    transform: scale(0);
+    transition: transform 0.12s ease;
+  }
 }
 
-[data-tooltip]::before {
-  content: attr(data-tooltip);
-  position: absolute;
-  bottom: 100%;
-  left: 50%;
-  transform: translate(-50%, -8px) scale(0.95);
+:where(input[type="checkbox"]:not(.sr-only)):hover:not(:disabled) {
+  border-color: var(--primary);
+}
+
+:where(input[type="checkbox"]:not(.sr-only)):checked,
+:where(input[type="checkbox"]:not(.sr-only)):indeterminate {
+  border-color: var(--primary);
+  background-color: var(--primary);
+}
+
+:where(input[type="checkbox"]:not(.sr-only)):checked::before {
+  transform: scale(1);
+}
+
+:where(input[type="checkbox"]:not(.sr-only)):indeterminate::before {
+  width: 0.55em;
+  height: 2px;
+  border-radius: 1px;
+  clip-path: none;
+  transform: scale(1);
+}
+
+:where(input[type="checkbox"]:not(.sr-only)):focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(14, 165, 233, 0.35);
+}
+
+:where(input[type="checkbox"]:not(.sr-only)):disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
+.dark :where(input[type="checkbox"]:not(.sr-only)):not(:checked):not(:indeterminate) {
+  border-color: rgba(148, 163, 184, 0.42);
+  background-color: rgba(15, 23, 42, 0.55);
+}
+
+.dark :where(input[type="checkbox"]:not(.sr-only)):not(:checked):not(:indeterminate):hover:not(:disabled) {
+  border-color: #38bdf8;
+}
+
+.dark :where(input[type="checkbox"]:not(.sr-only)):checked,
+.dark :where(input[type="checkbox"]:not(.sr-only)):indeterminate {
+  border-color: #0ea5e9;
+  background-color: #0ea5e9;
+}
+
+/* ============================================================
+   App tooltip — dirender oleh <GlobalTooltip /> (atribut data-tooltip
+   dan title) serta komponen <Tooltip />. Gelap di mode terang (kontras
+   tinggi), sedikit lebih terang dari latar di mode gelap.
+   ============================================================ */
+.app-tooltip {
+  position: fixed;
+  z-index: 2147483647;
+  max-width: 280px;
   padding: 6px 10px;
-  background-color: #10201e;
-  color: #ffffff;
-  font-size: 11px;
+  border-radius: 9px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(15, 23, 42, 0.95);
+  color: #f8fafc;
+  font-size: 12px;
   font-weight: 600;
-  font-family: var(--font-display), sans-serif;
-  letter-spacing: 0.02em;
-  border-radius: 8px;
-  white-space: nowrap;
-  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -4px rgba(0, 0, 0, 0.1);
-  opacity: 0;
+  line-height: 1.35;
+  letter-spacing: 0.005em;
+  white-space: pre-line;
+  overflow-wrap: anywhere;
   pointer-events: none;
-  transition: opacity 0.15s ease, transform 0.15s ease;
-  z-index: 9999;
+  box-shadow: 0 14px 34px -14px rgba(2, 6, 23, 0.6), 0 2px 6px rgba(2, 6, 23, 0.16);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  opacity: 0;
+  transform: translateY(4px) scale(0.97);
+  transition: opacity 0.12s ease, transform 0.12s ease;
 }
 
-[data-tooltip]:hover::before {
+.app-tooltip[data-placement="bottom"] {
+  transform: translateY(-4px) scale(0.97);
+}
+
+.app-tooltip[data-ready="true"] {
   opacity: 1;
-  transform: translate(-50%, -8px) scale(1);
+  transform: none;
 }
 
-[data-tooltip]::after {
-  content: '';
+.dark .app-tooltip {
+  border-color: rgba(148, 163, 184, 0.22);
+  background: rgba(30, 41, 59, 0.97);
+  color: #f1f5f9;
+  box-shadow: 0 16px 40px -14px rgba(0, 0, 0, 0.75), 0 2px 6px rgba(0, 0, 0, 0.3);
+}
+
+.app-tooltip-desc {
+  margin-top: 2px;
+  font-size: 11px;
+  font-weight: 500;
+  color: rgba(226, 232, 240, 0.72);
+}
+
+.app-tooltip-arrow {
   position: absolute;
-  bottom: 100%;
-  left: 50%;
-  transform: translate(-50%, -3px);
-  border-width: 5px;
-  border-style: solid;
-  border-color: #0f172a transparent transparent transparent;
-  opacity: 0;
-  pointer-events: none;
-  transition: opacity 0.15s ease, transform 0.15s ease;
-  z-index: 9999;
+  width: 8px;
+  height: 8px;
+  margin-left: -4px;
+  background: inherit;
+  border: inherit;
+  transform: rotate(45deg);
 }
 
-[data-tooltip]:hover::after {
-  opacity: 1;
+.app-tooltip[data-placement="top"] .app-tooltip-arrow {
+  bottom: -5px;
+  border-top-color: transparent;
+  border-left-color: transparent;
+}
+
+.app-tooltip[data-placement="bottom"] .app-tooltip-arrow {
+  top: -5px;
+  border-bottom-color: transparent;
+  border-right-color: transparent;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .app-tooltip {
+    transition: none;
+  }
 }

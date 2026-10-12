@@ -290,7 +290,10 @@ export function DatePicker({
       ref={containerRef} 
       className={cn(
         "relative inline-block w-full", 
-        !className?.split(/\s+/).some((w) => w.startsWith("h-")) && "h-11", 
+        !className?.split(/\s+/).some((w) => w.startsWith("h-")) && "h-11",
+        // Ukuran & ketebalan teks diwarisi tombol; bawaan text-xs font-semibold.
+        !className?.split(/\s+/).some((w) => /^text-(xs|sm|base|\[)/.test(w)) && "text-xs",
+        !className?.split(/\s+/).some((w) => w.startsWith("font-")) && "font-semibold",
         className,
         isOpen ? "z-40" : "z-10"
       )}
@@ -302,20 +305,22 @@ export function DatePicker({
         type="button"
         disabled={disabled}
         onClick={() => setIsOpen(!isOpen)}
+        aria-expanded={isOpen}
         className={cn(
-          "btn-liquid-outline flex h-full w-full items-center justify-between rounded-lg px-4 text-xs font-bold text-left outline-none cursor-pointer select-none",
+          // Permukaan sama dengan Input/Select; radius mengikuti kelas rounded-* pemanggil.
+          "field-surface flex h-full w-full items-center justify-between px-3.5 text-left outline-none cursor-pointer select-none",
+          className?.split(/\s+/).find((w) => w.startsWith("rounded")) ?? "rounded-lg",
           "transition-[background-color,border-color,color,box-shadow,transform] active:scale-[0.99]",
-          isOpen && "border-[var(--primary)] ring-4 ring-[var(--primary)]/12",
-          disabled && "opacity-50 pointer-events-none bg-slate-50 dark:bg-slate-950 text-slate-400"
+          disabled && "opacity-50 pointer-events-none text-slate-400"
         )}
       >
         <div className="flex items-center gap-2.5 min-w-0">
-          <CalendarIcon size={14} className="text-slate-500 shrink-0" />
-          <span className={cn("truncate font-bold", !internalValue ? "text-slate-400" : "text-foreground dark:text-slate-100")}>
+          <CalendarIcon size={14} className="text-[var(--text-muted-2)] shrink-0" />
+          <span className={cn("truncate", !internalValue ? "font-medium text-[var(--text-muted-2)]" : "text-foreground dark:text-slate-100")}>
             {formattedDisplay || placeholder}
           </span>
         </div>
-        <ChevronDown size={14} className={cn("text-slate-400 transition-transform ml-1 shrink-0", isOpen && "rotate-180")} />
+        <ChevronDown size={14} className={cn("text-[var(--text-muted-2)] transition-transform ml-1 shrink-0", isOpen && "rotate-180")} />
       </button>
 
       {isOpen && typeof document !== "undefined" && createPortal(

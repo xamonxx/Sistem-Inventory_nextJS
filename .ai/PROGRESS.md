@@ -1,5 +1,24 @@
 # Progress
 
+## 2026-10-13 — UI/UX modernization pass
+- [x] WhatsApp number dialog replaces `window.prompt` (Invoice list/detail, Retur).
+- [x] Desktop navbar 76px → 64px; mobile notification bell (single polling instance).
+- [x] Calmer tables, modern checkboxes, selection state fixes.
+- [x] Global tooltip engine (`GlobalTooltip`), theme-aware 404.
+- [x] Barang tablet/desktop breakpoints; sidebar drawer collapsed-state leak fixed; soft border on inactive nav items.
+- [x] Stok redesign (chips, compact filters, paginated grouped timeline) and unified form fields (`.field-surface`); `Select` search split bug fixed.
+- [x] Laporan refresh (bento cards, segmented tabs, theme tokens).
+- [x] Browser checks at 375/768/1024/1100/1280/1440/1920px for touched pages (Gudang role).
+- [ ] Browser check as Admin Kasir and Non-Gudang for the shared component changes.
+- [ ] Manual check of Laporan Excel/PDF buttons and Retur WhatsApp path.
+
+## 2026-10-13 — Dashboard bento redesign
+- [x] Rebuild `/` layout: hero, featured KPI + sparkline, compact KPIs, trend + alert center, top items, margin %, projects, activity.
+- [x] Split charts into four dynamic components; add `bento-*` CSS without touching Non-Gudang classes.
+- [x] Fix 30-day trend date keys to local dates.
+- [x] Type-check, ESLint, browser check (Gudang, 1440 light/dark, 375 mobile).
+- [ ] Browser check as Admin Kasir.
+
 ## 2026-10-13 — Excel export header colors
 - [x] Replace flat navy headers with semantic per-column-group colors in `excelStyles.ts`.
 - [x] Track header rows per sheet instead of detecting them by fill color.

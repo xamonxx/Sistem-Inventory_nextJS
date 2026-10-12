@@ -16,7 +16,7 @@ import {
   Pie,
   Cell,
 } from "recharts";
-import { Table, Th, Td, Badge } from "@/components/ui";
+import { Table, Th, Td, Badge, Button } from "@/components/ui";
 import { Pagination, usePagination } from "@/components/Pagination";
 import { formatRupiah, cn } from "@/lib/utils";
 import {
@@ -33,6 +33,7 @@ import {
   ArrowUpRight,
   LayoutGrid,
   Boxes,
+  Info,
 } from "lucide-react";
 import { toast } from "sonner";
 import { exportAnalyticExcel } from "@/lib/export/exportAnalyticExcel";
@@ -98,7 +99,7 @@ const fmtAxis = (v: unknown) => {
 // light slate tones that washed out on a white background).
 const AXIS_TICK_COLOR = "var(--muted)";
 const AXIS_LABEL_COLOR = "var(--foreground)";
-// ===== Reusable surface (shadcn "Card") =====
+// ===== Reusable surface (bento card, selaras dengan dashboard) =====
 function Panel({
   title,
   desc,
@@ -115,19 +116,37 @@ function Panel({
   className?: string;
 }) {
   return (
-    <div className={cn("rounded-2xl border border-border bg-card shadow-[var(--shadow-card)]", className)}>
+    <div className={cn("bento-card", className)}>
       <header className="flex items-center justify-between gap-3 border-b border-border px-5 py-4">
-        <div className="flex items-center gap-2.5">
+        <div className="flex min-w-0 items-center gap-3">
           {icon}
-          <div>
-            <h3 className="text-sm font-bold leading-tight text-foreground">{title}</h3>
-            {desc && <p className="mt-0.5 text-[11px] text-muted">{desc}</p>}
+          <div className="min-w-0">
+            <h3 className="truncate font-display text-sm font-bold leading-tight text-foreground">{title}</h3>
+            {desc && <p className="mt-0.5 truncate text-[11px] text-[var(--text-muted-2)]">{desc}</p>}
           </div>
         </div>
         {action}
       </header>
-      <div className="p-5">{children}</div>
+      <div className="p-4 sm:p-5">{children}</div>
     </div>
+  );
+}
+
+const TONE_HEX = {
+  sky: "#0ea5e9",
+  emerald: "#10b981",
+  blue: "#3b82f6",
+  amber: "#f59e0b",
+  rose: "#f43f5e",
+  slate: "#94a3b8",
+} as const;
+
+/** Ikon dalam squircle berwarna lembut (terang & gelap) — memakai .bento-icon. */
+function IconChip({ icon: Icon, tone }: { icon: React.ElementType; tone: keyof typeof TONE_HEX }) {
+  return (
+    <span className="bento-icon !h-9 !w-9 !rounded-[11px]" style={{ "--tone": TONE_HEX[tone] } as React.CSSProperties}>
+      <Icon size={17} />
+    </span>
   );
 }
 
@@ -152,27 +171,27 @@ function StatCard({
   /** Angka pendamping kecil di samping nilai (mis. persen margin total). */
   badge?: string;
 }) {
-  const tones = {
-    emerald: "bg-primary-50 text-primary-600 border-primary-100",
-    blue: "bg-blue-50 text-blue-600 border-blue-100",
-    amber: "bg-amber-50 text-amber-600 border-amber-100",
-    slate: "bg-slate-50 text-slate-600 border-slate-200",
-  };
+  const hex = { emerald: TONE_HEX.emerald, blue: TONE_HEX.sky, amber: TONE_HEX.amber, slate: TONE_HEX.slate }[tone];
   return (
-    <div className="group rounded-2xl border border-border bg-card p-5 shadow-[var(--shadow-card)] transition-all hover:-translate-y-0.5 hover:shadow-[0_8px_28px_rgba(0,0,0,0.08)]">
-      <div className="flex items-start justify-between">
-        <p className="text-[10px] font-bold uppercase tracking-wider text-muted">{label}</p>
-        <div className={cn("flex h-9 w-9 items-center justify-center rounded-xl border transition-transform group-hover:scale-105", tones[tone])}>
+    <div className="bento-card bento-tone p-4 sm:p-5" style={{ "--tone": hex } as React.CSSProperties}>
+      <div className="flex items-start justify-between gap-3">
+        <p className="text-[11px] font-bold uppercase leading-tight tracking-wider text-[var(--text-soft)]">{label}</p>
+        <span className="bento-icon !h-9 !w-9 !rounded-[11px]">
           <Icon size={17} />
-        </div>
+        </span>
       </div>
       <div data-tooltip={value} className="mt-3 flex min-w-0 items-baseline gap-2">
-        <p className="min-w-0 font-display font-extrabold tracking-tight text-foreground text-sm sm:text-lg whitespace-nowrap overflow-hidden text-ellipsis">{value}</p>
+        <p className="tnum min-w-0 truncate pb-0.5 font-display text-lg font-extrabold leading-[1.15] tracking-tight text-foreground sm:text-xl">{value}</p>
         {badge && (
-          <span className={cn("shrink-0 rounded-full border px-2 py-0.5 text-[11px] font-bold tabular-nums", tones[tone])}>{badge}</span>
+          <span
+            className="tnum shrink-0 rounded-full px-2 py-0.5 text-[11px] font-bold"
+            style={{ background: "color-mix(in srgb, var(--tone) 14%, transparent)", color: "var(--tone)" }}
+          >
+            {badge}
+          </span>
         )}
       </div>
-      <p className="mt-1 text-[11px] text-muted truncate" title={hint}>{hint}</p>
+      <p className="mt-1 truncate text-[11px] text-[var(--text-muted-2)]" title={hint}>{hint}</p>
     </div>
   );
 }
@@ -968,64 +987,68 @@ export function LaporanClient({ role, userName, periodeLabel, initialFrom, initi
 
   return (
     <div className="space-y-6">
-      {/* ===== Tabs (shadcn segmented) + actions ===== */}
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <div className="inline-flex flex-wrap items-center gap-1 rounded-xl border border-border bg-[var(--surface-2)] p-1 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)]">
+      {/* ===== Header: judul + aksi unduh ===== */}
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+        <div className="min-w-0">
+          <h1 className="text-2xl font-bold tracking-tight">Analisis &amp; Laporan</h1>
+          <p className="mt-1 text-sm text-muted">Performa penjualan, piutang, dan valuasi aset persediaan gudang.</p>
+        </div>
+        <div className="grid grid-cols-2 gap-2.5 sm:flex sm:items-center">
+          <Button size="sm" variant="success" onClick={handleExportExcel} disabled={exporting} className="w-full sm:w-auto">
+            <Download size={14} /> {exporting ? "Mengunduh..." : "Unduh Excel"}
+          </Button>
+          <Button size="sm" variant="outline" onClick={handlePrintPdf} className="w-full sm:w-auto">
+            <Printer size={14} /> Unduh PDF A4
+          </Button>
+        </div>
+      </div>
+
+      {/* ===== Toolbar: tab + filter periode ===== */}
+      <div className="flex flex-col gap-3 xl:flex-row xl:items-center xl:justify-between">
+        <div className="bento-segment flex max-w-full gap-1 overflow-x-auto rounded-xl p-1 scrollbar-none xl:w-fit" role="tablist" aria-label="Bagian laporan">
           {tabs.map((t) => {
             const Icon = t.icon;
             const active = activeTab === t.key;
             return (
               <button
                 key={t.key}
+                type="button"
+                role="tab"
+                aria-selected={active}
                 onClick={() => setActiveTab(t.key)}
                 className={cn(
-                  "inline-flex items-center gap-1.5 rounded-lg px-3 py-2.5 md:py-1.5 text-xs font-semibold transition-all duration-150 cursor-pointer",
+                  "inline-flex shrink-0 cursor-pointer items-center gap-1.5 whitespace-nowrap rounded-lg px-3 py-2 text-xs font-semibold transition-all duration-150",
                   active
-                    ? "bg-[#0f2236] text-white shadow-[0_1px_0_rgba(255,255,255,0.05),0_8px_20px_rgba(2,132,199,0.14)]"
-                    : "text-[var(--text-muted-2)] hover:bg-[var(--surface-hover)] hover:text-foreground"
+                    ? "bg-card text-foreground shadow-sm ring-1 ring-border"
+                    : "text-[var(--text-muted-2)] hover:text-foreground"
                 )}
               >
-                <Icon size={14} className={active ? "text-[var(--primary-300)]" : ""} />
+                <Icon size={14} className={active ? "text-[var(--primary)] dark:text-sky-300" : ""} />
                 {t.label}
               </button>
             );
           })}
         </div>
 
-        <div className="flex gap-2">
-          <button
-            onClick={handleExportExcel}
-            disabled={exporting}
-            className="inline-flex items-center gap-1.5 rounded-lg border border-primary-200 bg-primary-50 px-3 py-1.5 text-xs font-semibold text-primary-700 shadow-xs transition hover:bg-primary-100 cursor-pointer disabled:cursor-not-allowed disabled:opacity-60"
-          >
-            <Download size={14} /> {exporting ? "Mengunduh..." : "Unduh Excel"}
-          </button>
-          <button
-            onClick={handlePrintPdf}
-            className="inline-flex items-center gap-1.5 rounded-lg border border-border bg-card px-3 py-1.5 text-xs font-semibold text-[var(--text-soft)] shadow-xs transition hover:bg-[var(--surface-hover)] hover:text-foreground cursor-pointer"
-          >
-            <Printer size={14} /> Unduh PDF A4
-          </button>
-        </div>
-      </div>
-
-      {/* ===== Filter periode (server-side) ===== */}
-      <div className="flex flex-col gap-2 rounded-xl border border-border bg-card p-3 shadow-[var(--shadow-card)] sm:flex-row sm:items-center sm:justify-between">
-        <div className="flex items-center gap-2">
-          <span className="text-xs font-bold uppercase tracking-wider text-muted">Periode</span>
+        <div className="flex flex-wrap items-center gap-2">
+          <span className="text-xs font-semibold text-[var(--text-muted-2)]">Periode</span>
           <PeriodFilter
             onChange={handlePeriodChange}
             defaultPreset={initialFrom || initialTo ? "custom" : "all"}
             defaultFrom={initialFrom}
             defaultTo={initialTo}
-            align="left"
+            align="right"
           />
-          {isFilterPending && <span className="text-[11px] font-medium text-muted animate-pulse">Memuat…</span>}
+          {isFilterPending && <span className="text-[11px] font-medium text-[var(--text-muted-2)] animate-pulse">Memuat…</span>}
         </div>
-        <p className="text-[11px] text-muted">
-          Stok &amp; Aset menampilkan posisi terkini (tidak mengikuti periode).
-        </p>
       </div>
+
+      {(activeTab === "stok" || activeTab === "ringkasan") && (
+        <p className="-mt-2 flex items-center gap-1.5 px-1 text-[11px] text-[var(--text-muted-2)]">
+          <Info size={12} className="text-[var(--primary)]" />
+          Stok &amp; aset menampilkan posisi terkini (tidak mengikuti periode).
+        </p>
+      )}
 
       <LaporanPrintDocument
         role={role}
@@ -1065,8 +1088,7 @@ export function LaporanClient({ role, userName, periodeLabel, initialFrom, initi
           <Panel
             title="Omzet 10 Barang Terlaris"
             desc="Kontribusi pendapatan tiap produk unggulan"
-            icon={<div className="flex h-9 w-9 items-center justify-center rounded-xl border border-primary-100 bg-primary-50 text-primary-600"><TrendingUp size={17} /></div>}
-            action={<Badge tone="green">Penjualan Terbaik</Badge>}
+            icon={<IconChip icon={TrendingUp} tone="sky" />}
           >
             {!mounted ? (
               <ChartSkeleton />
@@ -1084,7 +1106,7 @@ export function LaporanClient({ role, userName, periodeLabel, initialFrom, initi
                   <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" horizontal={false} />
                   <XAxis type="number" tick={{ fontSize: 10, fill: AXIS_TICK_COLOR }} tickFormatter={fmtAxis} />
                   <YAxis type="category" dataKey="nama" width={catAxisWidth} tickFormatter={truncLabel} tick={{ fontSize: 10, fill: AXIS_LABEL_COLOR }} interval={0} />
-                  <Tooltip {...TOOLTIP_STYLE} cursor={{ fill: "rgba(5,150,105,0.05)" }} formatter={(v: unknown) => [formatRupiah(v as number), "Omzet"]} />
+                  <Tooltip {...TOOLTIP_STYLE} cursor={{ fill: "var(--surface-2)", fillOpacity: 0.5 }} formatter={(v: unknown) => [formatRupiah(v as number), "Omzet"]} />
                   <Bar dataKey="omset" fill="url(#omsetBar)" radius={[0, 6, 6, 0]} barSize={18}>
                     <LabelList dataKey="omset" position="right" formatter={fmtAxis} fontSize={10} fill={AXIS_LABEL_COLOR} />
                   </Bar>
@@ -1093,17 +1115,16 @@ export function LaporanClient({ role, userName, periodeLabel, initialFrom, initi
             )}
           </Panel>
 
-          <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+          <div className="grid grid-cols-1 gap-5 xl:grid-cols-2">
             <Panel
               title="10 Barang Terlaris (Volume)"
               desc="Berdasarkan kuantitas unit terjual"
-              icon={<div className="flex h-9 w-9 items-center justify-center rounded-xl border border-primary-100 bg-primary-50 text-primary-600"><Boxes size={17} /></div>}
+              icon={<IconChip icon={Boxes} tone="sky" />}
             >
               <Table className="border-none shadow-none bg-transparent rounded-none">
                 <thead>
                   <tr>
                     <Th className="w-10 text-center">#</Th>
-                    <Th className="w-28">Kode</Th>
                     <Th>Nama Barang</Th>
                     <Th className="w-24 text-center">Volume</Th>
                     <Th className="w-32 text-right">Omzet</Th>
@@ -1112,11 +1133,27 @@ export function LaporanClient({ role, userName, periodeLabel, initialFrom, initi
                 <tbody>
                   {terlarisPg.pageData.map((it, i) => (
                     <tr key={(terlarisPg.page - 1) * terlarisPg.perPage + i}>
-                      <Td className="text-center text-xs font-bold text-slate-400">{(terlarisPg.page - 1) * terlarisPg.perPage + i + 1}</Td>
-                      <Td className="font-mono text-[10px] text-slate-400">{it.kode}</Td>
-                      <Td className="font-semibold text-slate-700">{it.nama}</Td>
-                      <Td className="whitespace-nowrap text-center font-mono text-xs font-bold text-slate-600">{it.qtyTerjual}<span className="ml-1 text-[10px] font-semibold text-slate-400">unit</span></Td>
-                      <Td className="text-right font-mono font-semibold text-foreground">{formatRupiah(it.omset)}</Td>
+                      <Td className="text-center">
+                        {(() => {
+                          const rank = (terlarisPg.page - 1) * terlarisPg.perPage + i + 1;
+                          return (
+                            <span
+                              className={cn(
+                                "tnum inline-flex h-6 min-w-6 items-center justify-center rounded-full px-1.5 text-[11px] font-bold",
+                                rank <= 3 ? "bg-sky-500/15 text-sky-700 dark:text-sky-300" : "text-[var(--text-muted-2)]"
+                              )}
+                            >
+                              {rank}
+                            </span>
+                          );
+                        })()}
+                      </Td>
+                      <Td className="min-w-[160px]">
+                        <p className="font-semibold leading-snug text-foreground">{it.nama}</p>
+                        <p className="tnum text-[11px] text-[var(--text-muted-2)]">{it.kode}</p>
+                      </Td>
+                      <Td className="whitespace-nowrap text-center tnum text-xs font-bold text-[var(--text-soft)]">{it.qtyTerjual}<span className="ml-1 text-[10px] font-semibold text-[var(--text-muted-2)]">unit</span></Td>
+                      <Td className="text-right tnum font-semibold text-foreground">{formatRupiah(it.omset)}</Td>
                     </tr>
                   ))}
                 </tbody>
@@ -1127,13 +1164,11 @@ export function LaporanClient({ role, userName, periodeLabel, initialFrom, initi
             <Panel
               title={`Peringatan Stok (${stokMenipisCount})`}
               desc="Barang menipis / minus yang butuh tindakan"
-              icon={<div className="flex h-9 w-9 items-center justify-center rounded-xl border border-rose-100 bg-rose-50 text-rose-600"><ShieldAlert size={17} /></div>}
-              action={<Badge tone="red">Tindakan Cepat</Badge>}
+              icon={<IconChip icon={ShieldAlert} tone="rose" />}
             >
               <Table className="border-none shadow-none bg-transparent rounded-none">
                 <thead>
                   <tr>
-                    <Th>Kode</Th>
                     <Th>Nama Barang</Th>
                     <Th className="w-24 text-center">Stok</Th>
                     <Th className="w-20 text-center">Min</Th>
@@ -1142,17 +1177,27 @@ export function LaporanClient({ role, userName, periodeLabel, initialFrom, initi
                 <tbody>
                   {warningPg.pageData.map((it) => (
                     <tr key={it.kode}>
-                      <Td className="font-mono text-[10px] text-slate-400">{it.kode}</Td>
-                      <Td className="font-semibold text-slate-700">{it.nama}</Td>
-                      <Td className="text-center">
-                        <Badge tone={it.stokAkhir < 0 ? "red" : "amber"} className="whitespace-nowrap">{it.stokAkhir} unit</Badge>
+                      <Td className="min-w-[160px]">
+                        <p className="font-semibold leading-snug text-foreground">{it.nama}</p>
+                        <p className="tnum text-[11px] text-[var(--text-muted-2)]">{it.kode}</p>
                       </Td>
-                      <Td className="text-center font-mono text-xs text-slate-500">{it.minStok}</Td>
+                      <Td className="text-center">
+                        <span
+                          className={cn(
+                            "tnum inline-flex items-center gap-1.5 whitespace-nowrap text-xs font-semibold",
+                            it.stokAkhir < 0 ? "text-rose-600 dark:text-rose-300" : "text-amber-700 dark:text-amber-300"
+                          )}
+                        >
+                          <span className={cn("h-1.5 w-1.5 rounded-full", it.stokAkhir < 0 ? "bg-rose-500" : "bg-amber-500")} />
+                          {it.stokAkhir} unit
+                        </span>
+                      </Td>
+                      <Td className="text-center tnum text-xs text-[var(--text-muted-2)]">{it.minStok}</Td>
                     </tr>
                   ))}
                   {warningStok.length === 0 && (
                     <tr>
-                      <Td colSpan={4} className="py-12 text-center text-sm text-slate-400">
+                      <Td colSpan={3} className="py-12 text-center text-sm text-[var(--text-muted-2)]">
                         Semua stok aman. Tidak ada barang di bawah stok minimum. 👍
                       </Td>
                     </tr>
@@ -1171,7 +1216,7 @@ export function LaporanClient({ role, userName, periodeLabel, initialFrom, initi
           <Panel
             title="Volume Penjualan per Produk"
             desc="10 produk dengan kuantitas unit terjual terbanyak"
-            icon={<div className="flex h-9 w-9 items-center justify-center rounded-xl border border-primary-100 bg-primary-50 text-primary-600"><TrendingUp size={17} /></div>}
+            icon={<IconChip icon={TrendingUp} tone="sky" />}
           >
             {!mounted ? (
               <ChartSkeleton h={340} />
@@ -1189,7 +1234,7 @@ export function LaporanClient({ role, userName, periodeLabel, initialFrom, initi
                   <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" horizontal={false} />
                   <XAxis type="number" allowDecimals={false} tick={{ fontSize: 10, fill: AXIS_TICK_COLOR }} />
                   <YAxis type="category" dataKey="nama" width={catAxisWidth} tickFormatter={truncLabel} tick={{ fontSize: 10, fill: AXIS_LABEL_COLOR }} interval={0} />
-                  <Tooltip {...TOOLTIP_STYLE} cursor={{ fill: "rgba(16,185,129,0.05)" }} formatter={(v: unknown) => [`${v as number} unit`, "Jumlah Terjual"]} />
+                  <Tooltip {...TOOLTIP_STYLE} cursor={{ fill: "var(--surface-2)", fillOpacity: 0.5 }} formatter={(v: unknown) => [`${v as number} unit`, "Jumlah Terjual"]} />
                   <Bar dataKey="qty" fill="url(#qtyBar)" radius={[0, 6, 6, 0]} barSize={18}>
                     <LabelList dataKey="qty" position="right" formatter={(v: unknown) => `${v as number}`} fontSize={10} fill={AXIS_LABEL_COLOR} />
                   </Bar>
@@ -1211,10 +1256,10 @@ export function LaporanClient({ role, userName, periodeLabel, initialFrom, initi
               <tbody>
                 {omsetPg.pageData.map((r) => (
                   <tr key={`${r.kode}-${r.nama}`}>
-                    <Td className="font-mono text-[10px] text-slate-400">{r.kode}</Td>
-                    <Td className="font-semibold text-slate-700">{r.nama}</Td>
-                    <Td className="whitespace-nowrap text-center font-mono font-bold text-slate-600">{r.qtyTerjual}<span className="ml-1 text-[10px] font-semibold text-slate-400">unit</span></Td>
-                    <Td className="text-right font-mono font-bold text-foreground">{formatRupiah(r.omset)}</Td>
+                    <Td className="whitespace-nowrap tnum text-[11px] text-[var(--text-muted-2)]">{r.kode}</Td>
+                    <Td className="min-w-[160px] font-semibold text-foreground">{r.nama}</Td>
+                    <Td className="whitespace-nowrap text-center tnum font-bold text-[var(--text-soft)]">{r.qtyTerjual}<span className="ml-1 text-[10px] font-semibold text-[var(--text-muted-2)]">unit</span></Td>
+                    <Td className="text-right tnum font-bold text-foreground">{formatRupiah(r.omset)}</Td>
                   </tr>
                 ))}
               </tbody>
@@ -1230,7 +1275,7 @@ export function LaporanClient({ role, userName, periodeLabel, initialFrom, initi
           <Panel
             title="Omzet vs Keuntungan Bersih"
             desc="Perbandingan pendapatan dan margin per produk"
-            icon={<div className="flex h-9 w-9 items-center justify-center rounded-xl border border-blue-100 bg-blue-50 text-blue-600"><BarChart3 size={17} /></div>}
+            icon={<IconChip icon={BarChart3} tone="blue" />}
           >
             {!mounted ? (
               <ChartSkeleton />
@@ -1242,9 +1287,9 @@ export function LaporanClient({ role, userName, periodeLabel, initialFrom, initi
                   <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" horizontal={false} />
                   <XAxis type="number" tick={{ fontSize: 10, fill: AXIS_TICK_COLOR }} tickFormatter={fmtAxis} />
                   <YAxis type="category" dataKey="nama" width={catAxisWidth} tickFormatter={truncLabel} tick={{ fontSize: 10, fill: AXIS_LABEL_COLOR }} interval={0} />
-                  <Tooltip {...TOOLTIP_STYLE} cursor={{ fill: "rgba(59,130,246,0.05)" }} formatter={(v: unknown, n: unknown) => [formatRupiah(v as number), n as string]} />
+                  <Tooltip {...TOOLTIP_STYLE} cursor={{ fill: "var(--surface-2)", fillOpacity: 0.5 }} formatter={(v: unknown, n: unknown) => [formatRupiah(v as number), n as string]} />
                   <Legend verticalAlign="top" height={30} iconType="circle" wrapperStyle={{ fontSize: 11 }} />
-                  <Bar name="Omzet" dataKey="omset" fill="#cbd5e1" radius={[0, 5, 5, 0]} barSize={10} />
+                  <Bar name="Omzet" dataKey="omset" fill="#94a3b8" radius={[0, 5, 5, 0]} barSize={10} />
                   <Bar name="Margin" dataKey="margin" fill="#0284c7" radius={[0, 5, 5, 0]} barSize={10} />
                 </BarChart>
               </ResponsiveContainer>
@@ -1268,11 +1313,11 @@ export function LaporanClient({ role, userName, periodeLabel, initialFrom, initi
                   const marginPct = r.omset > 0 ? Math.round((r.margin / r.omset) * 100) : 0;
                   return (
                     <tr key={`${r.kode}-${r.nama}`}>
-                      <Td className="font-mono text-[10px] text-slate-400">{r.kode}</Td>
-                      <Td className="font-semibold text-slate-700">{r.nama}</Td>
-                      <Td className="whitespace-nowrap text-center font-mono text-slate-600">{r.qtyTerjual}<span className="ml-1 text-[10px] font-semibold text-slate-400">unit</span></Td>
-                      <Td className="text-right font-mono text-slate-600">{formatRupiah(r.omset)}</Td>
-                      <Td className="text-right font-mono font-bold text-primary-600">{formatRupiah(r.margin)}</Td>
+                      <Td className="whitespace-nowrap tnum text-[11px] text-[var(--text-muted-2)]">{r.kode}</Td>
+                      <Td className="min-w-[160px] font-semibold text-foreground">{r.nama}</Td>
+                      <Td className="whitespace-nowrap text-center tnum text-[var(--text-soft)]">{r.qtyTerjual}<span className="ml-1 text-[10px] font-semibold text-[var(--text-muted-2)]">unit</span></Td>
+                      <Td className="text-right tnum text-[var(--text-soft)]">{formatRupiah(r.omset)}</Td>
+                      <Td className="text-right tnum font-bold text-primary-600">{formatRupiah(r.margin)}</Td>
                       <Td className="text-center">
                         <Badge tone={marginPct > 20 ? "green" : marginPct > 10 ? "blue" : "amber"}>{marginPct}% Margin</Badge>
                       </Td>
@@ -1282,9 +1327,9 @@ export function LaporanClient({ role, userName, periodeLabel, initialFrom, initi
                 {marginData.length > 0 && (
                   <tr className="border-t-2 border-[var(--primary)]/40 bg-[var(--surface-2)]">
                     <Td className="font-bold text-foreground" colSpan={2}>Total keseluruhan ({marginData.length} barang)</Td>
-                    <Td className="whitespace-nowrap text-center font-mono font-bold text-foreground">{totalQtyTerjual}<span className="ml-1 text-[10px] font-semibold text-slate-400">unit</span></Td>
-                    <Td className="text-right font-mono font-bold text-foreground">{formatRupiah(totalOmset)}</Td>
-                    <Td className="text-right font-mono font-bold text-primary-600">{formatRupiah(totalMargin)}</Td>
+                    <Td className="whitespace-nowrap text-center tnum font-bold text-foreground">{totalQtyTerjual}<span className="ml-1 text-[10px] font-semibold text-[var(--text-muted-2)]">unit</span></Td>
+                    <Td className="text-right tnum font-bold text-foreground">{formatRupiah(totalOmset)}</Td>
+                    <Td className="text-right tnum font-bold text-primary-600">{formatRupiah(totalMargin)}</Td>
                     <Td className="text-center">
                       {totalMarginPct !== null && (
                         <Badge tone={totalMarginPct > 20 ? "green" : totalMarginPct > 10 ? "blue" : "amber"}>{formatPercent2(totalMarginPct)} Margin</Badge>
@@ -1411,7 +1456,7 @@ export function LaporanClient({ role, userName, periodeLabel, initialFrom, initi
             <Panel
               title="Komposisi Umur Piutang"
               desc="Proporsi sisa tagihan per kelompok umur"
-              icon={<div className="flex h-9 w-9 items-center justify-center rounded-xl border border-amber-100 bg-amber-50 text-amber-600"><Wallet size={17} /></div>}
+              icon={<IconChip icon={Wallet} tone="amber" />}
               className="h-fit overflow-hidden lg:col-span-1 lg:self-start"
             >
               {!mounted ? (
@@ -1437,7 +1482,7 @@ export function LaporanClient({ role, userName, periodeLabel, initialFrom, initi
                       <span className="h-2.5 w-2.5 shrink-0 rounded-full" style={{ backgroundColor: b.color }} />
                       {b.name}
                     </span>
-                    <span className="shrink-0 font-mono font-bold text-foreground">{formatRupiah(b.value)}</span>
+                    <span className="shrink-0 tnum font-bold text-foreground">{formatRupiah(b.value)}</span>
                   </div>
                 ))}
               </div>
@@ -1472,15 +1517,15 @@ export function LaporanClient({ role, userName, periodeLabel, initialFrom, initi
                     else if (p.ageDays > 30) badgeColor = "amber";
                     return (
                       <tr key={p.noInvoice}>
-                        <Td className="font-mono font-semibold text-foreground">{p.noInvoice}</Td>
+                        <Td className="tnum font-semibold text-foreground">{p.noInvoice}</Td>
                         <Td className="font-medium text-[var(--text-soft)]">{p.client}</Td>
                         <Td className="text-center">
-                          <span className="inline-flex min-w-16 justify-center rounded-full bg-[var(--surface-2)] px-2.5 py-1 font-mono text-[11px] font-bold text-[var(--text-soft)]">
+                          <span className="inline-flex min-w-16 justify-center rounded-full bg-[var(--surface-2)] px-2.5 py-1 tnum text-[11px] font-bold text-[var(--text-soft)]">
                             {p.ageDays} Hari
                           </span>
                         </Td>
-                        <Td className="text-right font-mono text-[var(--text-soft)]">{formatRupiah(p.total)}</Td>
-                        <Td className={cn("text-right font-mono font-bold", p.status === "LUNAS" ? "text-slate-400" : "text-rose-600")}>
+                        <Td className="text-right tnum text-[var(--text-soft)]">{formatRupiah(p.total)}</Td>
+                        <Td className={cn("text-right tnum font-bold", p.status === "LUNAS" ? "text-[var(--text-muted-2)]" : "text-rose-600")}>
                           {p.status === "LUNAS" ? "—" : formatRupiah(p.sisa)}
                         </Td>
                         <Td className="text-center">
@@ -1504,7 +1549,7 @@ export function LaporanClient({ role, userName, periodeLabel, initialFrom, initi
             <Panel
               title="10 Aset Persediaan Terbesar"
               desc="Nilai aset = harga beli × sisa stok"
-              icon={<div className="flex h-9 w-9 items-center justify-center rounded-xl border border-blue-100 bg-blue-50 text-blue-600"><Archive size={17} /></div>}
+              icon={<IconChip icon={Archive} tone="blue" />}
             >
               {!mounted ? (
                 <ChartSkeleton h={360} />
@@ -1522,7 +1567,7 @@ export function LaporanClient({ role, userName, periodeLabel, initialFrom, initi
                     <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" horizontal={false} />
                   <XAxis type="number" tick={{ fontSize: 10, fill: AXIS_TICK_COLOR }} tickFormatter={fmtAxis} />
                   <YAxis type="category" dataKey="name" width={catAxisWidth} tickFormatter={truncLabel} tick={{ fontSize: 10, fill: AXIS_LABEL_COLOR }} interval={0} />
-                    <Tooltip {...TOOLTIP_STYLE} cursor={{ fill: "rgba(37,99,235,0.05)" }} formatter={(v: unknown) => [formatRupiah(v as number), "Nilai Aset"]} />
+                    <Tooltip {...TOOLTIP_STYLE} cursor={{ fill: "var(--surface-2)", fillOpacity: 0.5 }} formatter={(v: unknown) => [formatRupiah(v as number), "Nilai Aset"]} />
                     <Bar dataKey="nilai" fill="url(#asetBar)" radius={[0, 6, 6, 0]} barSize={18}>
                     <LabelList dataKey="nilai" position="right" formatter={fmtAxis} fontSize={10} fill={AXIS_LABEL_COLOR} />
                     </Bar>
@@ -1532,16 +1577,15 @@ export function LaporanClient({ role, userName, periodeLabel, initialFrom, initi
             </Panel>
           )}
 
-          <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+          <div className="grid grid-cols-1 gap-5 xl:grid-cols-2">
             <Panel
               title="Cepat Laku"
               desc="Terjual ≥ 15 unit dalam siklus"
-              icon={<div className="flex h-9 w-9 items-center justify-center rounded-xl border border-primary-100 bg-primary-50 text-primary-600"><CheckCircle size={17} /></div>}
+              icon={<IconChip icon={CheckCircle} tone="sky" />}
             >
               <Table className="border-none shadow-none bg-transparent rounded-none">
                 <thead>
                   <tr>
-                    <Th>Kode</Th>
                     <Th>Nama Barang</Th>
                     <Th className="w-24 whitespace-nowrap text-right">Stok</Th>
                     <Th className="w-28 whitespace-nowrap text-right">Terjual</Th>
@@ -1550,13 +1594,15 @@ export function LaporanClient({ role, userName, periodeLabel, initialFrom, initi
                 <tbody>
                   {fastPg.pageData.map((s) => (
                     <tr key={s.kode}>
-                      <Td className="font-mono text-[10px] text-slate-400">{s.kode}</Td>
-                      <Td className="font-semibold text-slate-700">{s.nama}</Td>
-                      <Td className="whitespace-nowrap text-right font-mono text-xs">{s.stokAkhir}<span className="ml-1 text-[10px] font-semibold text-slate-400">pcs</span></Td>
-                      <Td className="whitespace-nowrap text-right font-mono font-bold text-primary-600">
+                      <Td className="min-w-[160px]">
+                        <p className="font-semibold leading-snug text-foreground">{s.nama}</p>
+                        <p className="tnum text-[11px] text-[var(--text-muted-2)]">{s.kode}</p>
+                      </Td>
+                      <Td className="whitespace-nowrap text-right tnum text-xs">{s.stokAkhir}<span className="ml-1 text-[10px] font-semibold text-[var(--text-muted-2)]">pcs</span></Td>
+                      <Td className="whitespace-nowrap text-right tnum font-bold text-primary-600">
                         <span className="inline-flex items-center justify-end gap-1">
                           {s.soldQty}
-                          <span className="text-[10px] font-semibold text-slate-400">unit</span>
+                          <span className="text-[10px] font-semibold text-[var(--text-muted-2)]">unit</span>
                           <ArrowUpRight size={12} className="shrink-0 text-primary-500" />
                         </span>
                       </Td>
@@ -1564,7 +1610,7 @@ export function LaporanClient({ role, userName, periodeLabel, initialFrom, initi
                   ))}
                   {inventoryHealth.fastMoving.length === 0 && (
                     <tr>
-                      <Td colSpan={4} className="py-12 text-center text-sm text-slate-400">Belum ada barang cepat laku pada periode ini.</Td>
+                      <Td colSpan={3} className="py-12 text-center text-sm text-[var(--text-muted-2)]">Belum ada barang cepat laku pada periode ini.</Td>
                     </tr>
                   )}
                 </tbody>
@@ -1575,12 +1621,11 @@ export function LaporanClient({ role, userName, periodeLabel, initialFrom, initi
             <Panel
               title="Lambat Laku / Tidak Laku"
               desc="Perputaran rendah atau stok mati"
-              icon={<div className="flex h-9 w-9 items-center justify-center rounded-xl border border-amber-100 bg-amber-50 text-amber-600"><AlertTriangle size={17} /></div>}
+              icon={<IconChip icon={AlertTriangle} tone="amber" />}
             >
               <Table className="border-none shadow-none bg-transparent rounded-none">
                 <thead>
                   <tr>
-                    <Th>Kode</Th>
                     <Th>Nama Barang</Th>
                     <Th className="w-24 whitespace-nowrap text-right">Stok</Th>
                     <Th className="w-24 text-right">Status</Th>
@@ -1589,9 +1634,11 @@ export function LaporanClient({ role, userName, periodeLabel, initialFrom, initi
                 <tbody>
                   {slowPg.pageData.map((s) => (
                     <tr key={s.kode}>
-                      <Td className="font-mono text-[10px] text-slate-400">{s.kode}</Td>
-                      <Td className="font-semibold text-slate-700">{s.nama}</Td>
-                      <Td className="whitespace-nowrap text-right font-mono text-xs">{s.stokAkhir}<span className="ml-1 text-[10px] font-semibold text-slate-400">pcs</span></Td>
+                      <Td className="min-w-[160px]">
+                        <p className="font-semibold leading-snug text-foreground">{s.nama}</p>
+                        <p className="tnum text-[11px] text-[var(--text-muted-2)]">{s.kode}</p>
+                      </Td>
+                      <Td className="whitespace-nowrap text-right tnum text-xs">{s.stokAkhir}<span className="ml-1 text-[10px] font-semibold text-[var(--text-muted-2)]">pcs</span></Td>
                       <Td className="text-right">
                         <Badge tone={s.velocity === "DEAD" ? "red" : "amber"}>{s.velocity === "DEAD" ? "STOK MATI" : "LAMBAT"}</Badge>
                       </Td>
@@ -1599,7 +1646,7 @@ export function LaporanClient({ role, userName, periodeLabel, initialFrom, initi
                   ))}
                   {inventoryHealth.slowMoving.length === 0 && (
                     <tr>
-                      <Td colSpan={4} className="py-12 text-center text-sm text-slate-400">Semua barang laku dengan baik. 👍</Td>
+                      <Td colSpan={3} className="py-12 text-center text-sm text-[var(--text-muted-2)]">Semua barang laku dengan baik. 👍</Td>
                     </tr>
                   )}
                 </tbody>
@@ -1623,12 +1670,12 @@ export function LaporanClient({ role, userName, periodeLabel, initialFrom, initi
               <tbody>
                 {valPg.pageData.map((s) => (
                   <tr key={s.kode}>
-                    <Td className="font-mono text-xs text-slate-400">{s.kode}</Td>
-                    <Td className="font-semibold text-slate-700">{s.nama}</Td>
-                    <Td className="whitespace-nowrap text-right font-mono font-bold text-slate-600">{s.stokAkhir}<span className="ml-1 text-[10px] font-semibold text-slate-400">pcs</span></Td>
-                    <Td className="text-right font-mono text-xs text-slate-500">{isGudang ? formatRupiah(s.hargaBeli) : "🔒"}</Td>
-                    <Td className="text-right font-mono text-xs text-slate-500">{formatRupiah(s.hargaJual)}</Td>
-                    <Td className="text-right font-mono font-semibold text-foreground">{isGudang ? formatRupiah(s.nilaiAset) : "🔒 Dibatasi"}</Td>
+                    <Td className="whitespace-nowrap tnum text-[11px] text-[var(--text-muted-2)]">{s.kode}</Td>
+                    <Td className="min-w-[160px] font-semibold text-foreground">{s.nama}</Td>
+                    <Td className="whitespace-nowrap text-right tnum font-bold text-[var(--text-soft)]">{s.stokAkhir}<span className="ml-1 text-[10px] font-semibold text-[var(--text-muted-2)]">pcs</span></Td>
+                    <Td className="text-right tnum text-xs text-[var(--text-muted-2)]">{isGudang ? formatRupiah(s.hargaBeli) : "🔒"}</Td>
+                    <Td className="text-right tnum text-xs text-[var(--text-muted-2)]">{formatRupiah(s.hargaJual)}</Td>
+                    <Td className="text-right tnum font-semibold text-foreground">{isGudang ? formatRupiah(s.nilaiAset) : "🔒 Dibatasi"}</Td>
                   </tr>
                 ))}
               </tbody>

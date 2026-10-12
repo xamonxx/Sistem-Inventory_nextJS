@@ -12,6 +12,8 @@
 - Three-role authentication, 50-route access matrix, Gudang, Kasir, Non-Gudang, shared UI, concurrency, invariants, and production read-only checks are complete.
 - Two confirmed receipt defects remain release blockers. Concurrent stock protection passed, but the losing checkout shows a generic internal-error message.
 - `CustomSelect`, POS category filtering, mobile work, and export changes remain as previously documented.
+- Dashboard `/` redesigned in a bento layout (`bento-*` CSS, split chart components); 30-day trend now keyed by local date.
+- UI/UX modernization pass (uncommitted until this checkpoint): 64px navbar, calmer tables, global tooltip engine, WhatsApp number dialog, modern checkboxes, unified `.field-surface` fields, redesigned Barang/Stok/Laporan layouts, sidebar drawer fixes, mobile notification bell, theme-aware 404. Details: daily changelog 2026-10-13.
 - Excel export table headers are colored by column group (identity, date, party, quantity, money, receivable/risk, percent, status) in all three exporters.
 - Project-scoped Caveman suite is installed from `JuliusBrussee/caveman`; `caveman` is the mandatory default chat-response skill.
 - Context7 `find-docs` is installed project-scoped for current external technology documentation.

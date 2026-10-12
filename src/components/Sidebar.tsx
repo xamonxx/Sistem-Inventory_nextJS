@@ -24,6 +24,8 @@ import {
 import type { Role } from "@prisma/client";
 import { cn } from "@/lib/utils";
 import { ThemeToggle } from "./ThemeToggle";
+import { NotificationCenter } from "./NotificationCenter";
+import { useMediaQuery, DESKTOP_QUERY } from "@/lib/useMediaQuery";
 import { AppLogo } from "./AppLogo";
 
 type Item = { href: string; label: string; icon: React.ElementType; roles?: Role[] };
@@ -90,6 +92,13 @@ function SidebarContent({
     return () => document.removeEventListener("keydown", handleKey);
   }, [isLogoutOpen]);
 
+  // Lonceng notifikasi di header mobile/tablet hanya di-mount di bawah lg;
+  // di desktop TopNav yang memegangnya (komponen ini polling tiap 60 detik).
+  const isDesktop = useMediaQuery(DESKTOP_QUERY);
+  // Rail collapsed hanya berlaku di desktop. Saat SSR/hidrasi (null) dianggap desktop
+  // agar tidak ada lompatan lebar; di bawah lg drawer selalu tampil penuh.
+  const railCollapsed = isCollapsed && isDesktop !== false;
+
   const openLogoutModal = () => {
     setIsOpen(false);
     setIsLogoutOpen(true);
@@ -152,7 +161,7 @@ function SidebarContent({
                 isCollapsed ? "lg:justify-center lg:px-0" : "",
                 active
                   ? "chrome-nav-link-active"
-                  : "chrome-nav-link border-[var(--chrome-border)]"
+                  : "chrome-nav-link border-slate-900/[0.09] hover:border-sky-500/30 dark:border-white/[0.09] dark:hover:border-sky-300/25"
               )}
             >
               {/* Active rail — only for full-width rows (expanded desktop + mobile
@@ -179,14 +188,14 @@ function SidebarContent({
                 />
               </div>
               <span className={cn(
-                "transition-[opacity,max-width,margin] duration-200 ease-in-out truncate origin-left",
-                isCollapsed ? "lg:opacity-0 lg:max-w-0 lg:ml-0" : "opacity-100 max-w-[200px] ml-3"
+                "ml-3 max-w-[200px] truncate opacity-100 origin-left transition-[opacity,max-width,margin] duration-200 ease-in-out",
+                isCollapsed && "lg:ml-0 lg:max-w-0 lg:opacity-0"
               )}>
                 {i.label}
               </span>
               <span className={cn(
                 "absolute left-full z-50 ml-3 translate-x-[-4px] whitespace-nowrap rounded-md border border-white/10 bg-[#0f172a] px-2 py-1 text-[10px] font-bold text-white opacity-0 shadow-lg transition-[opacity,transform] duration-150 pointer-events-none group-hover:translate-x-0 group-hover:opacity-100",
-                isCollapsed ? "" : "hidden"
+                isCollapsed ? "hidden lg:block" : "hidden"
               )}>
                 {i.label}
               </span>
@@ -210,10 +219,12 @@ function SidebarContent({
           <Menu size={20} />
         </button>
         <span className="min-w-0 truncate px-2 text-center text-[14px] font-extrabold uppercase tracking-tight sm:text-[15px]">
-          PUTRA CORPORATION
+          <span className="sm:hidden">PUTRA CORP</span>
+          <span className="hidden sm:inline">PUTRA CORPORATION</span>
         </span>
         <div className="flex items-center gap-2">
           <ThemeToggle />
+          {isDesktop === false && <NotificationCenter role={role} />}
           <button
             type="button"
             onClick={openLogoutModal}
@@ -250,17 +261,19 @@ function SidebarContent({
        >
            {/* Brand logo & Close button — GradientDeck Premium */}
            <div className={cn(
-             "chrome-hairline relative z-10 flex h-16 w-full items-center overflow-hidden border-b transition-[padding] duration-200 lg:h-[76px]",
-             isCollapsed ? "lg:px-4 lg:justify-center" : "px-5"
+             "chrome-hairline relative z-10 flex h-16 w-full items-center overflow-hidden border-b transition-[padding] duration-200 lg:h-16",
+             "px-4 sm:px-5",
+             isCollapsed && "lg:justify-center lg:px-4"
            )}
            >
              <div className="relative z-10 flex min-w-0 flex-1 items-center">
-               <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-sky-500 to-cyan-400 text-white shadow-[0_14px_32px_rgba(14,165,233,0.28)]">
+               <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-sky-500 to-cyan-400 lg:h-10 lg:w-10 text-white shadow-[0_14px_32px_rgba(14,165,233,0.28)]">
                <AppLogo className="h-7 w-7" />
              </div>
             <div className={cn(
               "leading-tight transition-[opacity,max-width,margin] duration-200 ease-in-out truncate origin-left",
-              isCollapsed ? "lg:opacity-0 lg:max-w-0 lg:ml-0 lg:overflow-hidden lg:invisible" : "opacity-100 max-w-[180px] ml-3"
+              "ml-3 max-w-[180px] opacity-100",
+              isCollapsed && "lg:invisible lg:ml-0 lg:max-w-0 lg:overflow-hidden lg:opacity-0"
             )}>
               <p className="font-display text-sm font-black uppercase tracking-tight text-[var(--chrome-ink)]">PUTRA CORP</p>
               <div className="mt-0.5 w-max rounded-[4px] border border-[var(--chrome-border)] bg-white/10 px-1.5 py-0.5 text-[8px] font-black uppercase tracking-[0.18em] text-[var(--chrome-soft)] select-none">
@@ -281,7 +294,8 @@ function SidebarContent({
         {/* Navigation Items (Scrollable without visible scrollbars) */}
         <nav className={cn(
           "flex-1 px-4 py-4 space-y-1.5 scrollbar-none",
-          isCollapsed ? "lg:overflow-y-visible" : "overflow-y-auto"
+          "overflow-y-auto",
+          isCollapsed && "lg:overflow-y-visible"
         )}>
           {renderSection("OPERASIONAL", OPERASIONAL)}
           {renderSection("KEUANGAN", KEUANGAN)}
@@ -325,7 +339,8 @@ function SidebarContent({
           {/* User profile & Logout — GradientDeck Liquid Glass */}
           <div className={cn(
             "chrome-hairline relative z-10 border-t pb-[max(0.75rem,env(safe-area-inset-bottom))] transition-[background-color,border-color] duration-200",
-            isCollapsed ? "lg:overflow-visible p-2 lg:pb-2" : "overflow-hidden p-3 lg:pb-3"
+            "overflow-hidden p-3 lg:pb-3",
+            isCollapsed && "lg:overflow-visible lg:p-2 lg:pb-2"
           )}
           >
           <button
@@ -337,7 +352,9 @@ function SidebarContent({
                 "group relative z-10 flex w-full cursor-pointer items-center rounded-xl border text-left",
                 // Collapsed: show only the avatar tile (no wrapping panel, which
                 // looked like a box-in-a-box). Expanded: full soft panel.
-                isCollapsed
+                // chrome-soft-panel adalah CSS di luar layer (mengalahkan utilitas lg:),
+                // jadi dilepas sepenuhnya saat rail desktop collapsed.
+                railCollapsed
                   ? "justify-center border-transparent bg-transparent p-0 shadow-none"
                   : "chrome-soft-panel gap-3 p-2.5 backdrop-blur-xl backdrop-saturate-150 transition-[background-color,border-color,box-shadow] duration-150 hover:border-[var(--chrome-active-border)]"
               )}
@@ -347,7 +364,8 @@ function SidebarContent({
              </div>
             <div className={cn(
               "min-w-0 leading-tight transition-[opacity,max-width,margin] duration-200 ease-in-out truncate origin-left",
-              isCollapsed ? "lg:opacity-0 lg:max-w-0 lg:ml-0 lg:overflow-hidden lg:invisible" : "opacity-100 max-w-[180px] ml-3"
+              "max-w-[180px] opacity-100",
+              isCollapsed && "lg:invisible lg:max-w-0 lg:overflow-hidden lg:opacity-0"
             )}>
               <p className="truncate text-xs font-bold text-[var(--chrome-ink)]">{nama}</p>
               <p className="mt-0.5 select-none text-[9px] font-bold uppercase tracking-wider text-[var(--chrome-soft)]">
@@ -360,9 +378,8 @@ function SidebarContent({
             data-testid="sidebar-logout-button"
             className={cn(
               "group relative flex w-full cursor-pointer items-center overflow-visible rounded-xl border text-[var(--chrome-muted)] hover:text-rose-600 dark:hover:text-rose-300",
-              isCollapsed
-                ? "lg:justify-center lg:py-2.5 border-transparent bg-transparent"
-                : "mt-2 border-[var(--chrome-border)] bg-white/55 px-3 py-2 text-xs font-semibold transition-[background-color,border-color,color] duration-150 hover:border-rose-400/35 hover:bg-rose-50 dark:bg-white/[0.035] dark:hover:border-rose-400/25 dark:hover:bg-rose-500/10"
+              "mt-2 border-[var(--chrome-border)] bg-white/55 px-3 py-2 text-xs font-semibold transition-[background-color,border-color,color] duration-150 hover:border-rose-400/35 hover:bg-rose-50 dark:bg-white/[0.035] dark:hover:border-rose-400/25 dark:hover:bg-rose-500/10",
+              isCollapsed && "lg:justify-center lg:border-transparent lg:bg-transparent lg:px-0 lg:py-2.5 lg:dark:bg-transparent"
             )}
 
           >
@@ -370,14 +387,14 @@ function SidebarContent({
               <LogOut size={16} className="shrink-0" />
             </div>
             <span className={cn(
-              "transition-[opacity,max-width,margin] duration-200 ease-in-out truncate origin-left",
-              isCollapsed ? "lg:opacity-0 lg:max-w-0 lg:ml-0" : "opacity-100 max-w-[180px] ml-3"
+              "ml-3 max-w-[180px] truncate opacity-100 origin-left transition-[opacity,max-width,margin] duration-200 ease-in-out",
+              isCollapsed && "lg:ml-0 lg:max-w-0 lg:opacity-0"
             )}>
               Keluar
             </span>
             <span className={cn(
               "absolute left-full z-50 ml-3 translate-x-[-4px] whitespace-nowrap rounded-md border border-white/10 bg-[#0f172a] px-2 py-1 text-[10px] font-bold text-white opacity-0 shadow-lg transition-[opacity,transform] duration-150 pointer-events-none group-hover:translate-x-0 group-hover:opacity-100",
-              isCollapsed ? "" : "hidden"
+              isCollapsed ? "hidden lg:block" : "hidden"
             )}>
               Keluar
             </span>

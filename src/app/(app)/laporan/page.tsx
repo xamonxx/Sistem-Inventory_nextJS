@@ -33,11 +33,6 @@ export default async function LaporanPage({
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold tracking-tight">Analisis &amp; Laporan</h1>
-        <p className="text-sm text-muted">Akses data performa penjualan harian, sisa piutang, dan valuasi aset persediaan gudang.</p>
-      </div>
-
       <LaporanClient
         role={user.role}
         userName={user.nama}

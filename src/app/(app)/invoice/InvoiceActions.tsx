@@ -11,6 +11,7 @@ import { toast } from "sonner";
 import { InvoiceDocument } from "@/components/InvoiceDocument";
 import { printArea } from "@/lib/print";
 import QRCode from "qrcode";
+import { WhatsAppDialog } from "@/components/WhatsAppDialog";
 
 export type InvoiceItem = {
   kode: string;
@@ -47,6 +48,7 @@ export function InvoiceActions({ inv, canBayar }: { inv: InvoiceRow; canBayar: b
   const [jumlah, setJumlah] = useState<number>(inv.total - inv.totalDibayar);
   const [metode, setMetode] = useState<"CASH" | "TRANSFER">("CASH");
   const [qrDataUrl, setQrDataUrl] = useState<string | undefined>(inv.qrDataUrl);
+  const [waOpen, setWaOpen] = useState(false);
   const [pending, start] = useTransition();
   const docRef = useRef<HTMLDivElement>(null);
 
@@ -99,10 +101,10 @@ export function InvoiceActions({ inv, canBayar }: { inv: InvoiceRow; canBayar: b
 
   // Generate WhatsApp billing reminder
   function kirimWA() {
-    let no = window.prompt("Nomor WhatsApp pelanggan (mis. 08123456789):", "");
-    if (!no) return;
-    no = no.replace(/[^0-9]/g, "");
-    if (no.startsWith("0")) no = "62" + no.slice(1);
+    setWaOpen(true);
+  }
+
+  function sendWA(no: string) {
     
     // Virtual due date: 30 days from invoice date
     const dueDate = new Date(inv.tanggal);
@@ -280,6 +282,13 @@ export function InvoiceActions({ inv, canBayar }: { inv: InvoiceRow; canBayar: b
           </div>
         </div>
       )}
+      <WhatsAppDialog
+        isOpen={waOpen}
+        onClose={() => setWaOpen(false)}
+        onSubmit={sendWA}
+        title="Kirim Tagihan via WhatsApp"
+        description={`Pengingat tagihan ${inv.noInvoice} untuk ${inv.namaClient}.`}
+      />
     </div>
   );
 }

@@ -11,6 +11,7 @@ import { Pagination, usePagination } from "@/components/Pagination";
 import { InvoiceDocument } from "@/components/InvoiceDocument";
 import { Nota } from "@/components/Nota";
 import { ModernDialog } from "@/components/ModernDialog";
+import { WhatsAppDialog } from "@/components/WhatsAppDialog";
 import { printArea } from "@/lib/print";
 import { formatRupiah, formatTanggal, cn } from "@/lib/utils";
 import { exportInvoiceExcel } from "@/lib/export/exportInvoiceExcel";
@@ -91,6 +92,7 @@ interface InvoiceClientProps {
 export function InvoiceClient({ initialInvoices, canBayar, userName }: InvoiceClientProps) {
   const router = useRouter();
   const [selectedInvoice, setSelectedInvoice] = useState<InvoiceRow | null>(null);
+  const [waInvoice, setWaInvoice] = useState<InvoiceRow | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState("ALL");
   const [dateRange, setDateRange] = useState<ResolvedPeriodRange>({ preset: "all", from: "", to: "", label: "Semua Waktu" });
@@ -332,10 +334,10 @@ export function InvoiceClient({ initialInvoices, canBayar, userName }: InvoiceCl
 
   // Trigger WhatsApp reminder share
   function handleSendWhatsApp(inv: InvoiceRow) {
-    let no = window.prompt("Nomor WhatsApp pelanggan (mis. 08123456789):", "");
-    if (!no) return;
-    no = no.replace(/[^0-9]/g, "");
-    if (no.startsWith("0")) no = "62" + no.slice(1);
+    setWaInvoice(inv);
+  }
+
+  function sendWhatsApp(inv: InvoiceRow, no: string) {
     
     const sisa = inv.total - inv.totalDibayar;
     const dueDate = new Date(inv.tanggal);
@@ -1237,6 +1239,13 @@ export function InvoiceClient({ initialInvoices, canBayar, userName }: InvoiceCl
         confirmText={isPending ? "Menghapus..." : "Hapus Terpilih"}
         cancelText="Batal"
         variant="danger"
+      />
+      <WhatsAppDialog
+        isOpen={waInvoice !== null}
+        onClose={() => setWaInvoice(null)}
+        onSubmit={(no) => waInvoice && sendWhatsApp(waInvoice, no)}
+        title="Kirim Tagihan via WhatsApp"
+        description={waInvoice ? `Pengingat tagihan ${waInvoice.noInvoice} untuk ${waInvoice.namaClient}.` : undefined}
       />
     </div>
   );

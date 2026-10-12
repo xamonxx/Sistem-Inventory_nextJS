@@ -1,5 +1,14 @@
 # Operational Tasks
 
+## UI/UX modernization follow-ups
+- [ ] Check Kasir and Non-Gudang pages for regressions from shared changes (field surface, checkbox, tooltip, table primitives).
+- [ ] Click Laporan "Unduh Excel" / "Unduh PDF A4" once and confirm output.
+- [ ] Exercise the Retur WhatsApp dialog path (requires creating a return).
+
+## Dashboard redesign
+- [x] Bento redesign of `/` for Gudang/Kasir.
+- [ ] Verify the Admin Kasir layout (4 KPIs, no margin chart or activity feed) in the browser.
+
 ## Excel export styling
 - [x] Semantic header colors for all Excel exports.
 - [ ] Visual check of exported workbooks in Excel (Laporan, Invoice, Non-Gudang).

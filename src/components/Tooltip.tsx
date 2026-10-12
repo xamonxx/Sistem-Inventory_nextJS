@@ -119,38 +119,14 @@ export function Tooltip({
             ref={tipRef}
             id={tipId}
             role="tooltip"
-            className={cn(
-              "pointer-events-none fixed z-[2147483000] max-w-[240px] rounded-[10px] border px-3 py-2",
-              "border-[var(--glass-border)] shadow-[0_18px_45px_-18px_rgba(8,47,73,0.55)] backdrop-blur-xl backdrop-saturate-150",
-              "transition-[opacity,transform] duration-150 ease-out"
-            )}
-            style={{
-              top: pos.top,
-              left: pos.left,
-              background: "var(--glass-bg-strong)",
-              opacity: pos.ready ? 1 : 0,
-              transform: pos.ready
-                ? "translateY(0) scale(1)"
-                : `translateY(${pos.placement === "top" ? "4px" : "-4px"}) scale(0.96)`,
-              visibility: pos.ready ? "visible" : "hidden",
-            }}
+            className="app-tooltip max-w-[240px]"
+            data-ready={pos.ready ? "true" : "false"}
+            data-placement={pos.placement}
+            style={{ top: pos.top, left: pos.left, visibility: pos.ready ? "visible" : "hidden" }}
           >
-            <p className="font-display text-[12px] font-bold leading-tight text-foreground">{label}</p>
-            {description && (
-              <p className="mt-0.5 text-[11px] font-medium leading-snug text-[var(--text-soft)]">{description}</p>
-            )}
-            {/* Panah */}
-            <span
-              className="absolute h-2.5 w-2.5 rotate-45 border-[var(--glass-border)]"
-              style={{
-                left: pos.arrowLeft,
-                marginLeft: -5,
-                background: "var(--glass-bg-strong)",
-                ...(pos.placement === "top"
-                  ? { bottom: -5, borderRight: "1px solid var(--glass-border)", borderBottom: "1px solid var(--glass-border)" }
-                  : { top: -5, borderLeft: "1px solid var(--glass-border)", borderTop: "1px solid var(--glass-border)" }),
-              }}
-            />
+            <p className="leading-tight">{label}</p>
+            {description && <p className="app-tooltip-desc leading-snug">{description}</p>}
+            <span className="app-tooltip-arrow" style={{ left: pos.arrowLeft }} />
           </div>,
           document.body
         )}

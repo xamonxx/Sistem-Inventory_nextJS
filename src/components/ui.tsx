@@ -47,8 +47,7 @@ export const Input = React.forwardRef<HTMLInputElement, React.InputHTMLAttribute
       <input
         ref={ref}
         className={cn(
-          "h-11 w-full rounded-lg border border-border bg-white/86 px-4 text-sm font-semibold text-foreground outline-none shadow-[inset_0_1px_0_rgba(255,255,255,0.72)] backdrop-blur-xl transition-[background-color,border-color,color,box-shadow]",
-          "focus:border-[var(--primary)] focus:bg-white focus:ring-4 focus:ring-[var(--primary)]/12 dark:bg-slate-950/45 dark:focus:bg-slate-950/70",
+          "field-surface h-11 w-full rounded-lg px-4 text-sm font-semibold text-foreground outline-none transition-[background-color,border-color,color,box-shadow]",
           "disabled:bg-[var(--surface-2)] disabled:text-[var(--text-muted-2)] placeholder:text-[var(--text-muted-2)]",
           className
         )}
@@ -356,7 +355,7 @@ export function Select({
   const canSearch = searchable ?? options.length > 8;
 
   const filtered = React.useMemo(() => {
-    const words = query.toLowerCase().split(/s+/).filter(Boolean);
+    const words = query.toLowerCase().split(/\s+/).filter(Boolean);
     if (words.length === 0) return options;
     return options.filter((o) => {
       const label = o.label.toLowerCase();
@@ -504,8 +503,6 @@ export function Select({
 
   const { wrapperClasses, buttonClasses } = splitClasses(className);
 
-  const hasBg = buttonClasses.split(/\s+/).some((w) => w.startsWith("bg-"));
-  const hasBorder = buttonClasses.split(/\s+/).some((w) => w.startsWith("border-"));
   const hasText = buttonClasses.split(/\s+/).some((w) => w.startsWith("text-"));
 
   return (
@@ -536,11 +533,9 @@ export function Select({
         type="button"
         onClick={() => setIsOpen(!isOpen)}
         className={cn(
-          "flex w-full items-center px-4 text-sm font-bold text-left outline-none cursor-pointer select-none",
-          "transition-[background-color,border-color,color,box-shadow,transform] shadow-[0_12px_28px_-24px_rgba(8,47,73,0.45),inset_0_1px_0_rgba(255,255,255,0.72)] backdrop-blur-xl",
+          "field-surface flex w-full items-center px-4 text-sm font-semibold text-left outline-none cursor-pointer select-none",
+          "transition-[background-color,border-color,color,box-shadow,transform]",
           hideChevron ? "justify-center" : "justify-between",
-          !hasBorder && "border border-slate-200/90 hover:border-sky-300/90 dark:border-sky-300/18 dark:hover:border-sky-300/34",
-          !hasBg && "bg-white/86 hover:bg-sky-50/88 dark:bg-slate-900/72 dark:hover:bg-slate-900/90",
           "focus:border-[var(--primary)] focus:ring-4 focus:ring-[var(--primary)]/14 active:scale-[0.99]",
           isOpen && "border-[var(--primary)] ring-4 ring-[var(--primary)]/12",
           buttonClasses
@@ -727,8 +722,8 @@ export function Th({ className, ...props }: React.ThHTMLAttributes<HTMLTableCell
       className={cn(
         [
           "h-12 border-b border-slate-300/80 bg-slate-100/90 px-5 py-3 text-left font-sans",
-          "text-[11px] font-black uppercase tracking-[0.08em] text-slate-600",
-          "dark:border-slate-700/55 dark:bg-slate-800/72 dark:text-slate-300",
+          "text-[11px] font-bold uppercase tracking-[0.08em] text-slate-600",
+          "dark:border-white/[0.06] dark:bg-slate-900/70 dark:text-slate-400",
         ].join(" "),
         className
       )}
@@ -743,8 +738,9 @@ export function Td({ className, ...props }: React.TdHTMLAttributes<HTMLTableCell
     <td
       className={cn(
         [
-          "h-[60px] border-b border-slate-200/85 px-5 py-3 align-middle font-sans",
-          "text-[13px] font-medium text-slate-800 dark:border-slate-800/70 dark:text-slate-200",
+          "h-14 border-b border-slate-200/85 px-5 py-2.5 align-middle font-sans",
+          // Mode gelap: teks tidak putih penuh dan garis baris tipis agar tabel padat tidak silau.
+          "text-[13px] font-medium text-slate-800 dark:border-white/[0.05] dark:text-slate-300",
         ].join(" "),
         className
       )}

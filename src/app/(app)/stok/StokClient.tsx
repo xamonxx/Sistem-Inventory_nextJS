@@ -2,11 +2,11 @@
 
 import { useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { Table, Th, Td, Badge, Input, Select, Card, Label, Button, CharCounter } from "@/components/ui";
+import { Table, Th, Td, Input, Select, Card, Label, Button, CharCounter } from "@/components/ui";
 import { FIELD_LIMITS } from "@/lib/fieldLimits";
 import { Pagination, usePagination } from "@/components/Pagination";
-import { formatTanggal } from "@/lib/utils";
-import { Search, ArrowDownCircle, ArrowUpCircle, RefreshCcw, RotateCcw, List, Activity, Calendar, User, X } from "lucide-react";
+import { cn, formatTanggal } from "@/lib/utils";
+import { Search, ArrowDownToLine, ArrowUpFromLine, RotateCcw, SlidersHorizontal, List, Activity, Calendar, X, Inbox, Info, PencilLine } from "lucide-react";
 import { barangMasuk, koreksiStok } from "./actions";
 import { toast } from "sonner";
 import { DatePicker } from "@/components/DatePicker";
@@ -27,19 +27,47 @@ type LedgerRow = {
   userName: string;
 };
 
-const TIPE_TONE = {
-  MASUK: "green" as const,
-  KELUAR: "red" as const,
-  RETUR: "blue" as const,
-  KOREKSI: "amber" as const,
+type Tipe = "MASUK" | "KELUAR" | "RETUR" | "KOREKSI";
+
+// Label & warna per jenis mutasi — selaras dengan palet status aplikasi.
+const TIPE_META: Record<Tipe, { label: string; icon: typeof ArrowDownToLine; dot: string; text: string; chip: string }> = {
+  MASUK: {
+    label: "Masuk",
+    icon: ArrowDownToLine,
+    dot: "bg-emerald-500",
+    text: "text-emerald-700 dark:text-emerald-300",
+    chip: "bg-emerald-500/12 text-emerald-600 dark:text-emerald-300",
+  },
+  KELUAR: {
+    label: "Keluar",
+    icon: ArrowUpFromLine,
+    dot: "bg-rose-500",
+    text: "text-rose-700 dark:text-rose-300",
+    chip: "bg-rose-500/12 text-rose-600 dark:text-rose-300",
+  },
+  RETUR: {
+    label: "Retur",
+    icon: RotateCcw,
+    dot: "bg-sky-500",
+    text: "text-sky-700 dark:text-sky-300",
+    chip: "bg-sky-500/12 text-sky-600 dark:text-sky-300",
+  },
+  KOREKSI: {
+    label: "Koreksi",
+    icon: SlidersHorizontal,
+    dot: "bg-amber-500",
+    text: "text-amber-700 dark:text-amber-300",
+    chip: "bg-amber-500/12 text-amber-600 dark:text-amber-300",
+  },
 };
 
-const TIPE_LABEL = {
-  MASUK: "IN",
-  KELUAR: "OUT",
-  RETUR: "RETURN",
-  KOREKSI: "ADJUSTMENT",
-};
+const TIPE_FILTERS: { value: "ALL" | Tipe; label: string }[] = [
+  { value: "ALL", label: "Semua" },
+  { value: "MASUK", label: "Masuk" },
+  { value: "KELUAR", label: "Keluar" },
+  { value: "RETUR", label: "Retur" },
+  { value: "KOREKSI", label: "Koreksi" },
+];
 
 export function StokClient({
   initialLedgers,
@@ -129,7 +157,7 @@ export function StokClient({
   };
 
   // Process data & compute running balances dynamically if filtered by a single item
-  const processedRows = useMemo(() => {
+  const rowsBeforeTipe = useMemo(() => {
     // 1. Sort chronologically (asc) to calculate running balance correctly
     const sorted = [...initialLedgers].reverse();
     
@@ -149,10 +177,9 @@ export function StokClient({
     // Reverse back to desc for list display
     const finalRows = mapped.reverse();
 
-    // Apply UI Filters
+    // Apply UI Filters (kecuali jenis; jenis difilter terpisah untuk hitungan chip)
     return finalRows.filter((r) => {
       const matchesItem = selectedItemId === "" || r.itemId === Number(selectedItemId);
-      const matchesTipe = tipeFilter === "ALL" || r.tipe === tipeFilter;
       const matchesSearch =
         searchQuery === "" ||
         r.itemName.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -162,334 +189,310 @@ export function StokClient({
       const matchesStart = startDate === "" || rowDate >= new Date(startDate);
       const matchesEnd = endDate === "" || rowDate <= new Date(endDate + "T23:59:59");
 
-      return matchesItem && matchesTipe && matchesSearch && matchesStart && matchesEnd;
+      return matchesItem && matchesSearch && matchesStart && matchesEnd;
     });
-  }, [initialLedgers, selectedItemId, tipeFilter, searchQuery, startDate, endDate]);
+  }, [initialLedgers, selectedItemId, searchQuery, startDate, endDate]);
+
+  const countsByTipe = useMemo(() => {
+    const c = { ALL: rowsBeforeTipe.length, MASUK: 0, KELUAR: 0, RETUR: 0, KOREKSI: 0 };
+    for (const r of rowsBeforeTipe) c[r.tipe] += 1;
+    return c;
+  }, [rowsBeforeTipe]);
+
+  const processedRows = useMemo(
+    () => (tipeFilter === "ALL" ? rowsBeforeTipe : rowsBeforeTipe.filter((r) => r.tipe === tipeFilter)),
+    [rowsBeforeTipe, tipeFilter]
+  );
 
   const ledgerPg = usePagination(processedRows, 10);
 
-  return (
-    <div className="space-y-6">
-      {/* View Toggle and Filter Toolbar */}
-      <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between md:gap-4">
-        <h2 className="text-lg font-bold text-foreground">Riwayat & Filter Pergerakan Stok</h2>
+  const hasActiveFilter = selectedItemId !== "" || searchQuery !== "" || startDate !== "" || endDate !== "" || tipeFilter !== "ALL";
+  const resetFilters = () => {
+    setSelectedItemId("");
+    setTipeFilter("ALL");
+    setSearchQuery("");
+    setStartDate("");
+    setEndDate("");
+  };
 
-        {/* Toggle Control */}
-        <div className="flex w-full bg-slate-100 dark:bg-slate-800 p-0.5 rounded-lg border border-border shadow-xs md:w-auto md:self-auto">
+  const showSaldo = selectedItemId !== "";
+
+  // Garis waktu: data halaman aktif dikelompokkan per tanggal.
+  const pageRows = ledgerPg.pageData;
+  const timelineGroups = useMemo(() => {
+    const groups: { key: string; label: string; net: number; rows: typeof pageRows }[] = [];
+    for (const row of pageRows) {
+      const d = new Date(row.tanggal);
+      const key = `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`;
+      let g = groups[groups.length - 1];
+      if (!g || g.key !== key) {
+        g = { key, label: formatTanggal(row.tanggal), net: 0, rows: [] };
+        groups.push(g);
+      }
+      g.rows.push(row);
+      g.net += row.qty;
+    }
+    return groups;
+  }, [pageRows]);
+
+  const qtyText = (qty: number) => (qty > 0 ? `+${qty}` : qty === 0 ? "0" : String(qty));
+  const qtyClass = (qty: number) =>
+    qty > 0 ? "text-emerald-600 dark:text-emerald-400" : qty < 0 ? "text-rose-600 dark:text-rose-400" : "text-[var(--text-muted-2)]";
+
+  /** Baris ringkas untuk garis waktu & tampilan HP. */
+  const renderCompactRow = (l: (typeof processedRows)[number]) => {
+    const meta = TIPE_META[l.tipe];
+    const Icon = meta.icon;
+    return (
+      <li key={l.id} className="group flex items-center gap-3 px-3 py-2.5 sm:px-4">
+        <span className={cn("flex h-8 w-8 shrink-0 items-center justify-center rounded-lg", meta.chip)} title={meta.label}>
+          <Icon size={15} strokeWidth={2.2} />
+        </span>
+        <div className="min-w-0 flex-1">
+          <p className="truncate text-sm font-semibold text-foreground dark:text-slate-100">{l.itemName}</p>
+          <p className="truncate text-[11px] text-[var(--text-muted-2)]">
+            <span className="font-mono">{l.itemKode}</span>
+            <span className="mx-1.5 opacity-50">·</span>
+            {l.keterangan ?? "Penyesuaian manual"}
+            <span className="mx-1.5 opacity-50">·</span>
+            {l.userName}
+          </p>
+        </div>
+        <div className="shrink-0 text-right">
+          <p className={cn("tnum text-sm font-bold", qtyClass(l.qty))}>{qtyText(l.qty)}</p>
+          {showSaldo && (
+            <p className={cn("tnum text-[11px]", l.runningBalance < l.itemMinStok ? "text-rose-600 dark:text-rose-300" : "text-[var(--text-muted-2)]")}>
+              Saldo {l.runningBalance}
+            </p>
+          )}
+        </div>
+        {canEdit && (
           <button
             type="button"
-            onClick={() => setViewMode("table")}
-            className={`flex flex-1 items-center justify-center gap-1.5 px-3 py-2.5 md:py-1.5 text-xs font-semibold rounded-md transition-all md:flex-none ${
-              viewMode === "table"
-                ? "bg-card text-foreground shadow-sm"
-                : "text-slate-500 hover:text-slate-700"
-            }`}
+            onClick={() => handleOpenQuickUpdate(l.itemId, l.itemName)}
+            title="Update stok barang ini"
+            className="flex h-8 w-8 shrink-0 cursor-pointer items-center justify-center rounded-lg text-[var(--text-muted-2)] transition hover:bg-[var(--surface-2)] hover:text-[var(--primary)]"
           >
-            <List size={14} />
-            Tampilan Tabel
+            <PencilLine size={14} />
           </button>
-          <button
-            type="button"
-            onClick={() => setViewMode("timeline")}
-            className={`flex flex-1 items-center justify-center gap-1.5 px-3 py-2.5 md:py-1.5 text-xs font-semibold rounded-md transition-all md:flex-none ${
-              viewMode === "timeline"
-                ? "bg-card text-foreground shadow-sm"
-                : "text-slate-500 hover:text-slate-700"
-            }`}
-          >
-            <Activity size={14} />
-            Tampilan Garis Waktu
-          </button>
+        )}
+      </li>
+    );
+  };
+
+  const emptyState = (
+    <div className="flex flex-col items-center justify-center gap-2 rounded-2xl border border-dashed border-border bg-card py-14 text-center">
+      <Inbox size={24} className="text-[var(--text-muted-2)] opacity-70" />
+      <p className="text-sm font-semibold text-foreground">Belum ada pergerakan stok</p>
+      <p className="text-xs text-[var(--text-muted-2)]">Ubah filter atau rentang tanggal untuk melihat data lain.</p>
+    </div>
+  );
+
+  return (
+    <div className="space-y-4">
+      {/* Baris 1: chip jenis pergerakan + toggle tampilan */}
+      <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+        <div className="-mx-1 flex gap-1.5 overflow-x-auto px-1 pb-1 scrollbar-none lg:pb-0">
+          {TIPE_FILTERS.map((f) => {
+            const active = tipeFilter === f.value;
+            const count = f.value === "ALL" ? countsByTipe.ALL : countsByTipe[f.value];
+            return (
+              <button
+                key={f.value}
+                type="button"
+                onClick={() => setTipeFilter(f.value)}
+                className={cn(
+                  "inline-flex shrink-0 cursor-pointer items-center gap-2 rounded-full border px-3.5 py-1.5 text-xs font-semibold transition",
+                  active
+                    ? "border-[var(--primary)]/40 bg-[var(--primary)]/10 text-[var(--primary)] dark:text-sky-300"
+                    : "border-border bg-card text-[var(--text-soft)] hover:border-[var(--primary)]/30 hover:text-foreground"
+                )}
+              >
+                {f.value !== "ALL" && <span className={cn("h-1.5 w-1.5 rounded-full", TIPE_META[f.value].dot)} />}
+                {f.label}
+                <span className={cn("tnum rounded-full px-1.5 text-[10px] font-bold", active ? "bg-[var(--primary)]/15" : "bg-[var(--surface-2)] text-[var(--text-muted-2)]")}>
+                  {count}
+                </span>
+              </button>
+            );
+          })}
+        </div>
+
+        <div className="bento-segment flex shrink-0 self-start rounded-xl p-1 lg:self-auto" role="tablist" aria-label="Tampilan">
+          {([
+            { key: "table", label: "Tabel", icon: List },
+            { key: "timeline", label: "Garis waktu", icon: Activity },
+          ] as const).map((v) => (
+            <button
+              key={v.key}
+              type="button"
+              role="tab"
+              aria-selected={viewMode === v.key}
+              onClick={() => setViewMode(v.key)}
+              className={cn(
+                "inline-flex cursor-pointer items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold transition",
+                viewMode === v.key
+                  ? "bg-card text-foreground shadow-sm ring-1 ring-border"
+                  : "text-[var(--text-muted-2)] hover:text-foreground"
+              )}
+            >
+              <v.icon size={14} /> {v.label}
+            </button>
+          ))}
         </div>
       </div>
 
-      <Card className="grid grid-cols-1 gap-4 sm:grid-cols-5 p-5">
-        <div>
-          <Label>Pilih Barang (Kartu Stok)</Label>
-          <Select value={selectedItemId} onChange={(e) => setSelectedItemId(e.target.value ? Number(e.target.value) : "")}>
-            <option value="">— Semua Barang —</option>
+      {/* Baris 2: filter ringkas */}
+      <Card className="relative z-20 grid grid-cols-1 gap-2.5 p-3 sm:grid-cols-2 sm:p-3.5 lg:grid-cols-6 xl:grid-cols-[minmax(0,1.3fr)_minmax(0,1fr)_minmax(0,0.8fr)_minmax(0,0.8fr)_auto]">
+        <div className="relative lg:col-span-3 xl:col-span-1">
+          <Search size={16} className="pointer-events-none absolute left-3 top-3 z-10 text-[var(--text-muted-2)]" />
+          <Input
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            maxLength={FIELD_LIMITS.search}
+            placeholder="Cari barang, no. transaksi, keterangan…"
+            aria-label="Cari pergerakan stok"
+            className="h-10 rounded-xl pl-9 text-[13px] font-medium"
+          />
+        </div>
+        {/* Select hanya meneruskan kelas col-* tanpa prefix ke wrapper, jadi span responsif di div ini. */}
+        <div className="min-w-0 lg:col-span-3 xl:col-span-1">
+          <Select
+            value={selectedItemId}
+            onChange={(e) => setSelectedItemId(e.target.value ? Number(e.target.value) : "")}
+            className="h-10 w-full rounded-xl px-3.5 text-[13px] font-medium"
+            aria-label="Pilih barang (kartu stok)"
+          >
+            <option value="">Semua barang</option>
             {items.map((it) => (
               <option key={it.id} value={it.id}>
-                {it.kode} &middot; {it.nama}
+                {it.kode} · {it.nama}
               </option>
             ))}
           </Select>
         </div>
-        <div>
-          <Label>Jenis Pergerakan</Label>
-          <Select value={tipeFilter} onChange={(e) => setTipeFilter(e.target.value as any)}>
-            <option value="ALL">Semua Pergerakan</option>
-            <option value="MASUK">MASUK</option>
-            <option value="KELUAR">KELUAR</option>
-            <option value="RETUR">RETUR</option>
-            <option value="KOREKSI">KOREKSI</option>
-          </Select>
-        </div>
-        <div>
-          <Label>Mulai Tanggal</Label>
-          <DatePicker value={startDate} onChange={(val) => setStartDate(val)} />
-        </div>
-        <div>
-          <Label>Hingga Tanggal</Label>
-          <DatePicker value={endDate} onChange={(val) => setEndDate(val)} align="right" />
-        </div>
-        <div>
-          <Label>Cari Detail / Keterangan</Label>
-          <div className="relative">
-            <Search size={16} className="pointer-events-none absolute left-2.5 top-3 z-10 text-[var(--text-soft)]" />
-            <Input
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              maxLength={FIELD_LIMITS.search}
-              placeholder="Nomor PC / referensi"
-              className="pl-8"
-            />
-          </div>
-        </div>
+        <DatePicker value={startDate} onChange={(val) => setStartDate(val)} placeholder="Dari tanggal" className="h-10 rounded-xl text-[13px] font-medium lg:col-span-2 xl:col-span-1" />
+        <DatePicker value={endDate} onChange={(val) => setEndDate(val)} align="right" placeholder="Sampai tanggal" className="h-10 rounded-xl text-[13px] font-medium lg:col-span-2 xl:col-span-1" />
+        <button
+          type="button"
+          onClick={resetFilters}
+          disabled={!hasActiveFilter}
+          className="field-surface inline-flex h-10 cursor-pointer items-center justify-center gap-1.5 rounded-xl px-3.5 text-[13px] font-medium text-[var(--text-soft)] transition hover:text-foreground disabled:cursor-not-allowed disabled:opacity-45 sm:col-span-2 lg:col-span-2 xl:col-span-1"
+        >
+          <X size={14} /> Reset
+        </button>
       </Card>
 
-      {/* Main Content Area */}
-      {viewMode === "table" ? (
-        <>
-        <div className="hidden md:block">
-        <Table>
-          <thead>
-              <tr>
-                <Th className="w-28">Tanggal</Th>
-                <Th>Barang</Th>
-                <Th className="w-24">Mutasi</Th>
-                <Th className="text-right w-24">Stok Masuk</Th>
-                <Th className="text-right w-24">Stok Keluar</Th>
-                <Th className="text-right w-28">
-                  {selectedItemId !== "" ? "Saldo Berjalan" : "Posisi Mutasi"}
-                </Th>
-                <Th>Keterangan / Ref</Th>
-                <Th className="w-28">Petugas</Th>
-                {canEdit && <Th className="text-center w-24">Aksi</Th>}
-              </tr>
-            </thead>
-            <tbody>
-              {ledgerPg.pageData.map((l) => {
-                const isPositive = l.qty > 0;
-                const isZero = l.qty === 0;
-
-                return (
-                  <tr key={l.id} className="hover:bg-slate-50/50 transition-colors">
-                    <Td className="text-slate-500 font-medium text-xs">
-                      {formatTanggal(l.tanggal)}
-                    </Td>
-                    <Td>
-                      <div className="font-semibold text-foreground max-w-[130px] leading-tight">{l.itemName}</div>
-                      <div className="font-mono text-[10px] text-slate-400">{l.itemKode}</div>
-                    </Td>
-                    <Td>
-                      <Badge tone={TIPE_TONE[l.tipe]}>
-                        <span className="flex items-center gap-1">
-                          {l.tipe === "MASUK" && <ArrowUpCircle size={12} />}
-                          {l.tipe === "KELUAR" && <ArrowDownCircle size={12} />}
-                          {l.tipe === "RETUR" && <RotateCcw size={12} />}
-                          {l.tipe === "KOREKSI" && <RefreshCcw size={12} />}
-                          {TIPE_LABEL[l.tipe]}
-                        </span>
-                      </Badge>
-                    </Td>
-                    <Td className="text-right font-semibold font-mono text-primary-600">
-                      {isPositive ? `+${l.qty}` : "-"}
-                    </Td>
-                    <Td className="text-right font-semibold font-mono text-rose-600">
-                      {!isPositive && !isZero ? l.qty : "-"}
-                    </Td>
-                    <Td className="text-right font-bold font-mono">
-                      {selectedItemId !== "" ? (
-                        <span className={l.runningBalance < l.itemMinStok ? "text-rose-600" : "text-foreground"}>
-                          {l.runningBalance}
-                        </span>
-                      ) : (
-                        <span className="text-slate-400 text-xs">—</span>
-                      )}
-                    </Td>
-                    <Td className="text-slate-600 text-xs max-w-[150px] truncate" title={l.keterangan ?? ""}>
-                      {l.keterangan ?? "Penyesuaian Manual"}
-                    </Td>
-                    <Td className="text-slate-600 text-xs font-medium">
-                      {l.userName}
-                    </Td>
-                    {canEdit && (
-                      <Td className="text-center">
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => handleOpenQuickUpdate(l.itemId, l.itemName)}
-                          className="h-8 px-2.5 rounded-[10px] text-xs font-semibold hover:border-[var(--primary)] hover:text-[var(--primary)] transition duration-150 inline-flex items-center gap-1.5 cursor-pointer mx-auto"
-                        >
-                          <RefreshCcw size={11} /> Update
-                        </Button>
-                      </Td>
-                    )}
-                  </tr>
-                );
-              })}
-              {processedRows.length === 0 && (
-                <tr>
-                  <Td colSpan={canEdit ? 9 : 8} className="py-12 text-center text-slate-400 text-sm">
-                    Belum ada pergerakan stok untuk filter ini.
-                  </Td>
-                </tr>
-              )}
-            </tbody>
-        </Table>
-        </div>
-        {/* Mobile (<768px): kartu per pergerakan stok */}
-        <div className="space-y-3 md:hidden">
-          {processedRows.length === 0 ? (
-            <div className="rounded-xl border border-border bg-card py-10 text-center text-sm text-slate-400">
-              Belum ada pergerakan stok untuk filter ini.
-            </div>
-          ) : (
-            ledgerPg.pageData.map((l) => (
-              <div key={l.id} className="space-y-3 rounded-xl border border-border bg-card p-4">
-                <div className="flex items-start justify-between gap-3">
-                  <div className="min-w-0">
-                    <p className="break-words text-sm font-bold leading-tight text-foreground">{l.itemName}</p>
-                    <p className="mt-0.5 font-mono text-xs text-slate-400">{l.itemKode}</p>
-                  </div>
-                  <Badge tone={TIPE_TONE[l.tipe]} className="shrink-0">{TIPE_LABEL[l.tipe]}</Badge>
-                </div>
-                <dl className="grid grid-cols-3 gap-2 rounded-lg border border-border/70 bg-slate-50/60 p-3 text-xs dark:bg-slate-950/25">
-                  <div>
-                    <dt className="text-[10px] font-bold uppercase tracking-wide text-slate-400">Mutasi</dt>
-                    <dd className={`mt-0.5 font-mono font-bold ${l.qty > 0 ? "text-primary-600" : l.qty < 0 ? "text-rose-600" : "text-slate-400"}`}>
-                      {l.qty > 0 ? `+${l.qty}` : l.qty === 0 ? "-" : l.qty}
-                    </dd>
-                  </div>
-                  <div>
-                    <dt className="text-[10px] font-bold uppercase tracking-wide text-slate-400">Saldo</dt>
-                    <dd className="mt-0.5 font-mono font-bold">
-                      {selectedItemId !== "" ? (
-                        <span className={l.runningBalance < l.itemMinStok ? "text-rose-600" : "text-foreground"}>{l.runningBalance}</span>
-                      ) : (
-                        <span className="text-slate-400">—</span>
-                      )}
-                    </dd>
-                  </div>
-                  <div>
-                    <dt className="text-[10px] font-bold uppercase tracking-wide text-slate-400">Petugas</dt>
-                    <dd className="mt-0.5 break-words font-medium text-slate-600">{l.userName}</dd>
-                  </div>
-                </dl>
-                <div className="text-xs text-slate-500">
-                  <span className="font-medium">{formatTanggal(l.tanggal)}</span>
-                  <span className="mx-1.5 text-slate-300">•</span>
-                  <span className="break-words">{l.keterangan ?? "Penyesuaian Manual"}</span>
-                </div>
-                {canEdit && (
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    onClick={() => handleOpenQuickUpdate(l.itemId, l.itemName)}
-                    className="min-h-10 w-full"
-                  >
-                    <RefreshCcw size={13} /> Update Stok
-                  </Button>
-                )}
-              </div>
-            ))
-          )}
-        </div>
-        </>
-      ) : null}
-      {viewMode === "table" && (
-        <Pagination page={ledgerPg.page} perPage={ledgerPg.perPage} total={ledgerPg.total} onPage={ledgerPg.setPage} onPerPage={ledgerPg.setPerPage} />
+      {showSaldo && (
+        <p className="flex items-center gap-2 px-1 text-xs text-[var(--text-muted-2)]">
+          <Info size={13} className="text-[var(--primary)]" />
+          Kartu stok aktif — kolom saldo menampilkan stok berjalan setelah setiap mutasi.
+        </p>
       )}
-      {viewMode === "timeline" && (
-        /* Timeline View */
-        <div className="relative border-l border-border pl-8 ml-4 space-y-6 py-2">
-          {processedRows.map((l) => {
-            const isPositive = l.qty > 0;
-            const isZero = l.qty === 0;
-            
-            const iconBg = {
-              MASUK: "bg-primary-50 text-primary-600 border-primary-200",
-              KELUAR: "bg-rose-50 text-rose-600 border-rose-200",
-              RETUR: "bg-blue-50 text-blue-600 border-blue-200",
-              KOREKSI: "bg-amber-50 text-amber-600 border-amber-200",
-            }[l.tipe];
 
-            return (
-              <div key={l.id} className="relative group">
-                {/* Timeline Dot Indicator */}
-                <div className={`absolute -left-[45px] top-1 flex items-center justify-center w-8 h-8 rounded-full border shadow-xs transition-transform group-hover:scale-105 ${iconBg}`}>
-                  {l.tipe === "MASUK" && <ArrowUpCircle size={16} />}
-                  {l.tipe === "KELUAR" && <ArrowDownCircle size={16} />}
-                  {l.tipe === "RETUR" && <RotateCcw size={16} />}
-                  {l.tipe === "KOREKSI" && <RefreshCcw size={16} />}
-                </div>
-
-                {/* Timeline Card */}
-                <Card className="hover:border-border hover:shadow-xs transition-all duration-200 p-5">
-                  <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-                    <div className="space-y-2">
-                      <div className="flex flex-wrap items-center gap-3">
-                        <Badge tone={TIPE_TONE[l.tipe]}>
-                          {TIPE_LABEL[l.tipe]}
-                        </Badge>
-                        <span className="text-[11px] text-slate-450 flex items-center gap-1.5">
-                          <Calendar size={12} className="text-slate-400" />
-                          {formatTanggal(l.tanggal)}
+      {/* Konten */}
+      {processedRows.length === 0 ? (
+        emptyState
+      ) : viewMode === "table" ? (
+        <>
+          {/* Tabel butuh ±870px; di bawah xl (sidebar terbuka) pakai daftar ringkas. */}
+          <div className="hidden xl:block">
+            <Table tableClassName="[&_tbody_td]:whitespace-nowrap [&_th]:px-4 [&_td]:px-4">
+              <thead>
+                <tr>
+                  <Th className="w-32">Tanggal</Th>
+                  <Th>Barang</Th>
+                  <Th className="w-28">Jenis</Th>
+                  <Th className="w-20 text-right">Qty</Th>
+                  {showSaldo && <Th className="w-20 text-right">Saldo</Th>}
+                  <Th>Keterangan</Th>
+                  <Th className="w-32">Petugas</Th>
+                  {canEdit && <Th className="w-14 text-center">Aksi</Th>}
+                </tr>
+              </thead>
+              <tbody>
+                {ledgerPg.pageData.map((l) => {
+                  const meta = TIPE_META[l.tipe];
+                  return (
+                    <tr key={l.id}>
+                      <Td className="text-xs text-[var(--text-muted-2)]">{formatTanggal(l.tanggal)}</Td>
+                      <Td>
+                        <p className="max-w-[260px] truncate font-semibold text-foreground dark:text-slate-100">{l.itemName}</p>
+                        <p className="font-mono text-[11px] text-[var(--text-muted-2)]">{l.itemKode}</p>
+                      </Td>
+                      <Td>
+                        <span className={cn("inline-flex items-center gap-1.5 text-xs font-semibold", meta.text)}>
+                          <span className={cn("h-1.5 w-1.5 rounded-full", meta.dot)} />
+                          {meta.label}
                         </span>
-                        <span className="text-[11px] text-slate-450 flex items-center gap-1.5">
-                          <User size={12} className="text-slate-400" />
-                          {l.userName}
-                        </span>
-                      </div>
-                      
-                      <div>
-                        <h3 className="font-bold text-foreground text-sm leading-tight">
-                          {l.itemName}
-                        </h3>
-                        <span className="font-mono text-[10px] text-slate-400">
-                          Kode: {l.itemKode}
-                        </span>
-                      </div>
-                      
-                      <p className="text-slate-600 text-xs leading-relaxed">
-                        {l.keterangan ?? "Penyesuaian Manual"}
-                      </p>
-                    </div>
-
-                    {/* Quantity & Balance */}
-                    <div className="flex md:flex-col items-baseline md:items-end justify-between md:justify-center border-t md:border-t-0 pt-3 md:pt-0 border-border">
-                      <div className="text-right">
-                        <span className={`text-base font-extrabold font-mono ${isPositive ? "text-primary-600" : "text-rose-600"}`}>
-                          {isPositive ? `+${l.qty}` : l.qty}
-                        </span>
-                        <span className="text-xs text-slate-400 ml-1 font-semibold">pcs</span>
-                      </div>
-                      
-                      {selectedItemId !== "" ? (
-                        <div className="text-right md:mt-1">
-                          <span className="text-[11px] text-slate-400">Saldo: </span>
-                          <span className={`text-sm font-bold font-mono ${l.runningBalance < l.itemMinStok ? "text-rose-600" : "text-foreground"}`}>
-                            {l.runningBalance}
-                          </span>
-                        </div>
-                      ) : (
-                        <div className="text-right md:mt-1">
-                          <span className="text-[10px] text-slate-400 italic">Filter barang untuk melihat saldo berjalan</span>
-                        </div>
+                      </Td>
+                      <Td className={cn("tnum text-right text-sm font-bold", qtyClass(l.qty))}>{qtyText(l.qty)}</Td>
+                      {showSaldo && (
+                        <Td
+                          className={cn(
+                            "tnum text-right text-sm font-semibold",
+                            l.runningBalance < l.itemMinStok ? "text-rose-600 dark:text-rose-300" : "text-foreground dark:text-slate-200"
+                          )}
+                        >
+                          {l.runningBalance}
+                        </Td>
                       )}
-                    </div>
-                  </div>
-                </Card>
+                      <Td className="max-w-[260px] truncate text-xs text-[var(--text-soft)]" title={l.keterangan ?? ""}>
+                        {l.keterangan ?? "Penyesuaian manual"}
+                      </Td>
+                      <Td className="text-xs text-[var(--text-soft)]">{l.userName}</Td>
+                      {canEdit && (
+                        <Td className="text-center">
+                          <button
+                            type="button"
+                            onClick={() => handleOpenQuickUpdate(l.itemId, l.itemName)}
+                            title="Update stok barang ini"
+                            className="mx-auto flex h-8 w-8 cursor-pointer items-center justify-center rounded-lg text-[var(--text-muted-2)] transition hover:bg-[var(--surface-2)] hover:text-[var(--primary)]"
+                          >
+                            <PencilLine size={14} />
+                          </button>
+                        </Td>
+                      )}
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </Table>
+          </div>
+          {/* HP: daftar ringkas */}
+          <ul className="divide-y divide-border overflow-hidden rounded-2xl border border-border bg-card xl:hidden">
+            {ledgerPg.pageData.map((l) => (
+              renderCompactRow(l)
+            ))}
+          </ul>
+        </>
+      ) : (
+        /* Garis waktu ringkas: dikelompokkan per tanggal, ikut paginasi */
+        <div className="space-y-4">
+          {timelineGroups.map((g) => (
+            <section key={g.key}>
+              <div className="mb-2 flex items-center gap-3 px-1">
+                <span className="inline-flex items-center gap-1.5 text-xs font-bold text-foreground">
+                  <Calendar size={13} className="text-[var(--primary)]" />
+                  {g.label}
+                </span>
+                <span className="h-px flex-1 bg-border" />
+                <span className="text-[11px] text-[var(--text-muted-2)]">
+                  {g.rows.length} mutasi · net <span className={cn("tnum font-bold", qtyClass(g.net))}>{qtyText(g.net)}</span>
+                </span>
               </div>
-            );
-          })}
-          {processedRows.length === 0 && (
-            <div className="text-center py-12 text-slate-400 text-sm">
-              Belum ada pergerakan stok untuk filter ini.
-            </div>
-          )}
+              <ul className="divide-y divide-border overflow-hidden rounded-2xl border border-border bg-card">
+                {g.rows.map((l) => (
+                  renderCompactRow(l)
+                ))}
+              </ul>
+            </section>
+          ))}
         </div>
+      )}
+
+      {processedRows.length > 0 && (
+        <Pagination page={ledgerPg.page} perPage={ledgerPg.perPage} total={ledgerPg.total} onPage={ledgerPg.setPage} onPerPage={ledgerPg.setPerPage} />
       )}
 
       {/* Modal Quick Update Stok */}

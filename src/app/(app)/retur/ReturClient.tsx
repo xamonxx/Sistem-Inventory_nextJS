@@ -30,6 +30,7 @@ import {
 import { Nota, type NotaData } from "@/components/Nota";
 import { printArea } from "@/lib/print";
 import { toast } from "sonner";
+import { WhatsAppDialog } from "@/components/WhatsAppDialog";
 
 type ItemOption = { id: number; kode: string; nama: string; hargaJual: number };
 type OriginalItem = { transactionItemId: number; itemId: number; nama: string; kode: string; qty: number; alreadyReturned: number; availableForReturn: number; harga: number };
@@ -99,6 +100,7 @@ export function ReturClient({
   // Step 4: Settlement
   const [error, setError] = useState("");
   const [nota, setNota] = useState<NotaData | null>(null);
+  const [waOpen, setWaOpen] = useState(false);
   const [pending, start] = useTransition();
 
   // Search catalog for replacement B
@@ -324,11 +326,11 @@ export function ReturClient({
   }
 
   function handleSendWA() {
+    if (nota) setWaOpen(true);
+  }
+
+  function sendWA(no: string) {
     if (!nota) return;
-    let no = window.prompt("Nomor WhatsApp pelanggan (mis. 08123456789):", "");
-    if (!no) return;
-    no = no.replace(/[^0-9]/g, "");
-    if (no.startsWith("0")) no = "62" + no.slice(1);
 
     const pesan =
       `Halo,\n` +
@@ -932,6 +934,12 @@ export function ReturClient({
           </div>
         </div>
       )}
+      <WhatsAppDialog
+        isOpen={waOpen}
+        onClose={() => setWaOpen(false)}
+        onSubmit={sendWA}
+        title="Kirim Nota Retur via WhatsApp"
+      />
     </div>
   );
 }

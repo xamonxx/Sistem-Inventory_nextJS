@@ -236,6 +236,12 @@ export function BarangClient({
   // ===== Seleksi & hapus =====
   const allPageSelected =
     paginatedItems.length > 0 && paginatedItems.every((it) => selectedIds.has(it.id));
+  const somePageSelected = !allPageSelected && paginatedItems.some((it) => selectedIds.has(it.id));
+  // Status "sebagian terpilih" hanya bisa diset lewat DOM (bukan atribut HTML).
+  const selectAllRef = useRef<HTMLInputElement>(null);
+  useEffect(() => {
+    if (selectAllRef.current) selectAllRef.current.indeterminate = somePageSelected;
+  }, [somePageSelected]);
 
   function toggleSelectAllPage() {
     setSelectedIds((prev) => {
@@ -295,36 +301,46 @@ export function BarangClient({
 
   return (
     <div className="space-y-8">
-      {/* 1. Statistics Cards Row */}
-      <section className={cn("grid grid-cols-1 gap-4 sm:grid-cols-2", canEdit ? "lg:grid-cols-3 xl:grid-cols-5" : "lg:grid-cols-4")}>
+      {/* 1. Statistics Cards Row
+          Mobile 2 kolom (Nilai Aset melebar di atas); tablet & lg grid 6 kolom
+          (2 kartu lebar + 3 kartu) agar tidak ada kartu yatim; 2xl 5 kolom. */}
+      <section className={cn("grid grid-cols-2 gap-3 sm:gap-4", canEdit ? "sm:grid-cols-6 2xl:grid-cols-5" : "sm:grid-cols-4")}>
         {[
-          { label: "Total Katalog Barang", value: `${stats.total} item`, desc: "Semua material terdaftar", icon: Boxes, tone: "blue" },
-          ...(canEdit ? [{ label: "Total Nilai Aset", value: formatRupiah(stats.asset), desc: "Total modal persediaan", icon: Coins, tone: "indigo" }] : []),
-          { label: "Barang Aktif di Kasir", value: `${stats.active} item`, desc: "Dapat dijual oleh Kasir", icon: ArrowUpRight, tone: "green" },
-          { label: "Stok Menipis", value: `${stats.low} item`, desc: "Di bawah stok minimum", icon: ArrowDownRight, tone: "amber" },
-          { label: "Stok Minus", value: `${stats.negative} item`, desc: "Perlu dicocokkan dengan stok fisik", icon: ShieldAlert, tone: "red" },
+          { label: "Total Katalog Barang", value: `${stats.total} item`, desc: "Semua material terdaftar", icon: Boxes, tone: "blue", wide: true, lead: false },
+          ...(canEdit ? [{ label: "Total Nilai Aset", value: formatRupiah(stats.asset), desc: "Total modal persediaan", icon: Coins, tone: "indigo", wide: true, lead: true }] : []),
+          { label: "Barang Aktif di Kasir", value: `${stats.active} item`, desc: "Dapat dijual oleh Kasir", icon: ArrowUpRight, tone: "green", wide: false, lead: false },
+          { label: "Stok Menipis", value: `${stats.low} item`, desc: "Di bawah stok minimum", icon: ArrowDownRight, tone: "amber", wide: false, lead: false },
+          { label: "Stok Minus", value: `${stats.negative} item`, desc: "Perlu dicocokkan dengan stok fisik", icon: ShieldAlert, tone: "red", wide: false, lead: false },
         ].map((card) => {
           const Icon = card.icon;
           const toneColors: Record<string, string> = {
-            blue: "bg-blue-50 text-blue-700 border-blue-100",
-            indigo: "bg-indigo-50 text-indigo-700 border-indigo-100",
-            green: "bg-primary-50 text-primary-700 border-primary-100",
-            amber: "bg-amber-50 text-amber-700 border-amber-100",
-            red: "bg-rose-50 text-rose-700 border-rose-100",
+            blue: "bg-blue-50 text-blue-700 border-blue-100 dark:bg-blue-500/12 dark:text-blue-300 dark:border-blue-400/20",
+            indigo: "bg-indigo-50 text-indigo-700 border-indigo-100 dark:bg-indigo-500/12 dark:text-indigo-300 dark:border-indigo-400/20",
+            green: "bg-emerald-50 text-emerald-700 border-emerald-100 dark:bg-emerald-500/12 dark:text-emerald-300 dark:border-emerald-400/20",
+            amber: "bg-amber-50 text-amber-700 border-amber-100 dark:bg-amber-500/12 dark:text-amber-300 dark:border-amber-400/20",
+            red: "bg-rose-50 text-rose-700 border-rose-100 dark:bg-rose-500/12 dark:text-rose-300 dark:border-rose-400/20",
           };
+          const span = canEdit
+            ? cn(
+                card.wide ? "sm:col-span-3" : "sm:col-span-2",
+                "2xl:col-span-1",
+                card.lead && "order-first col-span-2 sm:order-none"
+              )
+            : "";
           return (
-            <Card key={card.label} className="flex items-center gap-3 p-4 sm:gap-4 sm:p-5 lg:gap-3 lg:p-3.5 xl:gap-4 xl:p-5">
-              <div className={cn("flex h-10 w-10 sm:h-12 sm:w-12 shrink-0 items-center justify-center rounded-xl border", toneColors[card.tone])}>
-                <Icon className="h-5 w-5 sm:h-6 sm:w-6" strokeWidth={2.3} />
+            <Card key={card.label} className={cn("flex min-w-0 items-center gap-3 p-3.5 sm:gap-3.5 sm:p-4", span)}>
+              <div className={cn("flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border", toneColors[card.tone])}>
+                <Icon className="h-5 w-5" strokeWidth={2.3} />
               </div>
-              <div className="leading-tight select-none min-w-0 flex-1">
-                <p className="text-[10px] lg:text-[9px] xl:text-[10px] font-bold uppercase tracking-wider text-[var(--text-muted-2)]">{card.label}</p>
-                <div data-tooltip={card.value} className="mt-1">
-                  <p className="font-extrabold text-foreground font-display text-xs sm:text-sm lg:text-[11px] xl:text-xs 2xl:text-sm whitespace-nowrap overflow-hidden text-ellipsis">
-                    {card.value}
-                  </p>
-                </div>
-                <p className="text-[10px] lg:text-[9px] xl:text-[10px] text-[var(--text-muted-2)] mt-0.5 truncate" title={card.desc}>
+              <div className="min-w-0 flex-1 leading-tight select-none">
+                <p className="truncate text-[10px] font-bold uppercase tracking-wider text-[var(--text-muted-2)]">{card.label}</p>
+                <p
+                  className="tnum mt-1 truncate font-display text-base font-extrabold text-foreground sm:text-lg 2xl:text-base"
+                  title={card.value}
+                >
+                  {card.value}
+                </p>
+                <p className="mt-0.5 hidden truncate text-[11px] text-[var(--text-muted-2)] sm:block" title={card.desc}>
                   {card.desc}
                 </p>
               </div>
@@ -333,65 +349,34 @@ export function BarangClient({
         })}
       </section>
 
-      {/* 2. Filters Toolbar */}
-      <Card className="relative z-20 flex flex-col gap-3 p-4 lg:flex-row lg:items-center lg:gap-4">
-        <div className="relative w-full lg:flex-1">
-          <Search size={16} className="pointer-events-none absolute left-3 top-3 z-10 text-[var(--text-soft)]" />
-          <Input
-            value={q}
-            onChange={(e) => setQ(e.target.value)}
-            maxLength={FIELD_LIMITS.search}
-            placeholder="Cari kode, barcode, atau nama..."
-            className="pl-9 h-10 rounded-xl"
-          />
-        </div>
-        <div className="flex flex-col gap-2.5 sm:flex-row sm:flex-wrap sm:items-center lg:flex-nowrap lg:shrink-0">
-          <Select
-            value={categoryFilter}
-            onChange={(e) => setCategoryFilter(e.target.value as "ALL" | ItemCategory)}
-            className="h-10 w-full rounded-xl text-xs font-bold sm:w-44"
-          >
-            <option value="ALL">Semua Kategori</option>
-            {ITEM_CATEGORIES.map((kategori) => (
-              <option key={kategori} value={kategori}>{kategori}</option>
-            ))}
-          </Select>
-
-          <Select
-            value={statusFilter}
-            onChange={(e) => setStatusFilter(e.target.value as any)}
-            className="h-10 w-full rounded-xl text-xs font-bold sm:w-40"
-          >
-            <option value="ALL">Semua Status</option>
-            <option value="ACTIVE">Aktif (tampil di kasir)</option>
-            <option value="INACTIVE">Diarsipkan</option>
-          </Select>
-
-          <Select
-            value={stockCondition}
-            onChange={(e) => setStockCondition(e.target.value as any)}
-            className="h-10 w-full rounded-xl text-xs font-bold sm:w-44"
-          >
-            <option value="ALL">Semua Kondisi Stok</option>
-            <option value="LOW">Stok Menipis</option>
-            <option value="NEGATIVE">Stok Minus</option>
-          </Select>
-
+      {/* 2. Filters Toolbar — baris 1: cari + stock opname; baris 2: filter (3 kolom). Satu baris mulai 2xl. */}
+      <Card className="relative z-20 flex flex-col gap-3 p-3.5 sm:p-4 2xl:flex-row 2xl:items-center 2xl:gap-3">
+        <div className="flex min-w-0 items-center gap-2 2xl:flex-1">
+          <div className="relative min-w-0 flex-1">
+            <Search size={16} className="pointer-events-none absolute left-3 top-3 z-10 text-[var(--text-soft)]" />
+            <Input
+              value={q}
+              onChange={(e) => setQ(e.target.value)}
+              maxLength={FIELD_LIMITS.search}
+              placeholder="Cari kode, barcode, atau nama..."
+              className="pl-9 h-10 rounded-xl"
+            />
+          </div>
           {canEdit && (
-            <div className="flex items-stretch gap-2.5">
+            <div className="flex shrink-0 items-stretch gap-2">
               <Button
                 onClick={() => setOpenSOPreview(true)}
-                variant="outline"
-                className="h-10 flex-1 rounded-xl px-4 text-xs font-bold gap-2 sm:flex-none"
+                variant="ghost"
+                className="field-surface h-10 shrink-0 rounded-xl px-3.5 text-[13px] font-medium gap-2 text-foreground"
               >
-                <Printer size={14} /> Lembar Stock Opname
+                <Printer size={14} /> <span className="sm:hidden">Opname</span><span className="hidden sm:inline">Lembar Stock Opname</span>
               </Button>
 
               <div ref={soOptionsRef} className="relative shrink-0">
                 <Button
                   onClick={() => setShowSOOptions(!showSOOptions)}
-                  variant="outline"
-                  className="h-10 rounded-xl px-3 text-xs font-bold gap-1.5"
+                  variant="ghost"
+                  className="field-surface h-10 rounded-xl px-3 text-xs font-bold gap-1.5 text-foreground"
                   title="Opsi Cetak Stock Opname"
                 >
                   <SlidersHorizontal size={14} />
@@ -414,12 +399,44 @@ export function BarangClient({
             </div>
           )}
         </div>
+        <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-3 2xl:flex 2xl:shrink-0 2xl:items-center">
+          <Select
+            value={categoryFilter}
+            onChange={(e) => setCategoryFilter(e.target.value as "ALL" | ItemCategory)}
+            className="h-10 w-full rounded-xl text-xs font-bold 2xl:w-44"
+          >
+            <option value="ALL">Semua Kategori</option>
+            {ITEM_CATEGORIES.map((kategori) => (
+              <option key={kategori} value={kategori}>{kategori}</option>
+            ))}
+          </Select>
+
+          <Select
+            value={statusFilter}
+            onChange={(e) => setStatusFilter(e.target.value as any)}
+            className="h-10 w-full rounded-xl text-xs font-bold 2xl:w-40"
+          >
+            <option value="ALL">Semua Status</option>
+            <option value="ACTIVE">Aktif (tampil di kasir)</option>
+            <option value="INACTIVE">Diarsipkan</option>
+          </Select>
+
+          <Select
+            value={stockCondition}
+            onChange={(e) => setStockCondition(e.target.value as any)}
+            className="h-10 w-full rounded-xl text-xs font-bold 2xl:w-44"
+          >
+            <option value="ALL">Semua Kondisi Stok</option>
+            <option value="LOW">Stok Menipis</option>
+            <option value="NEGATIVE">Stok Minus</option>
+          </Select>
+        </div>
       </Card>
 
       {/* Bulk action bar — hapus terpilih */}
       {canEdit && selectedIds.size > 0 && (
-        <div className="flex flex-col gap-3 rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 sm:flex-row sm:items-center sm:justify-between animate-in fade-in slide-in-from-top-1 duration-150">
-          <p className="text-sm font-bold text-rose-700">
+        <div className="flex flex-col gap-3 rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 sm:flex-row sm:items-center sm:justify-between animate-in fade-in slide-in-from-top-1 duration-150 dark:border-rose-400/25 dark:bg-rose-500/10">
+          <p className="text-sm font-bold text-rose-700 dark:text-rose-300">
             {selectedIds.size} barang dipilih untuk dihapus
           </p>
           <div className="flex items-center gap-2">
@@ -433,81 +450,103 @@ export function BarangClient({
         </div>
       )}
 
-      {/* ===== Mobile / tablet card list (below lg) ===== */}
-      <div className="space-y-3 lg:hidden">
+      {/* ===== Card list (di bawah xl): 1 kolom di HP, 2 kolom di tablet/laptop kecil.
+          Tabel butuh ±1060px sehingga baru dipakai mulai xl. ===== */}
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:hidden">
         {paginatedItems.map((it) => {
           const isLow = it.stok >= 0 && it.stok < it.minStok;
           const isNeg = it.stok < 0;
+          const aset = it.hargaBeli * it.stok;
           return (
             <div
               key={it.id}
               onClick={() => openItemDetails(it)}
               className={cn(
-                "relative cursor-pointer rounded-2xl border bg-card p-4 shadow-[var(--shadow-card)] transition-colors active:scale-[0.995]",
+                "relative flex cursor-pointer flex-col gap-3 rounded-2xl border bg-card p-4 shadow-[var(--shadow-card)] transition-colors active:scale-[0.995]",
                 selectedIds.has(it.id)
-                  ? "border-rose-300 bg-rose-50/60"
+                  ? "border-rose-300 bg-rose-50/60 dark:border-rose-400/40 dark:bg-rose-500/10"
                   : "border-border hover:border-[var(--primary)]/40"
               )}
             >
-              <div className="flex items-start justify-between gap-3">
-                <div className="flex min-w-0 items-start gap-2.5">
-                  {canEdit && (
-                    <input
-                      type="checkbox"
-                      checked={selectedIds.has(it.id)}
-                      onChange={() => toggleSelect(it.id)}
-                      onClick={(e) => e.stopPropagation()}
-                      aria-label={`Pilih ${it.nama}`}
-                      className="mt-1 h-4 w-4 shrink-0 rounded border-border text-[var(--primary)] focus:ring-[var(--primary)] cursor-pointer"
-                    />
-                  )}
-                  <div className="min-w-0">
-                    <p className="font-mono text-[11px] font-bold text-[var(--primary)]">{it.kode}</p>
-                    <p className="mt-0.5 font-semibold leading-snug text-foreground line-clamp-2">{it.nama}</p>
-                    {it.kategori && <Badge tone="blue" className="mt-1 text-[8px]">{it.kategori}</Badge>}
-                  </div>
-                </div>
-                <Badge tone={it.aktif ? "green" : "slate"}>{it.aktif ? "Aktif" : "Arsip"}</Badge>
-              </div>
-
-              <div className="mt-3.5 grid grid-cols-2 gap-x-4 gap-y-3 border-t border-border pt-3.5">
-                <div>
-                  <p className="text-[10px] font-bold uppercase tracking-wider text-[var(--text-muted-2)]">Harga Jual</p>
-                  <p className="mt-0.5 font-mono text-sm font-bold text-[var(--primary)]">{formatRupiah(it.hargaJual)}</p>
-                </div>
-                <div>
-                  <p className="text-[10px] font-bold uppercase tracking-wider text-[var(--text-muted-2)]">Sisa Stok</p>
-                  <p className="mt-0.5 flex items-center gap-1.5 font-mono text-sm font-bold text-foreground">
-                    {it.stok} unit
+              <div className="flex items-start gap-2.5">
+                {canEdit && (
+                  <input
+                    type="checkbox"
+                    checked={selectedIds.has(it.id)}
+                    onChange={() => toggleSelect(it.id)}
+                    onClick={(e) => e.stopPropagation()}
+                    aria-label={`Pilih ${it.nama}`}
+                    className="mt-0.5 h-4 w-4 shrink-0 cursor-pointer rounded border-border text-[var(--primary)] focus:ring-[var(--primary)]"
+                  />
+                )}
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-center justify-between gap-2">
+                    <p className="truncate font-mono text-[11px] font-medium text-[var(--text-muted-2)]">
+                      {it.kode}
+                      {it.kategori && <span className="ml-1.5 font-sans text-[10px] font-semibold uppercase tracking-wide">· {it.kategori}</span>}
+                    </p>
                     <span
                       className={cn(
-                        "h-1.5 w-1.5 rounded-full",
-                        isNeg ? "bg-red-500" : isLow ? "bg-amber-500" : "bg-primary-500"
+                        "inline-flex shrink-0 items-center gap-1.5 text-[11px] font-medium",
+                        it.aktif ? "text-emerald-700 dark:text-emerald-300/90" : "text-[var(--text-muted-2)]"
                       )}
-                    />
-                  </p>
+                    >
+                      <span className={cn("h-1.5 w-1.5 rounded-full", it.aktif ? "bg-emerald-500" : "bg-slate-400")} />
+                      {it.aktif ? "Aktif" : "Arsip"}
+                    </span>
+                  </div>
+                  <p className="mt-1 line-clamp-2 font-semibold leading-snug text-foreground dark:text-slate-100">{it.nama}</p>
+                </div>
+              </div>
+
+              <dl className="mt-auto grid grid-cols-2 gap-x-3 gap-y-2.5 border-t border-border pt-3 text-xs">
+                <div className="min-w-0">
+                  <dt className="text-[10px] font-bold uppercase tracking-wider text-[var(--text-muted-2)]">Harga Jual</dt>
+                  <dd className="tnum mt-0.5 truncate text-sm font-semibold text-foreground dark:text-slate-200">{formatRupiah(it.hargaJual)}</dd>
+                </div>
+                <div className="min-w-0">
+                  <dt className="text-[10px] font-bold uppercase tracking-wider text-[var(--text-muted-2)]">Sisa Stok</dt>
+                  <dd
+                    className={cn(
+                      "tnum mt-0.5 flex items-center gap-1.5 text-sm font-semibold",
+                      isNeg ? "text-rose-600 dark:text-rose-300" : isLow ? "text-amber-700 dark:text-amber-300/90" : "text-foreground dark:text-slate-200"
+                    )}
+                    title={isNeg ? "Stok minus" : isLow ? `Di bawah stok minimum (${it.minStok})` : undefined}
+                  >
+                    {(isNeg || isLow) && <span className={cn("h-1.5 w-1.5 rounded-full", isNeg ? "bg-rose-500" : "bg-amber-500/80")} />}
+                    {it.stok} unit
+                  </dd>
                 </div>
                 {canEdit && (
                   <>
-                    <div>
-                      <p className="text-[10px] font-bold uppercase tracking-wider text-[var(--text-muted-2)]">Harga Beli</p>
-                      <p className="mt-0.5 font-mono text-sm font-semibold text-[var(--text-soft)]">{formatRupiah(it.hargaBeli)}</p>
+                    <div className="min-w-0">
+                      <dt className="text-[10px] font-bold uppercase tracking-wider text-[var(--text-muted-2)]">Harga Beli</dt>
+                      <dd className="tnum mt-0.5 truncate text-[var(--text-soft)]">{formatRupiah(it.hargaBeli)}</dd>
                     </div>
-                    <div>
-                      <p className="text-[10px] font-bold uppercase tracking-wider text-[var(--text-muted-2)]">Total Aset</p>
-                      <p className={cn("mt-0.5 font-mono text-sm font-bold", it.stok < 0 ? "text-rose-600" : "text-foreground")}>
-                        {formatRupiah(it.hargaBeli * it.stok)}
-                      </p>
+                    <div className="min-w-0">
+                      <dt className="text-[10px] font-bold uppercase tracking-wider text-[var(--text-muted-2)]">Total Aset</dt>
+                      <dd
+                        className={cn(
+                          "tnum mt-0.5 truncate",
+                          aset < 0
+                            ? "font-semibold text-rose-600 dark:text-rose-300"
+                            : aset === 0
+                              ? "text-slate-400 dark:text-slate-500"
+                              : "font-semibold text-foreground dark:text-slate-200"
+                        )}
+                      >
+                        {formatRupiah(aset)}
+                      </dd>
                     </div>
                   </>
                 )}
-              </div>
+              </dl>
             </div>
           );
         })}
 
         {paginatedItems.length === 0 && (
-          <div className="rounded-2xl border border-border bg-card py-16 text-center text-slate-400 select-none">
+          <div className="rounded-2xl border border-border bg-card py-16 text-center text-slate-400 select-none sm:col-span-2">
             <Boxes className="mx-auto mb-2 text-slate-200" size={32} />
             <p className="text-sm font-semibold">Barang Tidak Ditemukan</p>
             <p className="text-xs">Katalog kosong atau pencarian tidak cocok.</p>
@@ -515,25 +554,26 @@ export function BarangClient({
         )}
 
         {filteredItems.length > 0 && canEdit && (
-          <div className="flex items-center justify-between rounded-2xl border border-border bg-[var(--surface-2)] px-4 py-3">
+          <div className="flex items-center justify-between rounded-2xl border border-border bg-[var(--surface-2)] px-4 py-3 sm:col-span-2">
             <p className="text-[11px] font-bold uppercase tracking-wider text-[var(--text-soft)]">
               Total Aset ({filteredItems.length})
             </p>
-            <p className={cn("font-mono text-sm font-extrabold", totalAset < 0 ? "text-rose-600" : "text-foreground")}>
+            <p className={cn("tnum text-sm font-extrabold", totalAset < 0 ? "text-rose-600" : "text-foreground")}>
               {formatRupiah(totalAset)}
             </p>
           </div>
         )}
       </div>
 
-      {/* ===== Desktop table (lg and up) ===== */}
-      <div className="hidden lg:block">
-      <Table>
+      {/* ===== Desktop table (xl and up) ===== */}
+      <div className="hidden xl:block">
+      <Table tableClassName="[&_tbody_td]:whitespace-nowrap [&_th]:px-3 [&_td]:px-3 2xl:[&_th]:px-3.5 2xl:[&_td]:px-3.5">
           <thead>
             <tr>
               {canEdit && (
                 <Th className="w-10 text-center">
                   <input
+                    ref={selectAllRef}
                     type="checkbox"
                     checked={allPageSelected}
                     onChange={toggleSelectAllPage}
@@ -547,11 +587,11 @@ export function BarangClient({
               <Th>Kategori</Th>
               <Th className="text-right">Harga Beli</Th>
               <Th className="text-right">Harga Jual</Th>
-              <Th className="text-right w-28">Stok Awal</Th>
+              <Th className="text-right w-28 max-2xl:hidden">Stok Awal</Th>
               <Th className="text-right w-32">Sisa Stok</Th>
-              <Th className="text-right w-40">Total Aset</Th>
-              <Th className="text-center w-28">Status</Th>
-              <Th className="text-center w-28">Aksi</Th>
+              <Th className="text-right w-36">Total Aset</Th>
+              <Th className="text-center w-24">Status</Th>
+              <Th className="text-center w-16">Aksi</Th>
             </tr>
           </thead>
           <tbody>
@@ -564,7 +604,9 @@ export function BarangClient({
                   onClick={() => openItemDetails(it)}
                   className={cn(
                     "cursor-pointer transition-colors duration-150 group",
-                    selectedIds.has(it.id) ? "bg-rose-50/70 hover:bg-rose-50" : "hover:bg-[var(--surface-hover)]"
+                    selectedIds.has(it.id)
+                      ? "bg-rose-50/70 hover:bg-rose-50 dark:bg-rose-500/[0.07] dark:hover:bg-rose-500/[0.11]"
+                      : "hover:bg-[var(--surface-hover)]"
                   )}
                 >
                   {canEdit && (
@@ -578,47 +620,68 @@ export function BarangClient({
                       />
                     </Td>
                   )}
-                  <Td className="font-mono text-xs font-bold text-foreground group-hover:text-[var(--primary)]">
+                  <Td className="whitespace-nowrap font-mono text-xs font-medium text-[var(--text-muted-2)] group-hover:text-[var(--primary)]">
                     {it.kode}
                   </Td>
-                  <Td className="font-semibold text-foreground">{it.nama}</Td>
-                  <Td><Badge tone="blue" className="text-[8px]">{it.kategori ?? "-"}</Badge></Td>
-                  <Td className="text-right font-mono text-xs">
+                  <Td className="min-w-[200px] !whitespace-normal font-semibold text-foreground dark:text-slate-100">{it.nama}</Td>
+                  <Td>
+                    <span className="whitespace-nowrap text-[11px] font-semibold uppercase tracking-wide text-[var(--text-muted-2)]">
+                      {it.kategori ?? "-"}
+                    </span>
+                  </Td>
+                  <Td className="tnum whitespace-nowrap text-right text-xs text-[var(--text-soft)]">
                     {canEdit ? formatRupiah(it.hargaBeli) : "🔒 Dibatasi"}
                   </Td>
-                  <Td className="text-right font-mono text-xs font-bold text-[var(--primary)]">
+                  <Td className="tnum whitespace-nowrap text-right text-xs font-semibold text-foreground dark:text-slate-200">
                     {formatRupiah(it.hargaJual)}
                   </Td>
-                  <Td className="text-right font-mono text-xs text-[var(--text-soft)]">
+                  <Td className={cn("tnum text-right text-xs max-2xl:hidden", it.stokAwal === 0 ? "text-slate-400 dark:text-slate-500" : "text-[var(--text-soft)]")}>
                     {it.stokAwal} unit
                   </Td>
                   <Td className="text-right">
-                    <div className="flex items-center justify-end gap-1.5 font-mono text-xs font-bold">
-                      <span>{it.stok} unit</span>
-                      {isNeg ? (
-                        <span className="h-1.5 w-1.5 rounded-full bg-red-500" />
-                      ) : isLow ? (
-                        <span className="h-1.5 w-1.5 rounded-full bg-amber-500" />
-                      ) : (
-                        <span className="h-1.5 w-1.5 rounded-full bg-primary-500" />
+                    <span
+                      className={cn(
+                        "tnum inline-flex items-center justify-end gap-1.5 text-xs font-semibold",
+                        isNeg
+                          ? "text-rose-600 dark:text-rose-300"
+                          : isLow
+                            ? "text-amber-700 dark:text-amber-300/90"
+                            : "text-foreground dark:text-slate-200"
                       )}
-                    </div>
+                      title={isNeg ? "Stok minus" : isLow ? `Di bawah stok minimum (${it.minStok})` : undefined}
+                    >
+                      {(isNeg || isLow) && (
+                        <span className={cn("h-1.5 w-1.5 rounded-full", isNeg ? "bg-rose-500" : "bg-amber-500/80")} />
+                      )}
+                      {it.stok} unit
+                    </span>
                   </Td>
                   <Td className={cn(
-                    "text-right font-mono text-xs font-bold",
-                    it.stok < 0 ? "text-rose-600" : "text-slate-700"
+                    "tnum text-right text-xs",
+                    it.stok < 0
+                      ? "font-semibold text-rose-600 dark:text-rose-300"
+                      : it.stok === 0
+                        ? "text-slate-400 dark:text-slate-500"
+                        : "font-semibold text-foreground dark:text-slate-200"
                   )}>
                     {canEdit ? formatRupiah(it.hargaBeli * it.stok) : "🔒"}
                   </Td>
                   <Td className="text-center select-none" onClick={(e) => e.stopPropagation()}>
-                    <Badge tone={it.aktif ? "green" : "slate"}>
+                    <span
+                      className={cn(
+                        "inline-flex items-center gap-1.5 text-xs font-medium",
+                        it.aktif ? "text-emerald-700 dark:text-emerald-300/90" : "text-[var(--text-muted-2)]"
+                      )}
+                    >
+                      <span className={cn("h-1.5 w-1.5 rounded-full", it.aktif ? "bg-emerald-500" : "bg-slate-400")} />
                       {it.aktif ? "Aktif" : "Arsip"}
-                    </Badge>
+                    </span>
                   </Td>
                   <Td className="text-center" onClick={(e) => e.stopPropagation()}>
                     <button
                       onClick={() => openItemDetails(it)}
-                      className="flex h-9 w-9 items-center justify-center rounded-xl bg-[var(--surface-2)] border border-border text-[var(--text-soft)] hover:bg-[var(--primary)] hover:text-white transition mx-auto cursor-pointer"
+                      aria-label={`Lihat detail ${it.nama}`}
+                      className="mx-auto flex h-8 w-8 cursor-pointer items-center justify-center rounded-lg text-[var(--text-muted-2)] transition hover:bg-[var(--surface-2)] hover:text-[var(--primary)]"
                     >
                       <Eye size={14} />
                     </button>
@@ -640,9 +703,11 @@ export function BarangClient({
           {filteredItems.length > 0 && canEdit && (
           <tfoot>
               <tr className="bg-[var(--surface-2)] font-bold">
-                <Td colSpan={8} className="text-right text-xs uppercase tracking-wider text-[var(--text-soft)]">
+                <Td colSpan={7} className="text-right text-xs uppercase tracking-wider text-[var(--text-soft)]">
                   Total Nilai Aset Persediaan ({filteredItems.length} item)
                 </Td>
+                {/* Pengisi kolom Stok Awal (hanya tampil di 2xl). */}
+                <Td className="max-2xl:hidden" />
                 <Td className={cn(
                   "text-right font-mono text-sm font-extrabold",
                   totalAset < 0 ? "text-rose-600" : "text-foreground"

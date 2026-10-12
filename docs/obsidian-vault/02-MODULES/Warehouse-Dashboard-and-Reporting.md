@@ -1,8 +1,8 @@
 ---
 type: module
 status: verified
-last_verified: 2026-10-12
-source_files: [src/app/(app)/page.tsx, src/app/(app)/laporan/page.tsx, src/app/(app)/laporan/actions.ts, src/lib/reports.ts, src/lib/export/excelStyles.ts, src/lib/export/exportAnalyticExcel.ts, src/lib/export/exportInvoiceExcel.ts, src/lib/export/exportNgExcel.ts]
+last_verified: 2026-10-13
+source_files: [src/app/(app)/page.tsx, src/components/DashboardCharts.tsx, src/components/DashboardChartsWrapper.tsx, src/app/(app)/laporan/page.tsx, src/app/(app)/laporan/actions.ts, src/lib/reports.ts, src/lib/export/excelStyles.ts, src/lib/export/exportAnalyticExcel.ts, src/lib/export/exportInvoiceExcel.ts, src/lib/export/exportNgExcel.ts]
 related: ["[[Warehouse-Reporting-Flow]]", "[[Stock-Ledger]]", "[[Warehouse-Invoices-and-Receivables]]"]
 tags: [module, reporting]
 ---
@@ -10,6 +10,21 @@ tags: [module, reporting]
 
 ## Cakupan
 Dashboard mengagregasi omset, margin, piutang, proyek, klien, tren 30 hari, barang terlaris, stok kritis/minus, nilai aset, dan aktivitas. Laporan menyediakan margin, barang terlaris, stok snapshot, dan piutang berdasarkan rentang tanggal.
+
+## Tata letak dashboard (bento, 2026-10-13)
+- Hero ringkas: badge mode, judul, sapaan, toggle Operasional/Owner, filter tanggal. Link mode/filter/Reset tidak berubah.
+- KPI: kartu unggulan (Omzet Hari Ini / Omzet Bulan Ini) dengan sparkline SVG 30 hari yang dirender server, badge delta vs kemarin (mode operasional), dan ringkasan kemarin/30 hari atau 30 hari/rata-rata. KPI lain berupa kartu ringkas; Stok Menipis/Minus menautkan ke `/stok`, Piutang ke `/invoice`.
+- Baris analitik: Tren Omzet & Margin (8/12) + Pusat Peringatan (4/12, selalu satu kolom; state "Semua stok aman" bila kosong).
+- 10 Barang Terlaris berupa bar horizontal; Persentase Margin hanya memakai hari dengan omzet (hari tanpa penjualan = `null`) plus garis rata-rata; Omzet per Proyek berupa donut atau empty state ringkas; Riwayat Aktivitas memakai avatar inisial dan label aksi berbahasa Indonesia (`AKSI_LABEL`).
+- Grafik dipecah menjadi `RevenueTrendChart`, `MarginPctChart`, `TopItemsChart`, `ProjectSalesChart` (dynamic, `ssr: false`) di `DashboardChartsWrapper`.
+- Kelas CSS baru `bento-*` di `globals.css`; kelas lama (`liquid-panel`, `kpi-glass-card`, `chart-glass-card`, `dashboard-hero`, `dashboard-chip`) tetap dipakai halaman Non-Gudang.
+- Perbaikan data: kunci tanggal tren 30 hari kini memakai tanggal lokal (`localDateKey`), bukan `toISOString()` (UTC), sehingga label hari dan delta tidak bergeser satu hari di WIB.
+
+## Tampilan Laporan `/laporan` (2026-10-13)
+- Judul dan tombol Unduh Excel / PDF A4 dirender di `LaporanClient` (judul dihapus dari `page.tsx`).
+- Tab berupa segmented control mengikuti tema (sebelumnya aktif di-hardcode `#0f2236`), berdampingan dengan `PeriodFilter`; catatan "posisi terkini" hanya di Ringkasan dan Stok & Aset.
+- `StatCard`/`Panel` memakai `.bento-card`; ikon panel lewat `IconChip`; tabel memakai token teks tema. Pada tabel sempit (Terlaris, Peringatan Stok, Cepat/Lambat Laku) kode barang ditaruh di bawah nama sehingga panel tetap dua kolom mulai `xl`.
+- Tidak berubah: query server, tab, fungsi export, dan `LaporanPrintDocument`.
 
 ## Hak akses
 Dashboard utama tersedia bagi Kasir/Gudang; `ADMIN_NONGUDANG` dialihkan ke dashboard sendiri. Margin, aset, laporan gudang, dan mode owner dibatasi oleh role di UI/page.

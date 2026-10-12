@@ -5,7 +5,12 @@ import { requireUser } from "@/lib/auth";
 import { getStokAkhirMap } from "@/lib/stock";
 import { formatRupiah, formatTanggal } from "@/lib/utils";
 import { DatePicker } from "@/components/DatePicker";
-import { DashboardCharts } from "@/components/DashboardChartsWrapper";
+import {
+  RevenueTrendChart,
+  MarginPctChart,
+  TopItemsChart,
+  ProjectSalesChart,
+} from "@/components/DashboardChartsWrapper";
 import {
   TrendingUp,
   Package,
@@ -19,10 +24,20 @@ import {
   CircleAlert,
   Filter,
   ShieldCheck,
+  CalendarDays,
+  ArrowUpRight,
+  ArrowDownRight,
+  Inbox,
 } from "lucide-react";
 
 function startOfDay(d: Date) {
   return new Date(d.getFullYear(), d.getMonth(), d.getDate());
+}
+
+// Kunci tanggal berdasarkan waktu lokal; toISOString() memakai UTC sehingga
+// transaksi WIB 00:00–06:59 dan label hari bergeser satu hari.
+function localDateKey(d: Date) {
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 }
 
 function addDays(d: Date, days: number) {
@@ -142,7 +157,7 @@ export default async function DashboardPage({
   
   // Process transactions
   for (const trx of allTransactions) {
-    const dateKey = trx.tanggal.toISOString().split('T')[0];
+    const dateKey = localDateKey(trx.tanggal);
     const existing = dateMap.get(dateKey) ?? { omset: 0, margin: 0 };
     existing.omset += Number(trx.grandTotal);
     dateMap.set(dateKey, existing);
@@ -150,7 +165,7 @@ export default async function DashboardPage({
 
   // Process transaction items for margin
   for (const item of allTransactionItems) {
-    const dateKey = item.tanggal.toISOString().split('T')[0];
+    const dateKey = localDateKey(item.tanggal);
     const existing = dateMap.get(dateKey) ?? { omset: 0, margin: 0 };
     existing.margin += (Number(item.hargaSnapshot) - Number(item.hargaBeliSnapshot)) * item.qty;
     dateMap.set(dateKey, existing);
@@ -160,7 +175,7 @@ export default async function DashboardPage({
   const trendData: { tanggal: string; omset: number; margin: number }[] = [];
   for (let i = chartDays - 1; i >= 0; i--) {
     const d = startOfDay(new Date(now.getTime() - i * 86400000));
-    const dateKey = d.toISOString().split('T')[0];
+    const dateKey = localDateKey(d);
     const data = dateMap.get(dateKey) ?? { omset: 0, margin: 0 };
     
     trendData.push({
@@ -258,302 +273,535 @@ export default async function DashboardPage({
 
   const toneColors: Record<string, string> = {
     success: "#0ea5e9",
-    blue: "#2563eb",
+    blue: "#6366f1",
     amber: "#f59e0b",
-    red: "#ef4444",
-    primary: "#0284c7",
-    slate: "#60736f",
+    red: "#f43f5e",
+    primary: "#14b8a6",
+    slate: "#94a3b8",
+  };
+  const kpiHref: Record<string, string> = {
+    "Stok Menipis": "/stok",
+    "Stok Minus Gudang": "/stok",
+    "Piutang Belum Dibayar": "/invoice",
   };
 
+  // KPI unggulan + konteks tren 30 hari dari trendData (tanpa query tambahan).
+  const [featured, ...restKpis] = kpiCards;
+  const FeaturedIcon = featured.icon;
+  const omsetSeries = trendData.map((d) => d.omset);
+  const omset30 = omsetSeries.reduce((a, b) => a + b, 0);
+  const margin30 = trendData.reduce((a, d) => a + d.margin, 0);
+  const omsetYesterday = omsetSeries[omsetSeries.length - 2] ?? 0;
+  const omsetLast = omsetSeries[omsetSeries.length - 1] ?? 0;
+  const deltaPct = omsetYesterday > 0 ? ((omsetLast - omsetYesterday) / omsetYesterday) * 100 : null;
+  const sparkline = buildSparkline(omsetSeries, 300, 72);
+  const featuredStats = isOwnerMode
+    ? [
+        { label: "30 hari terakhir", value: formatRupiah(omset30) },
+        { label: "Rata-rata / hari", value: formatRupiah(Math.round(omset30 / Math.max(1, trendData.length))) },
+      ]
+    : [
+        { label: "Kemarin", value: formatRupiah(omsetYesterday) },
+        { label: "30 hari terakhir", value: formatRupiah(omset30) },
+      ];
+
+  const showMargin = user.role !== "ADMIN_KASIR";
+  const alertCount = negativeStockItems.length + lowStockItems.length;
+  const lowStockLimit = negativeStockItems.length > 0 ? 3 : 6;
+  const modeQuery = `${params.from ? `&from=${encodeURIComponent(params.from)}` : ""}${params.to ? `&to=${encodeURIComponent(params.to)}` : ""}`;
+
   return (
-    <div className="space-y-7">
-      <header className="liquid-panel liquid-panel-strong dashboard-hero relative z-20 anim-rise p-5 backdrop-blur-2xl backdrop-saturate-150 md:p-6">
-        <div className="flex flex-col gap-5 xl:flex-row xl:items-center xl:justify-between">
-        <div>
-          <p className="u-label flex items-center gap-2.5 text-[var(--primary)]">
-            <span className="inline-block h-[3px] w-7 rounded-full bg-gradient-to-r from-[var(--primary)] via-sky-400 to-amber-400" />
-            Sistem Inventory Putra Corp
-          </p>
-          <h1 className="mt-3 text-2xl font-extrabold text-foreground tracking-normal">
-            {isOwnerMode ? "Owner Business Dashboard" : "Operational Workspace"}
-          </h1>
-          <p className="mt-2 max-w-2xl text-sm font-medium leading-6 text-[var(--text-soft)]">
-            Selamat datang kembali, <span className="font-bold text-foreground">{user.nama}</span>. Pantau omzet, stok menipis, dan aktivitas gudang dari satu ruang kerja.
-          </p>
-          <div className="mt-4 flex flex-wrap gap-2">
-            <span className="dashboard-chip inline-flex items-center gap-2 rounded-full px-3 py-1.5 text-[11px] font-bold text-[var(--text-soft)] backdrop-blur-xl backdrop-saturate-150">
-              <ShieldCheck size={13} className="text-[var(--primary)]" />
-              Stok terkini
-            </span>
-            <span className="dashboard-chip inline-flex items-center gap-2 rounded-full px-3 py-1.5 text-[11px] font-bold text-[var(--text-soft)] backdrop-blur-xl backdrop-saturate-150">
-              <Clock size={13} className="text-amber-500" />
-              Update {formatTanggal(now)}
-            </span>
+    <div className="space-y-5">
+      {/* ===== Hero ===== */}
+      <header className="bento-card bento-hero relative z-20 anim-rise p-5 md:p-6">
+        <div className="flex flex-col gap-5 xl:flex-row xl:items-end xl:justify-between">
+          <div className="min-w-0">
+            <p className="inline-flex items-center gap-2 rounded-full border border-[var(--border)] bg-[var(--card)] px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.14em] text-[var(--text-soft)]">
+              <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 shadow-[0_0_0_3px_rgba(16,185,129,0.18)]" />
+              {isOwnerMode ? "Mode Owner" : "Mode Operasional"}
+            </p>
+            <h1 className="mt-3 font-display text-[26px] font-extrabold leading-tight tracking-tight text-foreground md:text-[30px]">
+              {isOwnerMode ? "Owner Business Dashboard" : "Operational Workspace"}
+            </h1>
+            <p className="mt-1.5 max-w-2xl text-sm font-medium leading-6 text-[var(--text-soft)]">
+              Selamat datang kembali, <span className="font-bold text-foreground">{user.nama}</span>. Pantau omzet, stok, dan aktivitas dari satu ruang kerja.
+            </p>
+            <div className="mt-3 flex flex-wrap gap-2 text-[11px] font-semibold text-[var(--text-muted-2)]">
+              <span className="inline-flex items-center gap-1.5">
+                <ShieldCheck size={13} className="text-[var(--primary)]" /> Stok terkini
+              </span>
+              <span className="text-[var(--border)]">•</span>
+              <span className="inline-flex items-center gap-1.5">
+                <CalendarDays size={13} className="text-amber-500" /> Update {formatTanggal(now)}
+              </span>
+            </div>
           </div>
-        </div>
 
-        {/* Toggle Mode & Filters */}
-        <div className="flex w-full flex-col gap-3 xl:w-auto xl:items-end">
-          {user.role !== "ADMIN_KASIR" && (
-            <div className="dashboard-chip flex w-full rounded-xl p-1.5 backdrop-blur-xl backdrop-saturate-150 sm:w-auto">
-              <Link
-                href={`/?mode=operational${params.from ? `&from=${encodeURIComponent(params.from)}` : ""}${params.to ? `&to=${encodeURIComponent(params.to)}` : ""}`}
-                className={`flex-1 rounded-lg px-4 py-2.5 text-center text-xs font-bold transition-all duration-200 sm:flex-none ${
-                  !isOwnerMode
-                    ? "bg-gradient-to-br from-[var(--primary)] to-sky-500 text-white shadow-lg shadow-sky-500/20"
-                    : "text-[var(--text-soft)] hover:bg-white/45 hover:text-foreground dark:hover:bg-white/5"
-                }`}
-              >
-                Operasional
-              </Link>
-              <Link
-                href={`/?mode=owner${params.from ? `&from=${encodeURIComponent(params.from)}` : ""}${params.to ? `&to=${encodeURIComponent(params.to)}` : ""}`}
-                className={`flex-1 rounded-lg px-4 py-2.5 text-center text-xs font-bold transition-all duration-200 sm:flex-none ${
-                  isOwnerMode
-                    ? "bg-gradient-to-br from-[var(--primary)] to-sky-500 text-white shadow-lg shadow-sky-500/20"
-                    : "text-[var(--text-soft)] hover:bg-white/45 hover:text-foreground dark:hover:bg-white/5"
-                }`}
-              >
-                Owner
-              </Link>
-            </div>
-          )}
+          <div className="flex w-full flex-col gap-2.5 xl:w-auto xl:items-end">
+            {user.role !== "ADMIN_KASIR" && (
+              <div className="bento-segment flex w-full rounded-xl p-1 sm:w-auto">
+                {[
+                  { key: "operational", label: "Operasional", active: !isOwnerMode },
+                  { key: "owner", label: "Owner", active: isOwnerMode },
+                ].map((m) => (
+                  <Link
+                    key={m.key}
+                    href={`/?mode=${m.key}${modeQuery}`}
+                    className={`flex-1 rounded-lg px-4 py-2 text-center text-xs font-bold transition-all duration-200 sm:flex-none ${
+                      m.active
+                        ? "bg-[var(--card)] text-[var(--primary)] shadow-[0_1px_2px_rgba(15,23,42,0.08),0_6px_16px_-8px_rgba(2,132,199,0.45)] ring-1 ring-[var(--border)]"
+                        : "text-[var(--text-soft)] hover:text-foreground"
+                    }`}
+                  >
+                    {m.label}
+                  </Link>
+                ))}
+              </div>
+            )}
 
-          <form className="flex w-full flex-col gap-2 xl:w-auto xl:flex-row xl:flex-wrap xl:items-center">
-            <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-2 xl:contents">
-              <DatePicker
-                name="from"
-                defaultValue={params.from ?? ""}
-                className="h-11 min-w-0 text-xs font-semibold xl:w-40 xl:flex-none"
-              />
-              <span className="text-center text-xs font-bold text-slate-400 xl:px-0.5">s/d</span>
-              <DatePicker
-                name="to"
-                defaultValue={params.to ?? ""}
-                align="right"
-                className="h-11 min-w-0 text-xs font-semibold xl:w-40 xl:flex-none"
-              />
-            </div>
-            {params.mode && <input type="hidden" name="mode" value={params.mode} />}
-            <div className="flex gap-2">
-              <button
-                className="inline-flex h-11 flex-1 cursor-pointer items-center justify-center gap-2 rounded-lg bg-gradient-to-br from-[var(--primary)] to-sky-500 px-5 text-xs font-bold text-white shadow-lg shadow-sky-500/20 transition-all hover:brightness-105 xl:flex-none"
-              >
-                <Filter size={14} />
-                Terapkan
-              </button>
-              {params.from || params.to ? (
-                <Link
-                  href={isOwnerMode ? "/?mode=owner" : "/"}
-                  className="dashboard-chip flex h-11 flex-1 items-center justify-center rounded-lg px-3 text-xs font-bold text-[var(--text-soft)] backdrop-blur-xl backdrop-saturate-150 transition-all hover:text-foreground xl:flex-none"
-                >
-                  Reset
-                </Link>
-              ) : null}
-            </div>
-          </form>
-        </div>
+            <form className="flex w-full flex-col gap-2 xl:w-auto xl:flex-row xl:flex-wrap xl:items-center">
+              <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-2 xl:contents">
+                <DatePicker
+                  name="from"
+                  defaultValue={params.from ?? ""}
+                  className="h-10 min-w-0 text-xs font-semibold xl:w-40 xl:flex-none"
+                />
+                <span className="text-center text-xs font-bold text-[var(--text-muted-2)] xl:px-0.5">s/d</span>
+                <DatePicker
+                  name="to"
+                  defaultValue={params.to ?? ""}
+                  align="right"
+                  className="h-10 min-w-0 text-xs font-semibold xl:w-40 xl:flex-none"
+                />
+              </div>
+              {params.mode && <input type="hidden" name="mode" value={params.mode} />}
+              <div className="flex gap-2">
+                <button className="btn-liquid-primary inline-flex h-10 flex-1 cursor-pointer items-center justify-center gap-2 rounded-lg px-5 text-xs font-bold transition-all xl:flex-none">
+                  <Filter size={14} />
+                  Terapkan
+                </button>
+                {params.from || params.to ? (
+                  <Link
+                    href={isOwnerMode ? "/?mode=owner" : "/"}
+                    className="bento-segment flex h-10 flex-1 items-center justify-center rounded-lg px-3 text-xs font-bold text-[var(--text-soft)] transition-all hover:text-foreground xl:flex-none"
+                  >
+                    Reset
+                  </Link>
+                ) : null}
+              </div>
+            </form>
+          </div>
         </div>
       </header>
 
-      {/* ===== Alert Center — Premium ===== */}
-      {(negativeStockItems.length > 0 || lowStockItems.length > 0) && (
-        <div className="liquid-panel anim-rise space-y-5 rounded-2xl p-6 backdrop-blur-2xl backdrop-saturate-150">
-          {/* Header */}
-          <div className="flex flex-wrap items-center justify-between gap-3">
+      {/* ===== KPI bento ===== */}
+      <section className="grid grid-cols-1 gap-4 xl:grid-cols-12">
+        <div
+          className="bento-card bento-tone anim-rise flex flex-col p-5 md:p-6 xl:col-span-5"
+          style={{ "--tone": toneColors[featured.tone] } as React.CSSProperties}
+        >
+          <div className="flex items-start justify-between gap-3">
             <div className="flex items-center gap-3">
-              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-amber-100 dark:bg-amber-500/15 text-amber-600 dark:text-amber-400 ring-1 ring-amber-200/60 dark:ring-amber-500/20">
-                <AlertTriangle size={18} strokeWidth={2.4} />
-              </div>
+              <span className="bento-icon">
+                <FeaturedIcon size={18} strokeWidth={2.4} />
+              </span>
               <div>
-                <h3 className="font-display text-sm font-bold text-foreground leading-tight">Pusat Peringatan</h3>
-                <p className="text-xs text-muted mt-0.5">Peringatan stok gudang yang perlu ditindaklanjuti.</p>
+                <p className="text-[11px] font-bold uppercase tracking-wider text-[var(--text-soft)]">{featured.label}</p>
+                <p className="text-[11px] font-medium text-[var(--text-muted-2)]">{featured.desc}</p>
               </div>
             </div>
-            <span className="inline-flex items-center gap-1.5 rounded-full border border-amber-200 dark:border-amber-500/25 bg-amber-50 dark:bg-amber-500/10 px-3 py-1 text-[10px] font-bold uppercase tracking-wider text-amber-700 dark:text-amber-400">
-              <span className="relative flex h-1.5 w-1.5">
-                <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-amber-500 opacity-60" />
-                <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-amber-500" />
+            {!isOwnerMode && (
+              <span
+                className={`inline-flex shrink-0 items-center gap-1 rounded-full px-2 py-1 text-[11px] font-bold ${
+                  deltaPct === null
+                    ? "bg-[var(--surface-2)] text-[var(--text-muted-2)]"
+                    : deltaPct >= 0
+                      ? "bg-emerald-500/12 text-emerald-600 dark:text-emerald-400"
+                      : "bg-rose-500/12 text-rose-600 dark:text-rose-400"
+                }`}
+                title="Dibanding kemarin"
+              >
+                {deltaPct === null ? (
+                  "— vs kemarin"
+                ) : (
+                  <>
+                    {deltaPct >= 0 ? <ArrowUpRight size={13} /> : <ArrowDownRight size={13} />}
+                    {Math.abs(deltaPct).toFixed(1)}%
+                  </>
+                )}
               </span>
-              {negativeStockItems.length + lowStockItems.length} butuh tindakan
-            </span>
+            )}
           </div>
 
-          <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-            {/* Stok Minus Gudang — merah */}
-            {negativeStockItems.length > 0 && (
-              <div className="overflow-hidden rounded-xl border border-red-200/70 dark:border-red-500/20 bg-red-50/50 dark:bg-red-500/[0.06]">
-                <div className="flex items-center gap-3 border-b border-red-200/60 dark:border-red-500/15 px-4 py-3">
-                  <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-red-100 dark:bg-red-500/15 text-red-600 dark:text-red-400">
-                    <CircleAlert size={17} strokeWidth={2.4} />
-                  </div>
-                  <div className="min-w-0 flex-1">
-                    <p className="text-[11px] font-bold uppercase tracking-wide text-red-700 dark:text-red-400">Stok Minus Gudang</p>
-                    <p className="text-[10px] text-red-600/70 dark:text-red-400/60">Perlu dicek ke gudang</p>
-                  </div>
-                  <span className="text-2xl font-extrabold tabular-nums text-red-600 dark:text-red-400 leading-none">{negativeStockItems.length}</span>
-                </div>
-                <ul className="divide-y divide-red-200/40 dark:divide-red-500/10">
-                  {negativeStockItems.slice(0, 4).map((it) => (
-                    <li key={it.id} className="flex items-center justify-between gap-3 px-4 py-2.5">
-                      <div className="min-w-0">
-                        <p className="truncate text-xs font-semibold text-foreground">{it.nama}</p>
-                        <p className="font-mono text-[10px] text-muted">{it.kode}</p>
-                      </div>
-                      <span className="shrink-0 rounded-md bg-red-100 dark:bg-red-500/15 px-2 py-1 font-mono text-[11px] font-bold text-red-700 dark:text-red-300 tabular-nums">
-                        {it.stok} unit
-                      </span>
-                    </li>
-                  ))}
-                </ul>
-                {negativeStockItems.length > 4 && (
-                  <Link href="/stok" className="flex items-center justify-center gap-1 border-t border-red-200/50 dark:border-red-500/15 px-4 py-2 text-[11px] font-bold text-red-700 dark:text-red-400 transition hover:bg-red-100/50 dark:hover:bg-red-500/10">
-                    +{negativeStockItems.length - 4} barang lainnya
-                  </Link>
-                )}
-              </div>
-            )}
+          <p className="tnum mt-5 truncate pb-1 font-display text-[34px] font-extrabold leading-[1.1] tracking-tight text-foreground" title={featured.value}>
+            {featured.value}
+          </p>
 
-            {/* Stok Kritis — amber */}
-            {lowStockItems.length > 0 && (
-              <div className="overflow-hidden rounded-xl border border-amber-200/70 dark:border-amber-500/20 bg-amber-50/50 dark:bg-amber-500/[0.06]">
-                <div className="flex items-center gap-3 border-b border-amber-200/60 dark:border-amber-500/15 px-4 py-3">
-                  <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-amber-100 dark:bg-amber-500/15 text-amber-600 dark:text-amber-400">
-                    <AlertTriangle size={17} strokeWidth={2.4} />
-                  </div>
-                  <div className="min-w-0 flex-1">
-                    <p className="text-[11px] font-bold uppercase tracking-wide text-amber-700 dark:text-amber-400">Stok Menipis</p>
-                    <p className="text-[10px] text-amber-600/70 dark:text-amber-400/60">Di bawah stok minimum</p>
-                  </div>
-                  <span className="text-2xl font-extrabold tabular-nums text-amber-600 dark:text-amber-400 leading-none">{lowStockItems.length}</span>
-                </div>
-                <ul className="divide-y divide-amber-200/40 dark:divide-amber-500/10">
-                  {lowStockItems.slice(0, 4).map((it) => {
-                    const pct = Math.min(100, Math.round((it.stok / Math.max(1, it.minStok)) * 100));
-                    return (
-                      <li key={it.id} className="px-4 py-2.5">
-                        <div className="flex items-center justify-between gap-3">
-                          <p className="truncate text-xs font-semibold text-foreground">{it.nama}</p>
-                          <span className="shrink-0 font-mono text-[11px] font-bold text-amber-700 dark:text-amber-300 tabular-nums">
-                            {it.stok}<span className="text-muted font-medium"> / {it.minStok}</span>
-                          </span>
-                        </div>
-                        <div className="mt-1.5 h-1 w-full overflow-hidden rounded-full bg-amber-200/50 dark:bg-amber-500/15">
-                          <div className="h-full rounded-full bg-amber-500 dark:bg-amber-400" style={{ width: `${pct}%` }} />
-                        </div>
-                      </li>
-                    );
-                  })}
-                </ul>
-                {lowStockItems.length > 4 && (
-                  <Link href="/stok/masuk" className="flex items-center justify-center gap-1 border-t border-amber-200/50 dark:border-amber-500/15 px-4 py-2 text-[11px] font-bold text-amber-700 dark:text-amber-400 transition hover:bg-amber-100/50 dark:hover:bg-amber-500/10">
-                    +{lowStockItems.length - 4} barang lainnya
-                  </Link>
-                )}
+          <svg viewBox="0 0 300 72" preserveAspectRatio="none" className="mt-4 h-[72px] w-full" aria-hidden="true">
+            <defs>
+              <linearGradient id="kpiSpark" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stopColor={toneColors[featured.tone]} stopOpacity="0.32" />
+                <stop offset="100%" stopColor={toneColors[featured.tone]} stopOpacity="0" />
+              </linearGradient>
+            </defs>
+            <path d={sparkline.area} fill="url(#kpiSpark)" />
+            <path d={sparkline.line} fill="none" stroke={toneColors[featured.tone]} strokeWidth="2" vectorEffect="non-scaling-stroke" strokeLinejoin="round" />
+          </svg>
+
+          <div className="mt-auto grid grid-cols-2 gap-3 border-t border-[var(--border)] pt-4">
+            {featuredStats.map((s) => (
+              <div key={s.label} className="min-w-0">
+                <p className="text-[10px] font-bold uppercase tracking-wider text-[var(--text-muted-2)]">{s.label}</p>
+                <p className="tnum mt-1 truncate text-sm font-bold text-foreground" title={s.value}>{s.value}</p>
               </div>
+            ))}
+          </div>
+        </div>
+
+        <div className="grid grid-cols-2 gap-4 sm:grid-cols-6 xl:col-span-7">
+          {restKpis.map((kpi, i) => {
+            const Icon = kpi.icon;
+            const href = kpiHref[kpi.label];
+            const span =
+              restKpis.length === 5 ? (i < 3 ? "sm:col-span-2" : "sm:col-span-3") : restKpis.length === 4 ? "sm:col-span-3" : "sm:col-span-2";
+            const lastOdd = restKpis.length % 2 === 1 && i === restKpis.length - 1 ? "col-span-2" : "";
+            const body = (
+              <>
+                <div className="flex items-start justify-between gap-3">
+                  <p className="text-[11px] font-bold uppercase leading-tight tracking-wider text-[var(--text-soft)]">{kpi.label}</p>
+                  <span className="bento-icon !h-9 !w-9 !rounded-[11px]">
+                    <Icon size={16} strokeWidth={2.4} />
+                  </span>
+                </div>
+                <div className="mt-4 min-w-0">
+                  <p
+                    className={`tnum truncate pb-0.5 font-display font-extrabold leading-[1.15] tracking-tight text-foreground ${
+                      kpi.value.length > 14 ? "text-[17px]" : kpi.value.length > 11 ? "text-[19px]" : "text-[22px]"
+                    }`}
+                    title={kpi.value}
+                  >
+                    {kpi.value}
+                  </p>
+                  <p className="mt-2 flex items-center gap-1 text-[11px] font-medium leading-snug text-[var(--text-muted-2)]">
+                    <span className="line-clamp-1">{kpi.desc}</span>
+                    {href && <ArrowUpRight size={12} className="shrink-0 opacity-70" />}
+                  </p>
+                </div>
+              </>
+            );
+            const cls = `bento-card bento-tone anim-rise flex flex-col justify-between p-4 md:p-5 ${span} ${lastOdd} ${href ? "bento-interactive" : ""}`;
+            const style = { "--tone": toneColors[kpi.tone], animationDelay: `${(i + 1) * 40}ms` } as React.CSSProperties;
+            return href ? (
+              <Link key={kpi.label} href={href} className={cls} style={style}>
+                {body}
+              </Link>
+            ) : (
+              <div key={kpi.label} className={cls} style={style}>
+                {body}
+              </div>
+            );
+          })}
+        </div>
+      </section>
+
+      {/* ===== Tren omzet + Pusat Peringatan ===== */}
+      <section className="grid grid-cols-1 gap-4 xl:grid-cols-12">
+        <div className="bento-card anim-rise flex flex-col p-5 md:p-6 xl:col-span-8">
+          <div className="flex flex-wrap items-start justify-between gap-4">
+            <div>
+              <h3 className="font-display text-sm font-bold text-foreground">{showMargin ? "Tren Omzet & Margin Kotor" : "Tren Omzet"}</h3>
+              <p className="mt-0.5 text-xs text-[var(--text-muted-2)]">30 hari terakhir</p>
+            </div>
+            <div className="flex gap-5">
+              <LegendStat color="#0ea5e9" label="Omzet" value={formatRupiah(omset30)} />
+              {showMargin && <LegendStat color="#10b981" label="Margin" value={formatRupiah(margin30)} />}
+            </div>
+          </div>
+          <div className="mt-4 h-72">
+            <RevenueTrendChart data={trendData} showMargin={showMargin} />
+          </div>
+        </div>
+
+        <div className="bento-card anim-rise flex flex-col p-5 md:p-6 xl:col-span-4">
+          <div className="flex items-center justify-between gap-3">
+            <div className="flex items-center gap-3">
+              <span className="bento-icon" style={{ "--tone": alertCount > 0 ? "#f59e0b" : "#10b981" } as React.CSSProperties}>
+                {alertCount > 0 ? <AlertTriangle size={18} strokeWidth={2.4} /> : <ShieldCheck size={18} strokeWidth={2.4} />}
+              </span>
+              <div>
+                <h3 className="font-display text-sm font-bold text-foreground">Pusat Peringatan</h3>
+                <p className="text-xs text-[var(--text-muted-2)]">Stok yang perlu ditindaklanjuti</p>
+              </div>
+            </div>
+            {alertCount > 0 && (
+              <span className="inline-flex items-center gap-1.5 rounded-full bg-amber-500/12 px-2.5 py-1 text-[11px] font-bold text-amber-600 dark:text-amber-400">
+                <span className="relative flex h-1.5 w-1.5">
+                  <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-amber-500 opacity-60" />
+                  <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-amber-500" />
+                </span>
+                {alertCount}
+              </span>
+            )}
+          </div>
+
+          {alertCount === 0 ? (
+            <div className="mt-4 flex flex-1 flex-col items-center justify-center rounded-2xl border border-dashed border-emerald-500/30 bg-emerald-500/5 px-4 py-10 text-center">
+              <ShieldCheck size={28} className="text-emerald-500" />
+              <p className="mt-2 text-sm font-bold text-foreground">Semua stok aman</p>
+              <p className="mt-0.5 text-xs text-[var(--text-muted-2)]">Tidak ada barang minus atau di bawah minimum.</p>
+            </div>
+          ) : (
+            <div className="mt-4 flex flex-1 flex-col gap-4">
+              {negativeStockItems.length > 0 && (
+                <AlertGroup
+                  title="Stok Minus"
+                  count={negativeStockItems.length}
+                  tone="rose"
+                  href="/stok"
+                  items={negativeStockItems.slice(0, 3).map((it) => ({ id: it.id, nama: it.nama, right: `${it.stok} unit`, pct: null }))}
+                  more={negativeStockItems.length - 3}
+                />
+              )}
+              {lowStockItems.length > 0 && (
+                <AlertGroup
+                  title="Stok Menipis"
+                  count={lowStockItems.length}
+                  tone="amber"
+                  href="/stok/masuk"
+                  items={lowStockItems.slice(0, lowStockLimit).map((it) => ({
+                    id: it.id,
+                    nama: it.nama,
+                    right: `${it.stok} / ${it.minStok}`,
+                    pct: Math.min(100, Math.round((it.stok / Math.max(1, it.minStok)) * 100)),
+                  }))}
+                  more={lowStockItems.length - lowStockLimit}
+                />
+              )}
+            </div>
+          )}
+        </div>
+      </section>
+
+      {/* ===== Barang terlaris + Margin % / Proyek ===== */}
+      <section className="grid grid-cols-1 gap-4 xl:grid-cols-12">
+        <div className="bento-card anim-rise flex flex-col p-5 md:p-6 xl:col-span-7">
+          <div>
+            <h3 className="font-display text-sm font-bold text-foreground">10 Barang Terlaris</h3>
+            <p className="mt-0.5 text-xs text-[var(--text-muted-2)]">Berdasarkan jumlah terjual pada periode filter</p>
+          </div>
+          <div className="mt-4 h-80">
+            {topItems.length === 0 ? (
+              <EmptyChart text="Belum ada data penjualan." />
+            ) : (
+              <TopItemsChart data={topItems} />
             )}
           </div>
         </div>
-      )}
 
-      {/* KPI Card grid - Premium Liquid Glass Cards */}
-      <section className={`grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3 ${kpiCards.length === 4 ? "2xl:grid-cols-4" : "2xl:grid-cols-6"}`}>
-        {kpiCards.map((kpi, i) => {
-          const Icon = kpi.icon;
-          return (
-            <div
-              key={kpi.label}
-              className="liquid-panel kpi-glass-card anim-rise relative flex min-h-[136px] flex-col justify-between p-5 backdrop-blur-2xl backdrop-saturate-150"
-              style={{
-                animationDelay: `${i * 40}ms`,
-              }}
-            >
-              {/* Accent indicator with glow */}
-              <span
-                className="absolute inset-y-4 left-0 w-[3px] rounded-r-full"
-                style={{
-                  background: `linear-gradient(180deg, ${toneColors[kpi.tone]}, ${toneColors[kpi.tone]}90)`,
-                  boxShadow: `0 0 12px -2px ${toneColors[kpi.tone]}40`,
-                }}
-              />
-
-              <div className="flex items-start justify-between gap-3">
-                <p className="pl-3 text-[11px] font-bold uppercase tracking-wider text-[var(--text-soft)] leading-tight">
-                  {kpi.label}
-                </p>
-                <div
-                  className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl"
-                  style={{
-                    background: `${toneColors[kpi.tone]}15`,
-                    border: `1px solid ${toneColors[kpi.tone]}20`,
-                  }}
-                >
-                  <Icon size={15} style={{ color: toneColors[kpi.tone] }} strokeWidth={2.5} />
-                </div>
-              </div>
-
-              <div className="mt-3 min-w-0 pl-3">
-                <div data-tooltip={kpi.value}>
-                  <h3 className="tnum overflow-hidden text-ellipsis whitespace-nowrap font-display text-[20px] font-extrabold leading-none text-slate-950 dark:text-slate-50 tracking-tight">
-                    {kpi.value}
-                  </h3>
-                </div>
-                <p className="mt-2 line-clamp-2 text-[11px] font-semibold leading-snug text-[var(--text-muted-2)]" title={kpi.desc}>
-                  {kpi.desc}
-                </p>
-              </div>
-            </div>
-          );
-        })}
-      </section>
-
-      {/* Charts Section */}
-      <section className="anim-rise">
-        <DashboardCharts
-          revenueTrend={trendData}
-          topItems={topItems}
-          projectSales={projectSales}
-          showMargin={user.role !== "ADMIN_KASIR"}
-        />
-      </section>
-
-      {/* Spacious Double Column Layout: Activity - Premium */}
-      {user.role !== "ADMIN_KASIR" && (
-        <section className="anim-rise">
-          <div className="liquid-panel space-y-5 rounded-2xl p-6 backdrop-blur-2xl backdrop-saturate-150">
+        {showMargin ? (
+          <div className="bento-card anim-rise flex flex-col p-5 md:p-6 xl:col-span-5">
             <div>
-              <h3 className="font-display text-base font-bold text-foreground dark:text-slate-100 flex items-center gap-2.5">
-                <Clock size={17} className="text-[var(--primary)]" /> Riwayat Aktivitas
-              </h3>
-              <p className="text-xs text-slate-500 dark:text-slate-400 mt-1.5">Catatan aktivitas staf kasir dan gudang terbaru.</p>
+              <h3 className="font-display text-sm font-bold text-foreground">Persentase Margin Kotor</h3>
+              <p className="mt-0.5 text-xs text-[var(--text-muted-2)]">Hanya hari dengan penjualan · 30 hari terakhir</p>
+            </div>
+            <div className="mt-4 h-80">
+              <MarginPctChart data={trendData} />
+            </div>
+          </div>
+        ) : (
+          <ProjectCard projectSales={projectSales} className="xl:col-span-5" />
+        )}
+      </section>
+
+      {/* ===== Proyek + Riwayat Aktivitas ===== */}
+      {showMargin && (
+        <section className="grid grid-cols-1 gap-4 xl:grid-cols-12">
+          <ProjectCard projectSales={projectSales} className="xl:col-span-5" />
+
+          <div className="bento-card anim-rise flex flex-col p-5 md:p-6 xl:col-span-7">
+            <div className="flex items-center justify-between gap-3">
+              <div>
+                <h3 className="font-display text-sm font-bold text-foreground">Riwayat Aktivitas</h3>
+                <p className="mt-0.5 text-xs text-[var(--text-muted-2)]">Aktivitas staf kasir dan gudang terbaru</p>
+              </div>
+              <span className="rounded-full bg-[var(--surface-2)] px-2.5 py-1 text-[11px] font-bold text-[var(--text-soft)]">
+                {logsTodayCount} hari ini
+              </span>
             </div>
 
-            <div className="relative border-l border-border dark:border-slate-800 pl-4 ml-2 space-y-5">
-              {recentLogs.map((log) => (
-                <div key={log.id} className="relative text-xs">
-                  {/* Bullet point indicator */}
-                  <span className="absolute -left-[21px] top-1 flex h-2 w-2 rounded-full bg-slate-350 dark:bg-slate-700 ring-4 ring-white dark:ring-card" />
-                  <div className="flex items-start justify-between gap-4">
-                    <div>
-                      <p className="font-semibold text-foreground dark:text-slate-300">
-                        {log.user?.nama ?? "System"} melakukan <span className="font-bold text-slate-950 dark:text-white">{log.aksi}</span>
-                      </p>
-                      <p className="text-[10px] text-slate-500 dark:text-slate-400 mt-0.5">Target: {log.entitas} (ID: {log.entitasId ?? "-"})</p>
-                    </div>
-                    <span className="text-[10px] font-bold text-slate-400 dark:text-slate-500 font-mono">
-                      {new Date(log.createdAt).toLocaleTimeString("id-ID", { hour: "2-digit", minute: "2-digit" })}
-                    </span>
-                  </div>
-                </div>
-              ))}
-
-              {recentLogs.length === 0 && (
-                <p className="text-xs text-slate-500 text-center py-6">Belum ada catatan aktivitas.</p>
-              )}
-            </div>
+            {recentLogs.length === 0 ? (
+              <div className="mt-4 flex-1">
+                <EmptyChart text="Belum ada catatan aktivitas." />
+              </div>
+            ) : (
+              <ul className="mt-4 divide-y divide-[var(--border)]">
+                {recentLogs.map((log) => {
+                  const nama = log.user?.nama ?? "System";
+                  return (
+                    <li key={log.id} className="flex items-center gap-3 py-3 first:pt-0 last:pb-0">
+                      <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-sky-500 to-indigo-500 text-[11px] font-bold text-white">
+                        {initials(nama)}
+                      </span>
+                      <div className="min-w-0 flex-1">
+                        <p className="truncate text-xs text-[var(--text-soft)]">
+                          <span className="font-bold text-foreground">{nama}</span> · {aksiLabel(log.aksi)}
+                        </p>
+                        <p className="mt-0.5 truncate text-[11px] text-[var(--text-muted-2)]">
+                          {log.entitas}
+                          {log.entitasId ? ` #${log.entitasId}` : ""}
+                        </p>
+                      </div>
+                      <span className="tnum shrink-0 text-right text-[11px] font-semibold text-[var(--text-muted-2)]">
+                        {new Date(log.createdAt).toLocaleTimeString("id-ID", { hour: "2-digit", minute: "2-digit" })}
+                        <span className="block text-[10px] font-medium opacity-80">
+                          {new Date(log.createdAt).toLocaleDateString("id-ID", { day: "2-digit", month: "short" })}
+                        </span>
+                      </span>
+                    </li>
+                  );
+                })}
+              </ul>
+            )}
           </div>
         </section>
       )}
+    </div>
+  );
+}
+
+// ===================== Komponen & helper presentasi =====================
+
+/** Path SVG sparkline (garis + area) dari deret angka, skala 0..max. */
+function buildSparkline(values: number[], width: number, height: number) {
+  if (values.length < 2) return { line: "", area: "" };
+  const max = Math.max(...values, 1);
+  const pad = 4;
+  const step = width / (values.length - 1);
+  const pts = values.map((v, i) => [i * step, height - pad - (v / max) * (height - pad * 2)] as const);
+  const line = pts.map(([x, y], i) => `${i === 0 ? "M" : "L"}${x.toFixed(1)},${y.toFixed(1)}`).join(" ");
+  return { line, area: `${line} L${width},${height} L0,${height} Z` };
+}
+
+const AKSI_LABEL: Record<string, string> = {
+  STOCK_IN_BATCH: "mencatat stok masuk (batch)",
+  BARANG_MASUK: "mencatat barang masuk",
+  KOREKSI_STOK: "mengoreksi stok",
+  CREATE_TRANSAKSI: "membuat transaksi",
+  CREATE_BARANG: "menambah barang",
+  UPDATE_BARANG: "memperbarui barang",
+  DELETE_BARANG: "menghapus barang",
+  TOGGLE_BARANG: "mengubah status barang",
+  PRINT_BARCODE: "mencetak barcode",
+  BAYAR_INVOICE: "mencatat pembayaran invoice",
+  UPDATE_INVOICE: "memperbarui invoice",
+  UPDATE_INVOICE_DAN_BARANG: "memperbarui invoice & barang",
+  HAPUS_INVOICE: "menghapus invoice",
+  HAPUS_INVOICE_MASSAL: "menghapus invoice (massal)",
+  VERIFIKASI_INVOICE: "memverifikasi invoice",
+  CREATE_USER: "menambah pengguna",
+  UPDATE_USER: "memperbarui pengguna",
+  TOGGLE_USER: "mengubah status pengguna",
+  RESET_PASSWORD_USER: "mereset password pengguna",
+  CLEAR_LOGS: "membersihkan log aktivitas",
+};
+
+function aksiLabel(aksi: string) {
+  return AKSI_LABEL[aksi] ?? aksi.toLowerCase().replace(/_/g, " ");
+}
+
+function initials(nama: string) {
+  return (
+    nama
+      .split(/\s+/)
+      .filter(Boolean)
+      .slice(0, 2)
+      .map((w) => w[0]?.toUpperCase())
+      .join("") || "?"
+  );
+}
+
+function LegendStat({ color, label, value }: { color: string; label: string; value: string }) {
+  return (
+    <div className="min-w-0">
+      <p className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider text-[var(--text-muted-2)]">
+        <span className="h-2 w-2 rounded-full" style={{ background: color }} />
+        {label}
+      </p>
+      <p className="tnum mt-0.5 text-sm font-extrabold text-foreground">{value}</p>
+    </div>
+  );
+}
+
+function EmptyChart({ text }: { text: string }) {
+  return (
+    <div className="flex h-full min-h-32 flex-col items-center justify-center gap-2 rounded-2xl border border-dashed border-[var(--border)] text-center">
+      <Inbox size={22} className="text-[var(--text-muted-2)] opacity-70" />
+      <p className="text-xs font-medium text-[var(--text-muted-2)]">{text}</p>
+    </div>
+  );
+}
+
+const ALERT_TONE = {
+  rose: { text: "text-rose-600 dark:text-rose-400", bar: "bg-rose-500", track: "bg-rose-500/15", chip: "bg-rose-500/12" },
+  amber: { text: "text-amber-600 dark:text-amber-400", bar: "bg-amber-500", track: "bg-amber-500/15", chip: "bg-amber-500/12" },
+};
+
+function AlertGroup({
+  title,
+  count,
+  tone,
+  href,
+  items,
+  more,
+}: {
+  title: string;
+  count: number;
+  tone: keyof typeof ALERT_TONE;
+  href: string;
+  items: { id: number; nama: string; right: string; pct: number | null }[];
+  more: number;
+}) {
+  const t = ALERT_TONE[tone];
+  return (
+    <div>
+      <div className="mb-2 flex items-center justify-between">
+        <p className={`text-[11px] font-bold uppercase tracking-wider ${t.text}`}>{title}</p>
+        <span className={`tnum rounded-md px-1.5 py-0.5 text-[11px] font-bold ${t.chip} ${t.text}`}>{count}</span>
+      </div>
+      <ul className="space-y-2">
+        {items.map((it) => (
+          <li key={it.id} className="rounded-xl bg-[var(--surface-2)]/60 px-3 py-2">
+            <div className="flex items-center justify-between gap-3">
+              <p className="truncate text-xs font-semibold text-foreground" title={it.nama}>{it.nama}</p>
+              <span className={`tnum shrink-0 font-mono text-[11px] font-bold ${t.text}`}>{it.right}</span>
+            </div>
+            {it.pct !== null && (
+              <div className={`mt-1.5 h-1 w-full overflow-hidden rounded-full ${t.track}`}>
+                <div className={`h-full rounded-full ${t.bar}`} style={{ width: `${Math.max(it.pct, 2)}%` }} />
+              </div>
+            )}
+          </li>
+        ))}
+      </ul>
+      {more > 0 && (
+        <Link href={href} className={`mt-2 inline-flex items-center gap-1 text-[11px] font-bold hover:underline ${t.text}`}>
+          +{more} barang lainnya <ArrowUpRight size={12} />
+        </Link>
+      )}
+    </div>
+  );
+}
+
+function ProjectCard({ projectSales, className = "" }: { projectSales: { nama: string; total: number }[]; className?: string }) {
+  return (
+    <div className={`bento-card anim-rise flex flex-col p-5 md:p-6 ${className}`}>
+      <div>
+        <h3 className="font-display text-sm font-bold text-foreground">Omzet per Proyek</h3>
+        <p className="mt-0.5 text-xs text-[var(--text-muted-2)]">5 proyek teratas pada periode filter</p>
+      </div>
+      <div className={`mt-4 ${projectSales.length === 0 ? "flex-1" : "min-h-44"}`}>
+        {projectSales.length === 0 ? <EmptyChart text="Belum ada data penjualan proyek." /> : <ProjectSalesChart data={projectSales} />}
+      </div>
     </div>
   );
 }

@@ -1,7 +1,7 @@
 ---
 type: module
 status: verified
-last_verified: 2026-10-12
+last_verified: 2026-10-13
 source_files: [src/app/(app)/retur/actions.ts, src/lib/returnRules.ts, src/lib/inventoryRules.ts]
 related: ["[[Return-and-Exchange-Flow]]", "[[POS-Transactions]]", "[[Stock-Ledger]]"]
 tags: [module, return]
@@ -10,6 +10,9 @@ tags: [module, return]
 
 ## Fungsi
 Retur dan tukar harus terikat ke `Transaction` asli. Pencarian menerima nomor transaksi atau invoice dan menelusuri ke transaksi sumber.
+
+## Kirim nota via WhatsApp
+Tombol WhatsApp pada nota retur membuka `WhatsAppDialog` (bukan `window.prompt`); nomor dinormalisasi ke `62…` sebelum membuka `wa.me`. Lihat [[Core-UI-Components]].
 
 ## Aturan
 - Harga snapshot dan item harus cocok dengan transaksi asli.
