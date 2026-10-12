@@ -1,7 +1,7 @@
 ---
 type: issue-register
 status: verified
-last_verified: 2026-10-12
+last_verified: 2026-10-13
 related: ["[[Technical-Debt]]", "[[Resolved-Issues]]"]
 tags: [issues, bugs]
 ---
@@ -14,11 +14,27 @@ tags: [issues, bugs]
 - **Workaround aman:** hentikan proses dev lain, hapus `.next` hanya setelah memastikan itu generated output, lalu jalankan ulang. Gunakan non-Turbopack hanya untuk diagnosis, bukan perubahan permanen tanpa bukti.
 - **Status:** open/unreproduced in this documentation pass.
 
-## KB-002 — Type-check gagal pada hasil checkout POS
-- **Observed:** `npm run type-check` gagal pada `src/app/(app)/kasir/KasirClient.tsx:385`.
-- **Error:** `res.grandTotal` bertipe `number | undefined`, sedangkan `NotaData.total` membutuhkan `number`.
-- **Context:** terdeteksi setelah source drift eksternal menambahkan filter kategori/penyesuaian UI selama validasi knowledge system.
-- **Impact:** build gate TypeScript tidak lulus; runtime path belum diuji pada sesi dokumentasi ini.
-- **Status:** open; source aplikasi sengaja tidak diubah oleh fase dokumentasi.
+## KB-002 — Type-check hasil checkout POS
+- **Observed:** `npm run type-check` pernah gagal pada `src/app/(app)/kasir/KasirClient.tsx:385`.
+- **Resolution:** consumer sekarang memakai `res.grandTotal ?? 0`; producer selalu mengembalikan angka pada hasil sukses.
+- **Verification:** type-check, lint, production build, dan checkout nyata pada database disposable lulus pada 2026-10-12.
+- **Status:** resolved.
+
+## KB-003 — Struk split payment hanya menghitung cash
+- **Observed:** transaksi `PC00003` menyimpan `CASH 30.000 + TRANSFER 50.000 + CREDIT 20.000` dan invoice LUNAS, tetapi struk menampilkan `Pembayaran Masuk Rp30.000` dan `Sisa Tagihan Rp70.000`.
+- **Impact:** struk salah menyatakan pembayaran dan piutang walaupun persistence benar.
+- **Status:** open; release blocker untuk struk multi-metode.
+
+## KB-004 — Struk transfer lunas masih menampilkan sisa penuh
+- **Observed:** transaksi proyek `PC00004` menyimpan transfer Rp100.000 dan invoice LUNAS, tetapi struk menampilkan `Sisa Tagihan Rp100.000`.
+- **Impact:** pelanggan menerima informasi piutang yang salah pada transaksi transfer.
+- **Status:** open; kemungkinan akar yang sama dengan KB-003.
+- **Evidence:** [[Comprehensive-Role-Verification-Checkpoint]].
+
+## KB-005 — Losing concurrent checkout reports a generic internal error
+- **Observed:** two simultaneous checkouts targeted the final unit of `E2E-ITEM-B`. One persisted and reduced effective stock to zero; the losing request displayed `Terjadi kesalahan internal saat memproses checkout.`
+- **Impact:** stock integrity is preserved, but the cashier receives no actionable stock-conflict message.
+- **Status:** open; not an integrity blocker, but should return the existing insufficient-stock/conflict language.
+- **Evidence:** [[Comprehensive-Role-Verification-Checkpoint]].
 
 Drift konfigurasi dan coverage gap bukan bug runtime; lihat [[Technical-Debt]].

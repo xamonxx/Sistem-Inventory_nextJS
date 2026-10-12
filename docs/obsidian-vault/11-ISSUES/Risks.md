@@ -1,7 +1,7 @@
 ---
 type: risk-register
 status: verified
-last_verified: 2026-10-12
+last_verified: 2026-10-13
 related: ["[[Security-Notes]]", "[[Data-Integrity]]", "[[Recovery]]"]
 tags: [issues, risks]
 ---
@@ -17,5 +17,7 @@ tags: [issues, risks]
 | R-06 | Non-gudang `userId` tanpa FK | Actor record dapat orphan | ID dicatat aplikasi |
 | R-07 | Env production dibuat di CI lalu disalin via SSH | Secret handling bergantung runner/host cleanup | GitHub Secrets; file tidak dikomit |
 | R-08 | Main financial/inventory flows minim integration tests | Regression lolos type-check | Validation helpers + manual smoke |
+| R-09 | Receipt totals ignore non-cash persisted payments | Customer-facing paid/remaining values can be false | Block release until KB-003 and KB-004 are fixed or accepted |
+| R-10 | Losing concurrent checkout returns a generic internal error | Cashier cannot identify the stock conflict | Integrity is preserved; map conflict to actionable stock feedback |
 
-Prioritas: boundary authorization, backup/recovery, migration history, lalu integration test transaksi.
+Prioritas: receipt correctness, backup/recovery, migration history, concurrent-checkout feedback, lalu integration test transaksi.

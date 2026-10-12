@@ -1,5 +1,9 @@
 # Operational Tasks
 
+## Excel export styling
+- [x] Semantic header colors for all Excel exports.
+- [ ] Visual check of exported workbooks in Excel (Laporan, Invoice, Non-Gudang).
+
 ## Context7 integration
 - [x] Inspect the official Context7 installer and client support.
 - [x] Install project-scoped CLI + Skills mode.
@@ -12,14 +16,22 @@
 - [x] Track installed skills and lockfile in the source baseline.
 - [x] Validate installation and documentation.
 
-## Current session
-- [x] Complete knowledge validator/source baseline.
-- [x] Run knowledge validation and clean-context handoff simulation.
-- [x] Replace pending status with measured evidence.
+## Current verification session
+- [x] Create an isolated disposable database and deterministic fixtures for all three roles.
+- [x] Pass Prisma, type, lint, security (58/58), production-build (22 routes), and knowledge gates.
+- [x] Pass authentication plus the 50-route role matrix.
+- [x] Complete Gudang verification.
+- [x] Complete Kasir verification and record two receipt-payment release blockers.
+- [x] Continue Non-Gudang verification from the saved `NG-00001` edit checkpoint.
+- [x] Complete shared search/verification/theme/responsive/console/network checks.
+- [x] Complete concurrency and final database invariant checks.
+- [x] Complete production read-only smoke.
+- [x] Clean only the disposable resources and restore the normal local development server.
+- [ ] Fix or explicitly accept the two receipt defects before push/deploy.
 
 ## Repository backlog
 - [x] Fix the POS checkout result type mismatch at `KasirClient.tsx:385`; type-check and lint pass.
-- [ ] Run POS checkout smoke on a disposable DB (mutates stock; needs explicit approval).
+- [x] Run POS checkout smoke on an isolated disposable DB; cash, credit, split, project, return, exchange, payment, edit, delete, hold/restore, barcode, print, and export paths exercised.
 - [x] Align direct-page role guards with domain navigation/policy (retur, invoice, invoice/[id], stok/[id] guarded).
 - [x] Align dev port to 3000 across package.json, README, launcher, smoke test (`.env` NEXT_PUBLIC_APP_URL still 3001, user-owned).
 - [x] Mobile responsiveness round 1: dvh heights, POS dock safe-area, 40px password toggle, 11px min text on screen <=640px. Login verified at 375/768.

@@ -5,8 +5,10 @@
  *
  * Konvensi tampilan:
  * - Blok judul (nama laporan + perusahaan) dan metadata di atas setiap sheet.
- * - Header tabel gelap dengan teks putih, baris data zebra, baris TOTAL tebal
- *   dengan garis atas tegas.
+ * - Header tabel berwarna per kelompok kolom (identitas, tanggal, pihak,
+ *   kuantitas, nominal, piutang/risiko, persentase, status) dengan teks putih
+ *   dan garis aksen bawah; baris data zebra; baris TOTAL tebal dengan garis
+ *   atas tegas.
  * - Gridline Excel disembunyikan; siap cetak A4 (fit lebar, header diulang,
  *   nomor halaman) lewat `finalizeWorkbook`.
  */
@@ -22,7 +24,8 @@ export const COLOR = {
   metaText: "FF475569", // slate-600
   metaLabel: "FF0F172A", // slate-900
   sectionText: "FF0F2A44",
-  headerBg: "FF1E3A5F", // navy-700
+  headerBg: "FF1E3A5F", // navy-700 (default kelompok identitas)
+  titleAccent: "FF38BDF8", // sky-400
   headerText: "FFFFFFFF",
   border: "FFD9E2EC",
   borderStrong: "FF1E3A5F",
@@ -93,6 +96,12 @@ const contentStartRow = new WeakMap<Worksheet, number>();
 const sheetReportName = new WeakMap<Worksheet, string>();
 /** Baris header tabel utama per sheet; diulang di setiap halaman cetak. */
 const printHeaderRow = new WeakMap<Worksheet, number>();
+/** Semua baris header tabel per sheet (bisa lebih dari satu tabel per sheet). */
+const headerRows = new WeakMap<Worksheet, Set<number>>();
+
+function isHeaderRow(ws: Worksheet, row: number): boolean {
+  return headerRows.get(ws)?.has(row) ?? false;
+}
 
 /**
  * Tandai header tabel utama sheet. Hanya untuk cetak (diulang tiap halaman);
@@ -138,7 +147,7 @@ function fillArgb(ws: Worksheet, r: number, c: number): string | undefined {
 export function applyBorder(ws: Worksheet, topRow: number, bottomRow: number, lastCol: number) {
   for (let r = topRow; r <= bottomRow; r++) {
     const isTotal = fillArgb(ws, r, 1) === COLOR.totalBg || fillArgb(ws, r, lastCol) === COLOR.totalBg;
-    const isHeader = fillArgb(ws, r, 1) === COLOR.headerBg;
+    const isHeader = isHeaderRow(ws, r);
     const zebra = !isHeader && !isTotal && (r - topRow) % 2 === 0;
 
     for (let c = 1; c <= lastCol; c++) {
@@ -170,14 +179,66 @@ export function applyTitleStyle(ws: Worksheet, row: number, lastCol: number, tit
   ws.getRow(row).height = 30;
 }
 
+// ===================== WARNA HEADER PER KELOMPOK KOLOM =====================
+
+interface HeaderTone {
+  bg: string;
+  accent: string;
+}
+
+/**
+ * Warna header berdasarkan makna kolom agar tabel mudah dipindai. Urutan aturan
+ * penting: aturan pertama yang cocok dipakai (mis. "Sisa Piutang" → piutang,
+ * bukan nominal; "Kontribusi Omzet" → persentase).
+ */
+const HEADER_TONES: { tone: HeaderTone; match: RegExp }[] = [
+  // Status / verifikasi / catatan — slate
+  { tone: { bg: "FF334155", accent: "FF94A3B8" }, match: /status|verifikasi|keterangan|catatan|analisis/i },
+  // Persentase / kontribusi — violet
+  { tone: { bg: "FF6D28D9", accent: "FFC4B5FD" }, match: /%|persen|kontribusi|rasio/i },
+  // Piutang / risiko / barang keluar — rose
+  { tone: { bg: "FFBE123C", accent: "FFFDA4AF" }, match: /piutang|tunggakan|keluar|retur|rusak|\bng\b|selisih/i },
+  // Tanggal / waktu / umur — cyan
+  { tone: { bg: "FF0E7490", accent: "FF67E8F9" }, match: /tanggal|tgl|jatuh tempo|umur|periode|waktu|\bjam\b|bulan|tahun/i },
+  // Identitas dokumen — navy
+  { tone: { bg: COLOR.headerBg, accent: "FF7DD3FC" }, match: /^no\b|nomor|kode|ranking|^kpi$|invoice|transaksi|^#$/i },
+  // Kuantitas / stok — teal
+  { tone: { bg: "FF0F766E", accent: "FF5EEAD4" }, match: /qty|jumlah|stok|^min\b|\bpcs\b/i },
+  // Nominal uang — emerald
+  { tone: { bg: "FF047857", accent: "FF6EE7B7" }, match: /harga|total|subtotal|tagihan|bayar|omzet|omset|nilai|modal|margin|laba|\brp\b|diskon|pendapatan|biaya|aset/i },
+];
+
+/** Pihak / barang / teks umum — indigo. */
+const HEADER_TONE_DEFAULT: HeaderTone = { bg: "FF4338CA", accent: "FFA5B4FC" };
+
+export function headerToneFor(label: unknown): HeaderTone {
+  const text = typeof label === "string" ? label.trim() : "";
+  if (!text) return HEADER_TONE_DEFAULT;
+  return HEADER_TONES.find((t) => t.match.test(text))?.tone ?? HEADER_TONE_DEFAULT;
+}
+
+/**
+ * Gaya header tabel. Panggil setelah teks header ditulis: warna tiap sel
+ * ditentukan dari teksnya (lihat `HEADER_TONES`).
+ */
 export function applyHeaderStyle(ws: Worksheet, row: number, lastCol: number) {
+  const set = headerRows.get(ws) ?? new Set<number>();
+  set.add(row);
+  headerRows.set(ws, set);
+
   const r = ws.getRow(row);
   for (let c = 1; c <= lastCol; c++) {
     const cell = r.getCell(c);
+    const tone = headerToneFor(cell.value);
     cell.font = { bold: true, color: { argb: COLOR.headerText }, size: 10.5 };
-    cell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: COLOR.headerBg } };
+    cell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: tone.bg } };
     cell.alignment = { vertical: "middle", horizontal: "center", wrapText: true };
-    cell.border = thinBorder;
+    cell.border = {
+      top: { style: "thin", color: { argb: tone.bg } },
+      left: { style: "thin", color: { argb: "FFFFFFFF" } },
+      right: { style: "thin", color: { argb: "FFFFFFFF" } },
+      bottom: { style: "medium", color: { argb: tone.accent } },
+    };
   }
   r.height = 30;
 }
@@ -232,7 +293,7 @@ export function autoFitColumns(ws: Worksheet, lastCol: number, min = 10, max = 4
       } else if (cell.value != null) text = String(cell.value);
       const longest = text.split("\n").reduce((m, l) => Math.max(m, l.length), 0);
       // Header dibungkus (wrapText); sisakan ruang untuk tombol filter di kanan.
-      const isHeader = fillArgb(ws, rowNumber, c) === COLOR.headerBg;
+      const isHeader = isHeaderRow(ws, rowNumber);
       widest = Math.max(widest, isHeader ? Math.min(longest + 6, 24) : longest + 3);
     });
     ws.getColumn(c).width = Math.min(widest, max);
@@ -269,6 +330,7 @@ export function writeSheetHeader(ws: Worksheet, lastCol: number, meta: MetaInfo)
   sub.font = { size: 9.5, italic: true, color: { argb: COLOR.subtitleText } };
   sub.fill = { type: "pattern", pattern: "solid", fgColor: { argb: COLOR.titleBg } };
   sub.alignment = { vertical: "middle", horizontal: "left", indent: 1 };
+  sub.border = { bottom: { style: "medium", color: { argb: COLOR.titleAccent } } };
   ws.getRow(2).height = 18;
 
   const metaRows: [string, string | Date][] = [

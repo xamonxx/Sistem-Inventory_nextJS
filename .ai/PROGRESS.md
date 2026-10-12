@@ -1,5 +1,11 @@
 # Progress
 
+## 2026-10-13 — Excel export header colors
+- [x] Replace flat navy headers with semantic per-column-group colors in `excelStyles.ts`.
+- [x] Track header rows per sheet instead of detecting them by fill color.
+- [x] Pass type-check and ESLint on `src/lib/export`; verify header-to-color mapping.
+- [ ] Open a generated workbook in Excel for a visual check.
+
 ## 2026-10-12 — Context7 Agent skill
 - [x] Verify official installer and choose project-scoped CLI + Skills mode.
 - [x] Run `npx ctx7 setup --cli --project -y`.
@@ -37,3 +43,15 @@ None intended. Existing UI overlay and port changes were observed and documented
 ## Evidence location
 - Session: [`sessions/2026-10-12-project-knowledge-system.md`](sessions/2026-10-12-project-knowledge-system.md)
 - Daily changelog: [`2026-10-12`](../docs/obsidian-vault/10-CHANGELOG/Daily/2026-10-12.md)
+
+## 2026-10-13 — Comprehensive role verification
+- [x] Create an isolated local database and deterministic fixtures for all three roles.
+- [x] Pass Prisma, type, lint, security 58/58, production-build 22-route, and knowledge gates.
+- [x] Pass authentication and the 50-route role matrix.
+- [x] Complete Gudang and Kasir scenarios; record two receipt-payment release blockers.
+- [x] Restore `NG-00001` and complete Non-Gudang edit, one-store, delete-guard, report, export, and isolation checks.
+- [x] Complete shared search, public verification, theme, dialog/select, responsive, console, and network checks.
+- [x] Prove concurrent stock/payment integrity and pass the final database invariant/counter sweep.
+- [x] Pass production read-only smoke at `https://gudangmki.com`.
+- [x] Stop port 3100, drop only the verified disposable database, restore port-3000 development server, and smoke the login page.
+- [ ] Fix or explicitly accept the two receipt-payment defects before push/deploy.

@@ -1,23 +1,23 @@
 ---
 type: verification-report
 status: verified
-last_verified: 2026-10-12
+last_verified: 2026-10-13
 related: ["[[Dashboard]]", "[[Current-State]]", "[[Testing-Strategy]]"]
 tags: [verification, status]
 ---
-# Verification Report — 2026-10-12
+# Verification Report — 2026-10-13
 
 ## Measured inventory
 | Metric | Result | Definition |
 |---|---:|---|
 | Identified modules | 14 | Dedicated notes under `02-MODULES` |
-| Vault notes | 85 | Markdown files under `docs/obsidian-vault`, including this report |
-| Operational notes | 24 | Markdown in `.ai` plus three root entrypoints |
-| Knowledge relations | 328 | Resolved Obsidian wikilink occurrences |
+| Vault notes | 87 | Markdown files under `docs/obsidian-vault`, including this report |
+| Operational notes | 25 | Markdown in `.ai` plus three root entrypoints |
+| Knowledge relations | 342 | Resolved Obsidian wikilink occurrences |
 | Mermaid diagrams | 21 | Closed Mermaid blocks with recognized diagram type |
-| Source references | 181 | Existing source/config paths declared in Vault frontmatter |
+| Source references | 184 | Existing source/config paths declared in Vault frontmatter |
 | Broken links/references | 0 | Wikilink, relative Markdown link, and source reference validator |
-| Source baseline | 232 files | SHA-256 scope includes application/config, Caveman/Context7 skills, root entrypoints, rules, and operational memory |
+| Source baseline | 233 files | SHA-256 scope includes application/config, Caveman/Context7 skills, root entrypoints, rules, and operational memory |
 
 ## Coverage
 | Area | Coverage | Definition |
@@ -40,18 +40,30 @@ Coverage means inventory-level traceability, not line or automated-test coverage
 - Context7 policy smoke: pass, 7/7 checks across skills, rule, canonical policy, Codex, Claude, and Gemini.
 - Context7 live lookup: pass; `/vercel/next.js` resolved and Route Handler documentation returned.
 - TypeScript: pass.
-- Production build: pass with `npx next build` (22 static pages); full `npm run build` remains blocked by a running dev server locking Prisma's query-engine DLL.
-- Browser smoke: partial pass for login and responsive application routes; authenticated data states remain incomplete.
+- Production build: pass with Next.js 15.5.19 (22 routes).
+- Disposable-database browser verification completed across all three roles, shared surfaces, concurrency, and final invariants.
+- Authentication/authorization: three-role login plus 50-route allow/deny matrix pass.
+- Gudang: item, stock, report, export, user, notification, activity, and print paths pass.
+- Kasir persistence and core lifecycle paths pass; split-payment and transfer-only receipt totals fail.
+- Non-Gudang: invoice edit guard, one-store enforcement, deletion guards, purchase/report/export, and warehouse-stock isolation pass.
+- Shared UI: global search, public one-time verification, theme, dialog/select, 375px responsive, console, and network checks pass.
+- Concurrency: no stock oversell and no invoice overpayment; the losing stock checkout displays a generic internal error.
+- Final database invariant and counter-alignment sweep: zero violations.
+- Production read-only smoke: `https://gudangmki.com` root redirect, login HTTP 200, security headers, desktop, and mobile pass.
 
 ## Not verified
-Production database contents, deployed Hostinger runtime, backup restore, migration rollback, and browser behavior across all routes. Reconstructed ADRs describe current implementation, not proven historical approval.
+Backup restore, migration rollback, and repeatable database integration coverage remain unverified. Reconstructed ADRs describe current implementation, not proven historical approval.
+
+## Confirmed release blockers
+1. Split-payment receipt uses only cash received and reports a false remaining balance.
+2. Transfer-only LUNAS receipt reports the full transaction total as remaining.
 
 ## Primary risks
-No tested recovery/migration path, no real POS checkout smoke on a disposable database, broad invoice-delete cascade, application-only ledger references, mutable activity logs, and limited DB integration coverage.
+No tested recovery/migration path, broad invoice-delete cascade, application-only ledger references, mutable activity logs, limited DB integration coverage, the open receipt defects, and generic feedback for a losing concurrent checkout.
 
 ## Recommended order
-1. Run POS checkout smoke on a disposable database.
-2. Establish tested backup/restore and migration deployment.
-3. Add DB integration tests for stock, checkout, return, payment, and invoice edit/delete.
-4. Review logout origin policy and production CSP.
-5. Align `.env` URL configuration and audit unused dependencies.
+1. Fix and retest both receipt-payment defects.
+2. Replace the concurrent-checkout generic error with a stock-conflict response.
+3. Establish tested backup/restore and migration deployment.
+4. Add repeatable DB integration tests for stock, checkout, return, payment, and invoice edit/delete.
+5. Review logout origin policy, production CSP, `.env` URL configuration, and unused dependencies.
