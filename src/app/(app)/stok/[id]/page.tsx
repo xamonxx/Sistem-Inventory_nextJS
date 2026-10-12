@@ -11,7 +11,19 @@ const TIPE_TONE: Record<string, "green" | "red" | "blue" | "amber"> = {
 };
 
 export default async function KartuStokPage({ params }: { params: Promise<{ id: string }> }) {
-  await requireUser();
+  const user = await requireUser();
+
+  if (user.role !== "ADMIN_GUDANG") {
+    return (
+      <div className="rounded-xl border border-red-200 bg-red-50 p-6">
+        <h1 className="text-xl font-bold text-red-800">Akses Ditolak</h1>
+        <p className="mt-2 text-sm text-red-700">
+          Kartu stok hanya diizinkan untuk <strong>Admin Gudang / Owner</strong>.
+        </p>
+      </div>
+    );
+  }
+
   const { id } = await params;
   const item = await prisma.item.findUnique({ where: { id: Number(id) } });
   if (!item) notFound();

@@ -139,7 +139,7 @@ export function EditInvoiceClient({ invoice, catalogItems }: EditInvoiceClientPr
       return toast.error("Nomor invoice wajib diisi.");
     }
     if (!metadata.namaClient.trim()) {
-      return toast.error("Nama klien/pelanggan wajib diisi.");
+      return toast.error("Nama pelanggan wajib diisi.");
     }
 
     startTransition(async () => {
@@ -171,8 +171,8 @@ export function EditInvoiceClient({ invoice, catalogItems }: EditInvoiceClientPr
               <FileText size={18} />
             </div>
             <div>
-              <h3 className="font-extrabold text-foreground tracking-tight text-sm uppercase">Detail Faktur &amp; Klien</h3>
-              <p className="text-[10px] text-slate-450 font-semibold mt-0.5">Informasi klien dan nomor faktur</p>
+              <h3 className="font-extrabold text-foreground tracking-tight text-sm uppercase">Detail Invoice &amp; Pelanggan</h3>
+              <p className="text-[10px] text-slate-450 font-semibold mt-0.5">Informasi pelanggan dan nomor invoice</p>
             </div>
           </div>
 
@@ -202,7 +202,7 @@ export function EditInvoiceClient({ invoice, catalogItems }: EditInvoiceClientPr
             </div>
             <div className="md:col-span-2">
               <LabelWithCounter value={metadata.namaClient} max={FIELD_LIMITS.namaClient} className="text-xs font-bold text-slate-650">
-                Nama Pelanggan / Klien
+                Nama Pelanggan
               </LabelWithCounter>
               <div className="relative mt-1">
                 <User size={14} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
@@ -234,7 +234,7 @@ export function EditInvoiceClient({ invoice, catalogItems }: EditInvoiceClientPr
             </div>
             <div>
               <LabelWithCounter value={metadata.namaWs} max={FIELD_LIMITS.namaWs} className="text-xs font-bold text-slate-650">
-                Bengkel / Workshop (WS)
+                Bengkel
               </LabelWithCounter>
               <div className="relative mt-1">
                 <Building2 size={14} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
@@ -255,7 +255,7 @@ export function EditInvoiceClient({ invoice, catalogItems }: EditInvoiceClientPr
                 <Landmark size={14} className="text-slate-400" />
                 <p className="text-xs font-bold text-slate-650">Info Pembayaran <span className="font-semibold text-slate-400">(Opsional)</span></p>
               </div>
-              <p className="mt-0.5 text-[10px] font-semibold text-slate-450">Ditampilkan pada bagian PEMBAYARAN di faktur & nota. Kosongkan bila tunai.</p>
+              <p className="mt-0.5 text-[10px] font-semibold text-slate-450">Ditampilkan pada bagian PEMBAYARAN di invoice & nota. Kosongkan bila tunai.</p>
 
               <div className="mt-3 grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div>
@@ -319,7 +319,7 @@ export function EditInvoiceClient({ invoice, catalogItems }: EditInvoiceClientPr
             </div>
             <div>
               <h3 className="font-extrabold text-foreground tracking-tight text-sm uppercase">Cari &amp; Tambah Barang</h3>
-              <p className="text-[10px] text-[var(--text-muted-2)] font-semibold mt-0.5">Cari barang di katalog untuk ditambahkan ke faktur</p>
+              <p className="text-[10px] text-[var(--text-muted-2)] font-semibold mt-0.5">Cari barang di katalog untuk ditambahkan ke invoice</p>
             </div>
           </div>
           
@@ -500,7 +500,7 @@ export function EditInvoiceClient({ invoice, catalogItems }: EditInvoiceClientPr
           ) : (
             <div className="flex items-start gap-2.5 p-3 bg-primary-50/50 border border-primary-100 rounded-xl text-primary-800 text-[10px] leading-relaxed">
               <CheckCircle2 size={14} className="shrink-0 text-primary-600 mt-0.5" />
-              <p>Invoice ini telah <strong>LUNAS</strong> sepenuhnya. Klien tidak memiliki tanggungan piutang.</p>
+              <p>Invoice ini telah <strong>LUNAS</strong> sepenuhnya. Pelanggan tidak memiliki tanggungan piutang.</p>
             </div>
           )}
 

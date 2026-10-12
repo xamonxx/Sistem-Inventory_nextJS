@@ -396,6 +396,24 @@ h3,
   animation: rise 0.4s cubic-bezier(0.16, 1, 0.3, 1) both;
 }
 
+@keyframes slide-in-right {
+  from { transform: translateX(100%); }
+  to { transform: translateX(0); }
+}
+
+.anim-slide-in-right {
+  animation: slide-in-right 0.3s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+@keyframes backdrop-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.anim-backdrop-in {
+  animation: backdrop-in 0.3s ease-out both;
+}
+
 @keyframes sheen {
   from { background-position: 200% 0; }
   to { background-position: -200% 0; }
@@ -1731,6 +1749,15 @@ body.print-format-a4 .a4-print-layout {
   [data-tooltip]::before,
   [data-tooltip]::after {
     display: none;
+  }
+}
+
+/* Keterbacaan HP: naikkan teks 8-10px ke 11px (layar saja; cetak nota/invoice tidak berubah). */
+@media screen and (max-width: 640px) {
+  .text-\[8px\],
+  .text-\[9px\],
+  .text-\[10px\] {
+    font-size: 11px;
   }
 }
 

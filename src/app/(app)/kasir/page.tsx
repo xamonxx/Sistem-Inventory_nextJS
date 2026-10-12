@@ -24,6 +24,7 @@ export default async function KasirPage() {
     id: i.id,
     kode: i.kode,
     nama: i.nama,
+    kategori: i.kategori,
     hargaJual: Number(i.hargaJual),
     stok: stokMap[i.id] ?? i.stokAwal,
   }));

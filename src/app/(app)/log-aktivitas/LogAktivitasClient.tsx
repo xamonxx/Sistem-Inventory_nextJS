@@ -102,7 +102,7 @@ export function LogAktivitasClient({ initialLogs }: { initialLogs: LogRow[] }) {
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             maxLength={FIELD_LIMITS.search}
-            placeholder="Cari operator atau ID target..."
+            placeholder="Cari petugas atau ID data..."
             className="pl-9 h-11"
           />
         </div>
@@ -131,14 +131,15 @@ export function LogAktivitasClient({ initialLogs }: { initialLogs: LogRow[] }) {
 
       {/* Audit table grid */}
       <div className="w-full">
+        <div className="hidden md:block">
         <Table>
           <thead>
             <tr>
               <Th>Waktu</Th>
-              <Th>Operator Staff</Th>
+              <Th>Petugas</Th>
               <Th>Aksi</Th>
-              <Th>Entitas Target</Th>
-              <Th>ID Target</Th>
+              <Th>Data yang Diubah</Th>
+              <Th>ID Data</Th>
               <Th className="text-center">Aksi</Th>
             </tr>
           </thead>
@@ -175,12 +176,43 @@ export function LogAktivitasClient({ initialLogs }: { initialLogs: LogRow[] }) {
             {filteredLogs.length === 0 && (
               <tr>
                 <Td colSpan={6} className="py-12 text-center text-muted">
-                  Tidak ada audit log yang cocok dengan filter saat ini.
+                  Tidak ada aktivitas yang cocok dengan filter saat ini.
                 </Td>
               </tr>
             )}
           </tbody>
         </Table>
+        </div>
+        {/* Mobile (<768px): kartu per aktivitas */}
+        <div className="space-y-3 md:hidden">
+          {filteredLogs.length === 0 ? (
+            <div className="rounded-xl border border-border bg-card py-10 text-center text-sm text-muted">
+              Tidak ada aktivitas yang cocok dengan filter saat ini.
+            </div>
+          ) : (
+            logPg.pageData.map((log) => (
+              <div key={log.id} className="space-y-3 rounded-xl border border-border bg-card p-4">
+                <div className="flex items-start justify-between gap-3">
+                  <Badge tone={AKSI_TONE[log.aksi] ?? "slate"} className="shrink-0">{log.aksi}</Badge>
+                  <span className="text-right text-xs font-medium text-slate-500">{formatTanggal(log.createdAt)}</span>
+                </div>
+                <div>
+                  <p className="text-sm font-semibold text-foreground">{log.userName}</p>
+                  <p className="text-[10px] text-muted">{log.userRole}</p>
+                </div>
+                <p className="break-words text-xs text-slate-600">
+                  <span className="font-medium">{log.entitas}</span>
+                  {log.entitasId ? <span className="ml-1.5 font-mono text-slate-500">#{log.entitasId}</span> : null}
+                </p>
+                {log.detail && (
+                  <Button size="sm" variant="outline" onClick={() => setSelectedLog(log)} className="min-h-10 w-full">
+                    <Eye size={13} /> Detail Perubahan
+                  </Button>
+                )}
+              </div>
+            ))
+          )}
+        </div>
         <div className="px-4 pb-3">
           <Pagination page={logPg.page} perPage={logPg.perPage} total={logPg.total} onPage={logPg.setPage} onPerPage={logPg.setPerPage} />
         </div>
@@ -192,7 +224,7 @@ export function LogAktivitasClient({ initialLogs }: { initialLogs: LogRow[] }) {
           <div onClick={(e) => e.stopPropagation()} className="w-full max-w-md bg-card rounded-2xl overflow-y-auto max-h-[85vh] p-6 shadow-2xl border border-border">
             <div className="flex items-center justify-between border-b border-border pb-3 mb-4">
               <h3 className="font-bold text-foreground flex items-center gap-1.5">
-                <History size={16} className="text-primary" /> Detail Riwayat Audit
+                <History size={16} className="text-primary" /> Detail Aktivitas
               </h3>
               <button onClick={() => setSelectedLog(null)} className="text-muted hover:text-foreground">
                 <X size={18} />
@@ -203,13 +235,13 @@ export function LogAktivitasClient({ initialLogs }: { initialLogs: LogRow[] }) {
               {/* Meta details */}
               <div className="text-xs space-y-1 bg-slate-50 dark:bg-slate-900 p-3 rounded-lg border border-border">
                 <p><strong>Aksi:</strong> {selectedLog.aksi}</p>
-                <p><strong>Operator:</strong> {selectedLog.userName} ({selectedLog.userRole})</p>
+                <p><strong>Petugas:</strong> {selectedLog.userName} ({selectedLog.userRole})</p>
                 <p><strong>Tanggal Log:</strong> {new Date(selectedLog.createdAt).toLocaleString("id-ID")}</p>
               </div>
 
               {/* Parsed Diff representation */}
               <div>
-                <Label>Metadata Perubahan (Format JSON)</Label>
+                <Label>Rincian Perubahan (data teknis)</Label>
                 <div className="rounded-lg bg-slate-900 p-4 overflow-x-auto text-[11px] font-mono text-primary-400 max-h-72">
                   <pre>{JSON.stringify(parsedDetails, null, 2)}</pre>
                 </div>

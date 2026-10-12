@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { createTransaction } from "./actions";
 import { useKasirStore, type CartLine } from "@/lib/kasirStore";
 import { computeCart } from "@/lib/cart";
-import { Button, Card, CurrencyInput, Input, Label, Select, Table, Th, Td, Badge, Textarea, CharCounter } from "@/components/ui";
+import { Button, Card, CurrencyInput, Input, QtyInput, Label, Select, Table, Th, Td, Badge, Textarea, CharCounter } from "@/components/ui";
 import { formatRupiah, cn } from "@/lib/utils";
 import { FIELD_LIMITS } from "@/lib/fieldLimits";
 import {
@@ -31,8 +31,9 @@ import { Nota, type NotaData } from "@/components/Nota";
 import { ModernDialog } from "@/components/ModernDialog";
 import { printArea } from "@/lib/print";
 import { toast } from "sonner";
+import { ITEM_CATEGORIES, type ItemCategory } from "@/lib/itemCategories";
 
-type Item = { id: number; kode: string; nama: string; hargaJual: number; stok: number };
+type Item = { id: number; kode: string; nama: string; kategori: string | null; hargaJual: number; stok: number };
 
 const QUICK_CASH = [20000, 50000, 100000, 200000, 500000];
 
@@ -73,6 +74,7 @@ export function KasirClient({ items }: { items: Item[] }) {
 
   const [step, setStep] = useState<1 | 2 | 3>(1);
   const [q, setQ] = useState("");
+  const [categoryFilter, setCategoryFilter] = useState<"ALL" | ItemCategory>("ALL");
   const [cashReceived, setCashReceived] = useState(0);
   const [error, setError] = useState("");
   const [nota, setNota] = useState<NotaData | null>(null);
@@ -111,12 +113,19 @@ export function KasirClient({ items }: { items: Item[] }) {
   // Filter items matching query or popular list
   const filtered = useMemo(() => {
     const s = q.toLowerCase().trim();
+    const byCategory = categoryFilter === "ALL"
+      ? items
+      : items.filter((item) => item.kategori === categoryFilter);
     if (!s) {
       // Display first 12 popular items as default grid
-      return items.slice(0, 12);
+      return byCategory.slice(0, 12);
     }
-    return items.filter((i) => i.nama.toLowerCase().includes(s) || i.kode.toLowerCase().includes(s));
-  }, [q, items]);
+    return byCategory.filter((i) =>
+      i.nama.toLowerCase().includes(s) ||
+      i.kode.toLowerCase().includes(s) ||
+      (i.kategori ?? "").toLowerCase().includes(s)
+    );
+  }, [q, categoryFilter, items]);
 
   // Cart math computations
   const computed = useMemo(
@@ -196,7 +205,7 @@ export function KasirClient({ items }: { items: Item[] }) {
           }
         } else if (step === 2) {
           if (tipe === "PROJECT" && !namaClient.trim()) {
-            toast.warning("Transaksi proyek wajib menyertakan Nama Client");
+            toast.warning("Transaksi proyek wajib menyertakan Nama Pelanggan");
           } else {
             setStep(3);
             toast.info("Lanjut ke Pembayaran");
@@ -214,7 +223,7 @@ export function KasirClient({ items }: { items: Item[] }) {
   // Hold transaction logic
   function handleHoldCart() {
     if (cart.length === 0) {
-      return toast.error("Keranjang kosong, tidak dapat menangguhkan transaksi.");
+      return toast.error("Keranjang kosong, tidak bisa menahan transaksi.");
     }
     const name = holdCartName.trim() || `Held Trx #${heldCarts.length + 1}`;
     const newHold = {
@@ -253,7 +262,7 @@ export function KasirClient({ items }: { items: Item[] }) {
 
   function handleDeleteHeldCart(id: string) {
     saveHeldCarts(heldCarts.filter((x) => x.id !== id));
-    toast.info("Penangguhan transaksi dihapus");
+    toast.info("Transaksi yang ditahan dihapus");
   }
 
   async function handleSaveToImage() {
@@ -295,16 +304,16 @@ export function KasirClient({ items }: { items: Item[] }) {
       return setError("Keranjang masih kosong.");
     }
     if (tipe === "PROJECT" && !namaClient.trim()) {
-      toast.warning("Transaksi proyek wajib menyertakan Nama Client");
-      return setError("Transaksi proyek wajib menyertakan Nama Client.");
+      toast.warning("Transaksi proyek wajib menyertakan Nama Pelanggan");
+      return setError("Transaksi proyek wajib menyertakan Nama Pelanggan.");
     }
     if (isCash && cashReceived > 0 && kembalian < 0) {
       toast.error("Uang tunai diterima belum mencukupi total belanja");
       return setError("Uang tunai yang diterima belum mencukupi total belanja.");
     }
     if (isSplitActive && !isSplitValid) {
-      toast.error("Jumlah split pembayaran tidak sesuai dengan total belanja");
-      return setError("Jumlah gabungan split pembayaran harus sama dengan Total Akhir.");
+      toast.error("Total pembayaran gabungan tidak sesuai dengan total belanja");
+      return setError("Total pembayaran gabungan harus sama dengan Total Akhir.");
     }
 
     const bayar = isCash ? cashReceived : isSplitActive ? splitCash : null;
@@ -373,10 +382,10 @@ export function KasirClient({ items }: { items: Item[] }) {
             qty: l.qty,
             subtotal: computed.lines[i].finalSubtotal,
           })),
-          total: res.grandTotal,
+          total: res.grandTotal ?? 0,
           bayar: bayar ?? undefined,
           kembali: kembali ?? undefined,
-          judul: "NOTA TRANSAKSI ERP",
+          judul: "NOTA TRANSAKSI",
           catatan: dynamicCatatan,
         });
         clearCart();
@@ -402,9 +411,9 @@ export function KasirClient({ items }: { items: Item[] }) {
           clearCart();
           setCashReceived(0);
           setStep(1);
-          toast.info("Keranjang direset");
+          toast.info("Keranjang dikosongkan");
         }}
-        title="Reset Keranjang Belanja?"
+        title="Kosongkan Keranjang Belanja?"
         description="Aksi ini akan mengosongkan seluruh barang yang ada di keranjang kasir saat ini. Tindakan ini tidak dapat dibatalkan."
         variant="danger"
       />
@@ -416,7 +425,7 @@ export function KasirClient({ items }: { items: Item[] }) {
           <div className="relative w-full max-w-lg rounded-[20px] bg-card p-6 shadow-[var(--shadow-modal)] border border-border anim-rise">
             <div className="flex items-center justify-between border-b border-border pb-3 mb-4">
               <h3 className="text-base font-bold text-foreground flex items-center gap-2">
-                <FolderOpen size={18} className="text-[var(--primary)]" /> Daftar Transaksi Ditangguhkan
+                <FolderOpen size={18} className="text-[var(--primary)]" /> Daftar Transaksi Ditahan
               </h3>
               <button onClick={() => setIsHoldModalOpen(false)} className="text-slate-400 hover:text-slate-700 cursor-pointer">
                 <X size={18} />
@@ -445,7 +454,7 @@ export function KasirClient({ items }: { items: Item[] }) {
               ))}
 
               {heldCarts.length === 0 && (
-                <p className="text-center text-sm text-slate-450 py-8">Tidak ada transaksi yang ditangguhkan.</p>
+                <p className="text-center text-sm text-slate-450 py-8">Tidak ada transaksi yang ditahan.</p>
               )}
             </div>
 
@@ -553,7 +562,7 @@ export function KasirClient({ items }: { items: Item[] }) {
               <Card className="space-y-4">
                 <div className="flex items-center justify-between border-b border-border pb-3">
                   <h2 className="text-sm font-semibold text-foreground flex items-center gap-1.5 leading-none">
-                    <Search size={16} className="text-primary" /> Katalog Barang POS
+                    <Search size={16} className="text-primary" /> Katalog Barang
                   </h2>
                   <span className="text-[10px] font-bold text-slate-400 hidden sm:flex items-center gap-1 shrink-0">
                     <Keyboard size={10} /> <kbd className="bg-slate-100 dark:bg-slate-800 px-1 rounded">F2</kbd> Cari | <kbd className="bg-slate-100 dark:bg-slate-800 px-1 rounded">F4</kbd> Bayar
@@ -587,6 +596,36 @@ export function KasirClient({ items }: { items: Item[] }) {
                   )}
                 </div>
 
+                <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-none" aria-label="Filter kategori barang">
+                  <button
+                    type="button"
+                    onClick={() => setCategoryFilter("ALL")}
+                    className={cn(
+                      "shrink-0 rounded-full border px-3 py-1.5 text-[10px] font-bold transition-colors",
+                      categoryFilter === "ALL"
+                        ? "border-[var(--primary)] bg-[var(--primary)] text-white"
+                        : "border-border bg-card text-[var(--text-soft)] hover:border-[var(--primary)]/40"
+                    )}
+                  >
+                    SEMUA
+                  </button>
+                  {ITEM_CATEGORIES.map((kategori) => (
+                    <button
+                      key={kategori}
+                      type="button"
+                      onClick={() => setCategoryFilter(kategori)}
+                      className={cn(
+                        "shrink-0 rounded-full border px-3 py-1.5 text-[10px] font-bold transition-colors",
+                        categoryFilter === kategori
+                          ? "border-[var(--primary)] bg-[var(--primary)] text-white"
+                          : "border-border bg-card text-[var(--text-soft)] hover:border-[var(--primary)]/40"
+                      )}
+                    >
+                      {kategori}
+                    </button>
+                  ))}
+                </div>
+
                 {/* Dynamic Grid of Items */}
                 {filtered.length === 0 ? (
                   <div className="flex flex-col items-center justify-center gap-2.5 py-14 px-6 text-center select-none">
@@ -618,7 +657,10 @@ export function KasirClient({ items }: { items: Item[] }) {
                       )}
                       <div className="space-y-1.5">
                         <p className="pos-item-name line-clamp-2 text-xs font-bold leading-snug">{it.nama}</p>
-                        <span className="pos-item-kode inline-flex items-center rounded-md px-1.5 py-0.5 font-mono text-[9px] font-bold tracking-wide">{it.kode}</span>
+                        <div className="flex flex-wrap items-center gap-1.5">
+                          <span className="pos-item-kode inline-flex items-center rounded-md px-1.5 py-0.5 font-mono text-[9px] font-bold tracking-wide">{it.kode}</span>
+                          {it.kategori && <span className="text-[8px] font-bold text-[var(--text-muted-2)]">{it.kategori}</span>}
+                        </div>
                       </div>
                       <div className="pos-item-divider mt-4 flex items-center justify-between border-t pt-2.5 w-full">
                         <span className="pos-item-price font-mono text-xs font-extrabold">{formatRupiah(it.hargaJual)}</span>
@@ -700,12 +742,11 @@ export function KasirClient({ items }: { items: Item[] }) {
                                 >
                                   <Minus size={13} />
                                 </button>
-                                <input
-                                  type="number"
+                                <QtyInput
+                                  bare
                                   value={l.qty}
-                                  min={1}
                                   max={FIELD_LIMITS.maxQty}
-                                  onChange={(e) => updateQty(l.itemId, parseInt(e.target.value) || 1)}
+                                  onCommit={(n) => updateQty(l.itemId, n)}
                                   className="h-8 w-11 rounded-lg border border-border text-center text-xs font-semibold font-mono outline-none"
                                 />
                                 <button
@@ -781,12 +822,11 @@ export function KasirClient({ items }: { items: Item[] }) {
                             >
                               <Minus size={12} />
                             </button>
-                            <input
-                              type="number"
+                            <QtyInput
+                              bare
                               value={l.qty}
-                              min={1}
                               max={FIELD_LIMITS.maxQty}
-                              onChange={(e) => updateQty(l.itemId, parseInt(e.target.value) || 1)}
+                              onCommit={(n) => updateQty(l.itemId, n)}
                               aria-label={`Jumlah ${l.nama}`}
                               className="h-8 w-11 bg-transparent text-center font-mono text-sm font-extrabold text-foreground outline-none"
                             />
@@ -830,7 +870,7 @@ export function KasirClient({ items }: { items: Item[] }) {
                   <h3 className="text-sm font-bold text-foreground flex items-center gap-2">
                     <ShoppingBag size={18} className="text-[var(--primary)]" /> Langkah 2: Data Pelanggan &amp; Proyek
                   </h3>
-                  <Badge tone="blue" className="text-xs">CRM &amp; Referensi</Badge>
+                  <Badge tone="blue" className="text-xs">Pelanggan &amp; Referensi</Badge>
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -843,15 +883,15 @@ export function KasirClient({ items }: { items: Item[] }) {
                         onChange={(e) => setTipe(e.target.value as "RETAIL" | "PROJECT")}
                         className="mt-1.5 w-full h-10 px-3 rounded-xl text-xs font-semibold outline-none"
                       >
-                        <option value="RETAIL">Eceran (Retail)</option>
-                        <option value="PROJECT">Proyek (Project)</option>
+                        <option value="RETAIL">Eceran</option>
+                        <option value="PROJECT">Proyek</option>
                       </Select>
                     </div>
 
                     <div>
                       <div className="flex items-center justify-between gap-2">
                         <Label className="text-xs font-bold text-slate-655 mb-0">
-                          Nama Klien / Pelanggan {tipe === "PROJECT" && <span className="text-rose-500 font-bold">*</span>}
+                          Nama Pelanggan {tipe === "PROJECT" && <span className="text-rose-500 font-bold">*</span>}
                         </Label>
                         <CharCounter value={namaClient} max={FIELD_LIMITS.namaClient} />
                       </div>
@@ -860,7 +900,7 @@ export function KasirClient({ items }: { items: Item[] }) {
                         value={namaClient}
                         onChange={(e) => setNamaClient(e.target.value)}
                         maxLength={FIELD_LIMITS.namaClient}
-                        placeholder="Nama klien"
+                        placeholder="Nama pelanggan"
                         className="mt-1.5 h-10 rounded-xl"
                         onKeyDown={(e) => {
                           if (e.key === "Enter") {
@@ -873,7 +913,7 @@ export function KasirClient({ items }: { items: Item[] }) {
 
                     <div>
                       <div className="flex items-center justify-between gap-2">
-                        <Label className="text-xs font-bold text-slate-655 mb-0">Referensi Bengkel / Workshop</Label>
+                        <Label className="text-xs font-bold text-slate-655 mb-0">Referensi Bengkel</Label>
                         <CharCounter value={namaWs} max={FIELD_LIMITS.namaWs} />
                       </div>
                       <Input
@@ -881,7 +921,7 @@ export function KasirClient({ items }: { items: Item[] }) {
                         value={namaWs}
                         onChange={(e) => setNamaWs(e.target.value)}
                         maxLength={FIELD_LIMITS.namaWs}
-                        placeholder="Nama workshop (opsional)"
+                        placeholder="Nama bengkel (opsional)"
                         className="mt-1.5 h-10 rounded-xl"
                         onKeyDown={(e) => {
                           if (e.key === "Enter") {
@@ -983,7 +1023,7 @@ export function KasirClient({ items }: { items: Item[] }) {
                   <h3 className="text-sm font-bold text-foreground flex items-center gap-2">
                     <CreditCard size={18} className="text-primary-600" /> Langkah 3: Selesaikan Pembayaran
                   </h3>
-                  <Badge tone="green" className="text-xs">Kasir Checkout</Badge>
+                  <Badge tone="green" className="text-xs">Transaksi Kasir</Badge>
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -999,7 +1039,7 @@ export function KasirClient({ items }: { items: Item[] }) {
                             onChange={(e) => setIsSplitActive(e.target.checked)}
                             className="h-3.5 w-3.5 rounded border-slate-350 text-[var(--primary)] focus:ring-transparent cursor-pointer"
                           />
-                          Split Payment
+                          Bayar Gabungan
                         </label>
                       </div>
 
@@ -1009,7 +1049,7 @@ export function KasirClient({ items }: { items: Item[] }) {
                           onChange={(e) => setPaymentMethod(e.target.value as "CASH" | "TRANSFER" | "CREDIT")}
                           className="mt-1.5 w-full h-10 px-3 rounded-xl text-xs font-semibold outline-none"
                         >
-                          <option value="CASH">Tunai (Cash)</option>
+                          <option value="CASH">Tunai</option>
                           <option value="TRANSFER">Transfer Bank</option>
                           <option value="CREDIT">Kredit / Piutang (Tempo)</option>
                         </Select>
@@ -1115,7 +1155,7 @@ export function KasirClient({ items }: { items: Item[] }) {
                         onChange={(e) => setBuatInvoice(e.target.checked)}
                         className="h-4 w-4 rounded border-border text-[var(--primary)] focus:ring-transparent cursor-pointer"
                       />
-                      <span className="font-semibold">Otomatis buat Faktur Tagihan (Invoice)</span>
+                      <span className="font-semibold">Otomatis buat invoice tagihan</span>
                     </label>
                   </div>
 
@@ -1253,7 +1293,7 @@ export function KasirClient({ items }: { items: Item[] }) {
                     disabled={cart.length === 0}
                     className="w-full h-10 rounded-xl text-xs gap-1.5 text-slate-500 hover:text-red-600 hover:border-red-200 hover:bg-red-50 dark:hover:bg-red-900/20"
                   >
-                    <Trash2 size={13} /> Reset Keranjang
+                    <Trash2 size={13} /> Kosongkan Keranjang
                   </Button>
                   {cart.length === 0 && (
                     <p className="text-center text-[10px] text-slate-400 select-none">Tambahkan barang dari katalog untuk mulai.</p>
@@ -1280,7 +1320,7 @@ export function KasirClient({ items }: { items: Item[] }) {
                     <ArrowLeft size={13} /> Kembali ke Keranjang
                   </Button>
                   {tipe === "PROJECT" && !namaClient.trim() && (
-                    <p className="text-center text-[10px] text-amber-600 dark:text-amber-400 select-none">Isi nama klien dulu untuk transaksi proyek.</p>
+                    <p className="text-center text-[10px] text-amber-600 dark:text-amber-400 select-none">Isi nama pelanggan dulu untuk transaksi proyek.</p>
                   )}
                 </div>
               )}
@@ -1314,7 +1354,7 @@ export function KasirClient({ items }: { items: Item[] }) {
             {/* Hold/Pause Transactions (Only in Step 1 to keep things uncluttered) */}
             {step === 1 && (
               <Card className="p-4 space-y-3.5 anim-rise">
-                <h4 className="text-xs font-bold text-slate-600 dark:text-slate-400 tracking-wide uppercase border-b border-border pb-2">Penangguhan Struk</h4>
+                <h4 className="text-xs font-bold text-slate-600 dark:text-slate-400 tracking-wide uppercase border-b border-border pb-2">Transaksi Ditahan</h4>
                 
                 <div className="flex gap-2">
                   <input
@@ -1322,11 +1362,11 @@ export function KasirClient({ items }: { items: Item[] }) {
                     value={holdCartName}
                     onChange={(e) => setHoldCartName(e.target.value)}
                     maxLength={60}
-                    placeholder="Label hold"
+                    placeholder="Label transaksi ditahan"
                     className="h-9 w-full rounded-xl border border-border bg-slate-50/50 dark:bg-slate-800/50 px-2.5 text-xs text-foreground outline-none focus:border-[var(--primary)] focus:bg-card focus:ring-4 focus:ring-[var(--primary)]/10"
                   />
                   <Button size="sm" variant="outline" className="h-9 shrink-0 text-xs px-3 rounded-xl gap-1" onClick={handleHoldCart} disabled={cart.length === 0}>
-                    <Bookmark size={12} /> Hold
+                    <Bookmark size={12} /> Tahan
                   </Button>
                 </div>
 
@@ -1396,7 +1436,7 @@ export function KasirClient({ items }: { items: Item[] }) {
                 size="sm"
                 className="w-full h-9 bg-orange-50 dark:bg-orange-900/20 hover:bg-orange-100 dark:hover:bg-orange-900/30 border-orange-200 dark:border-orange-800 text-[var(--primary)] font-bold gap-1.5 rounded-xl cursor-pointer"
               >
-                <Camera size={14} /> Save to Image (PNG)
+                <Camera size={14} /> Simpan sebagai Gambar (PNG)
               </Button>
             </div>
           </div>
@@ -1405,7 +1445,7 @@ export function KasirClient({ items }: { items: Item[] }) {
 
       {/* Floating Bottom Dock for Mobile & Tablet (hidden on XL) */}
       {cart.length > 0 && (
-        <div className="xl:hidden fixed bottom-4 left-4 right-4 z-40 bg-white/90 dark:bg-slate-900/90 backdrop-blur-md border border-border/80 p-4 rounded-2xl shadow-[0_12px_40px_rgba(0,0,0,0.12)] flex items-center justify-between gap-4 select-none anim-rise no-print">
+        <div className="xl:hidden fixed bottom-[max(1rem,env(safe-area-inset-bottom))] left-4 right-4 z-40 bg-white/90 dark:bg-slate-900/90 backdrop-blur-md border border-border/80 p-4 rounded-2xl shadow-[0_12px_40px_rgba(0,0,0,0.12)] flex items-center justify-between gap-4 select-none anim-rise no-print">
           <div className="flex flex-col">
             <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wider">Total Belanja</span>
             <span className="text-base font-extrabold font-mono text-[var(--primary)]">{formatRupiah(grandTotalCost)}</span>

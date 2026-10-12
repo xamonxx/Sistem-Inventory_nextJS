@@ -7,7 +7,7 @@
  * Data 100% dari agregasi halaman (NgAnalisa) — tidak ada angka dikarang.
  */
 
-import type { Workbook, Worksheet } from "exceljs";
+import type { Workbook } from "exceljs";
 import type { NgAnalisa, NgSummary, NgTokoRow, NgProdukRow, NgTrenRow, NgKonsumenLaporanRow } from "@/lib/ngReports";
 import {
   COLOR,
@@ -22,7 +22,11 @@ import {
   autoFitColumns,
   writeSheetHeader,
   writeEmptyNotice,
+  setPrintHeaderRow,
+  writeSectionTitle,
   fillRow,
+  buildExportFileName,
+  downloadWorkbook,
 } from "./excelStyles";
 
 export interface ExportNgPayload {
@@ -38,11 +42,6 @@ function toFraction(percentValue: number): number {
   return safeNumber(percentValue) / 100;
 }
 
-function sectionTitle(ws: Worksheet, row: number, text: string) {
-  ws.getCell(row, 1).value = text;
-  ws.getCell(row, 1).font = { bold: true, size: 12, color: { argb: COLOR.headerText } };
-}
-
 // ===================== SHEET 1: RINGKASAN =====================
 
 function addRingkasanSheet(wb: Workbook, s: NgSummary, meta: MetaInfo) {
@@ -50,7 +49,7 @@ function addRingkasanSheet(wb: Workbook, s: NgSummary, meta: MetaInfo) {
   const lastCol = 3;
   let row = writeSheetHeader(ws, lastCol, meta);
 
-  sectionTitle(ws, row, "Ringkasan Analisa Margin");
+  writeSectionTitle(ws, row, "Ringkasan Analisa Margin", lastCol);
   row += 1;
 
   const headerRow = row;
@@ -61,9 +60,9 @@ function addRingkasanSheet(wb: Workbook, s: NgSummary, meta: MetaInfo) {
   const metrics: { label: string; value: number; fmt: string; note: string; fill?: string }[] = [
     { label: "Total Pembelian (Seluruh Toko)", value: s.totalPembelian, fmt: FMT_RUPIAH, note: "Modal beli dari semua toko sumber", fill: COLOR.blue },
     { label: "Total Omzet (Penjualan)", value: s.totalOmzet, fmt: FMT_RUPIAH, note: "Nilai jual ke konsumen", fill: COLOR.green },
-    { label: "Total Profit", value: s.totalProfit, fmt: FMT_RUPIAH, note: "Omzet - Pembelian", fill: COLOR.green },
-    { label: "Margin", value: toFraction(s.margin), fmt: FMT_PERCENT, note: "Profit / Omzet", fill: COLOR.yellow },
-    { label: "Markup", value: toFraction(s.markup), fmt: FMT_PERCENT, note: "Profit / Pembelian", fill: COLOR.yellow },
+    { label: "Total Keuntungan", value: s.totalProfit, fmt: FMT_RUPIAH, note: "Omzet - Pembelian", fill: COLOR.green },
+    { label: "Margin", value: toFraction(s.margin), fmt: FMT_PERCENT, note: "Keuntungan / Omzet", fill: COLOR.yellow },
+    { label: "Markup", value: toFraction(s.markup), fmt: FMT_PERCENT, note: "Keuntungan / Pembelian", fill: COLOR.yellow },
     { label: "Jumlah Invoice", value: s.jumlahInvoice, fmt: FMT_INT, note: "Total invoice pada periode" },
     { label: "Total Diterima", value: s.totalDibayar, fmt: FMT_RUPIAH, note: "Pembayaran konsumen masuk" },
     { label: "Sisa Piutang", value: s.totalPiutang, fmt: FMT_RUPIAH, note: "Tagihan belum lunas", fill: COLOR.orange },
@@ -77,7 +76,7 @@ function addRingkasanSheet(wb: Workbook, s: NgSummary, meta: MetaInfo) {
     v.numFmt = m.fmt;
     v.font = { bold: true };
     ws.getCell(row, 3).value = m.note;
-    if (m.fill) fillRow(ws, row, 1, lastCol, m.fill);
+    if (m.fill) fillRow(ws, row, 1, 1, m.fill);
     row += 1;
   }
   applyBorder(ws, headerRow, row - 1, lastCol);
@@ -85,7 +84,7 @@ function addRingkasanSheet(wb: Workbook, s: NgSummary, meta: MetaInfo) {
 
   // Blok status invoice
   row += 1;
-  sectionTitle(ws, row, "Status Invoice");
+  writeSectionTitle(ws, row, "Status Invoice", lastCol);
   row += 1;
   const stHeader = row;
   ["Status", "Jumlah", "Keterangan"].forEach((h, i) => (ws.getCell(stHeader, i + 1).value = h));
@@ -95,7 +94,7 @@ function addRingkasanSheet(wb: Workbook, s: NgSummary, meta: MetaInfo) {
   const statuses: { label: string; value: number; note: string; fill?: string }[] = [
     { label: "Lunas", value: s.jumlahLunas, note: "Sudah dibayar penuh", fill: COLOR.green },
     { label: "Tempo (Belum Bayar)", value: s.jumlahTempo, note: "Piutang penuh", fill: COLOR.yellow },
-    { label: "Sebagian (Partial)", value: s.jumlahPartial, note: "Dibayar sebagian", fill: COLOR.blue },
+    { label: "Sebagian", value: s.jumlahPartial, note: "Dibayar sebagian", fill: COLOR.blue },
     { label: "Terlambat", value: s.jumlahTerlambat, note: "Belum lunas & lewat jatuh tempo", fill: COLOR.red },
   ];
   for (const st of statuses) {
@@ -104,7 +103,7 @@ function addRingkasanSheet(wb: Workbook, s: NgSummary, meta: MetaInfo) {
     ws.getCell(row, 2).value = st.value;
     ws.getCell(row, 2).numFmt = FMT_INT;
     ws.getCell(row, 3).value = st.note;
-    if (st.fill) fillRow(ws, row, 1, lastCol, st.fill);
+    if (st.fill) fillRow(ws, row, 1, 1, st.fill);
     row += 1;
   }
   applyBorder(ws, stHeader, row - 1, lastCol);
@@ -119,11 +118,11 @@ function addPerTokoSheet(wb: Workbook, rows: NgTokoRow[], meta: MetaInfo) {
   const lastCol = 7;
   let row = writeSheetHeader(ws, lastCol, meta);
 
-  sectionTitle(ws, row, "Ranking Pembelian per Toko Sumber");
+  writeSectionTitle(ws, row, "Ranking Pembelian per Toko Sumber", lastCol);
   row += 1;
 
   const headerRow = row;
-  ["Ranking", "Toko Sumber", "Jml Invoice", "Total Qty", "Total Pembelian", "Total Omzet", "Margin"].forEach(
+  ["Ranking", "Toko Sumber", "Jml Invoice", "Total Jumlah", "Total Pembelian", "Total Omzet", "Margin"].forEach(
     (h, i) => (ws.getCell(headerRow, i + 1).value = h)
   );
   applyHeaderStyle(ws, headerRow, lastCol);
@@ -169,12 +168,17 @@ function addPerTokoSheet(wb: Workbook, rows: NgTokoRow[], meta: MetaInfo) {
     ws.getCell(row, 5).numFmt = FMT_RUPIAH;
     ws.getCell(row, 6).value = tOmzet;
     ws.getCell(row, 6).numFmt = FMT_RUPIAH;
-    for (let c = 1; c <= lastCol; c++) ws.getCell(row, c).font = { bold: true };
+    if (tOmzet > 0) {
+      ws.getCell(row, 7).value = (tOmzet - tPembelian) / tOmzet;
+      ws.getCell(row, 7).numFmt = FMT_PERCENT;
+    }
     fillRow(ws, row, 1, lastCol, COLOR.totalBg);
     row += 1;
   }
   applyBorder(ws, headerRow, row - 1, lastCol);
   autoFitColumns(ws, lastCol, 10, 44);
+  setPrintHeaderRow(ws, headerRow);
+  if (rows.length > 0) ws.autoFilter = { from: { row: headerRow, column: 1 }, to: { row: row - 2, column: lastCol } };
 }
 
 // ===================== SHEET 3: TOP PRODUK =====================
@@ -184,11 +188,11 @@ function addTopProdukSheet(wb: Workbook, rows: NgProdukRow[], meta: MetaInfo) {
   const lastCol = 7;
   let row = writeSheetHeader(ws, lastCol, meta);
 
-  sectionTitle(ws, row, "Top Produk (berdasarkan Omzet)");
+  writeSectionTitle(ws, row, "Top Produk (berdasarkan Omzet)", lastCol);
   row += 1;
 
   const headerRow = row;
-  ["Ranking", "Nama Barang", "Qty Terjual", "Pembelian", "Omzet", "Profit", "Margin"].forEach(
+  ["Ranking", "Nama Barang", "Jumlah Terjual", "Pembelian", "Omzet", "Keuntungan", "Margin"].forEach(
     (h, i) => (ws.getCell(headerRow, i + 1).value = h)
   );
   applyHeaderStyle(ws, headerRow, lastCol);
@@ -199,7 +203,15 @@ function addTopProdukSheet(wb: Workbook, rows: NgProdukRow[], meta: MetaInfo) {
     row += 1;
   } else {
     let rank = 1;
+    let tQty = 0;
+    let tPembelian = 0;
+    let tOmzet = 0;
+    let tProfit = 0;
     for (const p of rows) {
+      tQty += safeNumber(p.qty);
+      tPembelian += safeNumber(p.pembelian);
+      tOmzet += safeNumber(p.omzet);
+      tProfit += safeNumber(p.profit);
       ws.getCell(row, 1).value = rank++;
       ws.getCell(row, 1).alignment = { horizontal: "center" };
       ws.getCell(row, 2).value = safeText(p.nama);
@@ -215,9 +227,26 @@ function addTopProdukSheet(wb: Workbook, rows: NgProdukRow[], meta: MetaInfo) {
       ws.getCell(row, 7).numFmt = FMT_PERCENT;
       row += 1;
     }
+    ws.getCell(row, 2).value = "TOTAL";
+    ws.getCell(row, 3).value = tQty;
+    ws.getCell(row, 3).numFmt = FMT_INT;
+    ws.getCell(row, 4).value = tPembelian;
+    ws.getCell(row, 4).numFmt = FMT_RUPIAH;
+    ws.getCell(row, 5).value = tOmzet;
+    ws.getCell(row, 5).numFmt = FMT_RUPIAH;
+    ws.getCell(row, 6).value = tProfit;
+    ws.getCell(row, 6).numFmt = FMT_RUPIAH;
+    if (tOmzet > 0) {
+      ws.getCell(row, 7).value = tProfit / tOmzet;
+      ws.getCell(row, 7).numFmt = FMT_PERCENT;
+    }
+    fillRow(ws, row, 1, lastCol, COLOR.totalBg);
+    row += 1;
   }
   applyBorder(ws, headerRow, row - 1, lastCol);
   autoFitColumns(ws, lastCol, 10, 44);
+  setPrintHeaderRow(ws, headerRow);
+  if (rows.length > 0) ws.autoFilter = { from: { row: headerRow, column: 1 }, to: { row: row - 2, column: lastCol } };
 }
 
 // ===================== SHEET 4: TREN BULANAN =====================
@@ -227,11 +256,11 @@ function addTrenSheet(wb: Workbook, rows: NgTrenRow[], meta: MetaInfo) {
   const lastCol = 5;
   let row = writeSheetHeader(ws, lastCol, meta);
 
-  sectionTitle(ws, row, "Tren Pembelian, Omzet & Profit per Bulan");
+  writeSectionTitle(ws, row, "Tren Pembelian, Omzet & Keuntungan per Bulan", lastCol);
   row += 1;
 
   const headerRow = row;
-  ["Periode", "Pembelian", "Omzet", "Profit", "Margin"].forEach((h, i) => (ws.getCell(headerRow, i + 1).value = h));
+  ["Periode", "Pembelian", "Omzet", "Keuntungan", "Margin"].forEach((h, i) => (ws.getCell(headerRow, i + 1).value = h));
   applyHeaderStyle(ws, headerRow, lastCol);
   row += 1;
 
@@ -267,12 +296,12 @@ function addTrenSheet(wb: Workbook, rows: NgTrenRow[], meta: MetaInfo) {
     ws.getCell(row, 4).numFmt = FMT_RUPIAH;
     ws.getCell(row, 5).value = tOmzet > 0 ? tProfit / tOmzet : 0;
     ws.getCell(row, 5).numFmt = FMT_PERCENT;
-    for (let c = 1; c <= lastCol; c++) ws.getCell(row, c).font = { bold: true };
     fillRow(ws, row, 1, lastCol, COLOR.totalBg);
     row += 1;
   }
   applyBorder(ws, headerRow, row - 1, lastCol);
   autoFitColumns(ws, lastCol, 12, 40);
+  setPrintHeaderRow(ws, headerRow);
 }
 
 // ===================== SHEET 5 (opsional): PER KONSUMEN =====================
@@ -282,11 +311,11 @@ function addPerKonsumenSheet(wb: Workbook, rows: NgKonsumenLaporanRow[], meta: M
   const lastCol = 8;
   let row = writeSheetHeader(ws, lastCol, meta);
 
-  sectionTitle(ws, row, "Rekap Penjualan & Piutang per Konsumen");
+  writeSectionTitle(ws, row, "Rekap Penjualan & Piutang per Konsumen", lastCol);
   row += 1;
 
   const headerRow = row;
-  ["Ranking", "Konsumen", "Grup / Proyek", "Jml Invoice", "Omzet", "Diterima", "Sisa Piutang", "Profit"].forEach(
+  ["Ranking", "Konsumen", "Grup / Proyek", "Jml Invoice", "Omzet", "Diterima", "Sisa Piutang", "Keuntungan"].forEach(
     (h, i) => (ws.getCell(headerRow, i + 1).value = h)
   );
   applyHeaderStyle(ws, headerRow, lastCol);
@@ -335,26 +364,25 @@ function addPerKonsumenSheet(wb: Workbook, rows: NgKonsumenLaporanRow[], meta: M
     ws.getCell(row, 7).numFmt = FMT_RUPIAH;
     ws.getCell(row, 8).value = tProfit;
     ws.getCell(row, 8).numFmt = FMT_RUPIAH;
-    for (let c = 1; c <= lastCol; c++) ws.getCell(row, c).font = { bold: true };
     fillRow(ws, row, 1, lastCol, COLOR.totalBg);
     row += 1;
   }
   applyBorder(ws, headerRow, row - 1, lastCol);
   autoFitColumns(ws, lastCol, 10, 44);
+  setPrintHeaderRow(ws, headerRow);
+  if (rows.length > 0) ws.autoFilter = { from: { row: headerRow, column: 1 }, to: { row: row - 2, column: lastCol } };
 }
 
 // ===================== ORCHESTRATOR =====================
 
 function buildFileName(): string {
-  const now = new Date();
-  const p = (n: number) => String(n).padStart(2, "0");
-  return `Analisa-NonGudang_${now.getFullYear()}${p(now.getMonth() + 1)}${p(now.getDate())}_${p(now.getHours())}${p(now.getMinutes())}.xlsx`;
+  return buildExportFileName("Analisa-NonGudang");
 }
 
 export async function buildNgWorkbook(payload: ExportNgPayload): Promise<Workbook> {
   const ExcelJS = (await import("exceljs")).default;
   const wb: Workbook = new ExcelJS.Workbook();
-  wb.creator = "Sistem Inventory ERP";
+  wb.creator = "Sistem Inventory";
   wb.created = new Date();
 
   const meta: MetaInfo = {
@@ -376,19 +404,6 @@ export async function buildNgWorkbook(payload: ExportNgPayload): Promise<Workboo
 export async function exportNgExcel(payload: ExportNgPayload): Promise<string> {
   const wb = await buildNgWorkbook(payload);
   const fileName = buildFileName();
-
-  const buffer = await wb.xlsx.writeBuffer();
-  const blob = new Blob([buffer], {
-    type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-  });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement("a");
-  a.href = url;
-  a.download = fileName;
-  document.body.appendChild(a);
-  a.click();
-  document.body.removeChild(a);
-  URL.revokeObjectURL(url);
-
+  await downloadWorkbook(wb, fileName);
   return fileName;
 }

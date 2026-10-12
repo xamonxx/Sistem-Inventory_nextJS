@@ -27,7 +27,7 @@ import { Nota, type NotaData } from "@/components/Nota";
 import { DatePicker } from "@/components/DatePicker";
 import { Tooltip } from "@/components/Tooltip";
 import { PeriodFilter, type ResolvedPeriodRange } from "@/components/PeriodFilter";
-import { Badge, Button, Card, CurrencyInput, Input, Label, Select, Table, TableActionButton, Td, Th } from "@/components/ui";
+import { Badge, Button, Card, CurrencyInput, Input, QtyInput, Label, Select, Table, TableActionButton, Td, Th } from "@/components/ui";
 import { FIELD_LIMITS } from "@/lib/fieldLimits";
 import { computeNgCart } from "@/lib/ngMargin";
 import { printArea, setPdfTitle } from "@/lib/print";
@@ -317,7 +317,7 @@ export function NgInvoiceClient({
             >
               <option value="ALL">Semua Status</option>
               <option value="PENDING">Tempo (Belum Bayar)</option>
-              <option value="PARTIAL">Sebagian (Partial)</option>
+              <option value="PARTIAL">Sebagian</option>
               <option value="LUNAS">Lunas</option>
             </Select>
           </div>
@@ -479,7 +479,7 @@ export function NgInvoiceClient({
               onClick={() => setNotaId(null)}
             >
               <div
-                className={`flex h-[calc(100vh-2rem)] w-full flex-col overflow-hidden rounded-xl border border-border bg-card shadow-2xl ${
+                className={`flex h-[calc(100dvh-2rem)] w-full flex-col overflow-hidden rounded-xl border border-border bg-card shadow-2xl ${
                   previewIsA4 ? "max-w-[880px]" : "max-w-md"
                 }`}
                 onClick={(e) => e.stopPropagation()}
@@ -532,7 +532,7 @@ export function NgInvoiceClient({
                     size="sm"
                     className="w-full justify-center gap-1.5 rounded-md border-orange-200 bg-orange-50 font-bold text-[var(--primary)] hover:bg-orange-100 dark:border-orange-800 dark:bg-orange-900/20 dark:hover:bg-orange-900/30 sm:w-auto"
                   >
-                    <Camera size={14} /> Save to Image (PNG)
+                    <Camera size={14} /> Simpan sebagai Gambar (PNG)
                   </Button>
                   <div className={`grid gap-2.5 ${previewIsA4 ? "grid-cols-1 sm:grid-cols-[80px_minmax(170px,1fr)]" : "grid-cols-[92px_minmax(0,1fr)]"}`}>
                     <Button variant="outline" size="sm" onClick={() => setNotaId(null)} className="w-full justify-center">
@@ -714,11 +714,11 @@ function DetailDrawer({
   const belumLunas = row.status !== "LUNAS";
   return (
     <div
-      className="fixed inset-0 z-[2147483000] flex justify-end bg-slate-950/55 backdrop-blur-sm"
+      className="anim-backdrop-in fixed inset-0 z-[2147483000] flex justify-end bg-slate-950/55 backdrop-blur-sm"
       onClick={onClose}
     >
       <div
-        className="flex h-full w-full max-w-3xl flex-col overflow-hidden border-l border-sky-100 bg-slate-50 shadow-2xl dark:border-sky-900/40 dark:bg-slate-950"
+        className="anim-slide-in-right flex h-full w-full max-w-3xl flex-col overflow-hidden border-l border-sky-100 bg-slate-50 shadow-2xl dark:border-sky-900/40 dark:bg-slate-950"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="relative overflow-hidden border-b border-sky-100 bg-gradient-to-br from-white via-sky-50 to-cyan-50 px-5 py-5 dark:border-sky-900/40 dark:from-slate-900 dark:via-slate-900 dark:to-sky-950/45">
@@ -750,7 +750,7 @@ function DetailDrawer({
             <Info label="Tanggal" value={formatTanggal(row.tanggal)} />
             <Info label="Toko Sumber" value={row.namaToko} />
             <Info label="Jatuh Tempo" value={row.jatuhTempo ? formatTanggal(row.jatuhTempo) : "-"} />
-            <Info label="Workshop" value={row.namaWorkshop || "-"} />
+            <Info label="Bengkel" value={row.namaWorkshop || "-"} />
             {row.namaGrup && <Info label="Grup" value={row.namaGrup} />}
             {row.alamat && <Info label="Alamat" value={row.alamat} />}
           </div>
@@ -768,7 +768,7 @@ function DetailDrawer({
                   <Th className="text-right">Qty</Th>
                   <Th className="text-right">Modal</Th>
                   <Th className="text-right">Jual</Th>
-                  <Th className="text-right">Profit</Th>
+                  <Th className="text-right">Keuntungan</Th>
                 </tr>
               </thead>
               <tbody>
@@ -793,7 +793,7 @@ function DetailDrawer({
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
             <SummaryStat label="Total Modal" value={formatRupiah(row.totalModal)} />
             <SummaryStat label="Total Penjualan" value={formatRupiah(row.totalPenjualan)} />
-            <SummaryStat label="Total Profit" value={formatRupiah(row.totalProfit)} accent />
+            <SummaryStat label="Total Keuntungan" value={formatRupiah(row.totalProfit)} accent />
             <SummaryStat label="Margin" value={`${row.margin.toFixed(2)}%`} />
             <SummaryStat label="Markup" value={`${row.markup.toFixed(2)}%`} />
           </div>
@@ -1103,7 +1103,7 @@ function EditModal({
       return;
     }
     if (!canSave) {
-      toast.error("Periksa kembali barang: nama, qty, dan harga jual ≥ harga beli.");
+      toast.error("Periksa kembali barang: nama, jumlah, dan harga jual ≥ harga beli.");
       return;
     }
     startTransition(async () => {
@@ -1143,7 +1143,7 @@ function EditModal({
       onClick={onClose}
     >
       <div
-        className="flex h-[calc(100vh-2rem)] w-full max-w-5xl flex-col overflow-hidden rounded-xl border border-sky-100 bg-slate-50 shadow-2xl dark:border-sky-900/40 dark:bg-slate-950"
+        className="flex h-[calc(100dvh-2rem)] w-full max-w-5xl flex-col overflow-hidden rounded-xl border border-sky-100 bg-slate-50 shadow-2xl dark:border-sky-900/40 dark:bg-slate-950"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="relative flex shrink-0 items-center justify-between overflow-hidden border-b border-sky-100 bg-gradient-to-br from-white via-sky-50 to-cyan-50 px-5 py-4 dark:border-sky-900/40 dark:from-slate-900 dark:via-slate-900 dark:to-sky-950/45">
@@ -1185,7 +1185,7 @@ function EditModal({
               <Input value={namaGrup} onChange={(e) => setNamaGrup(e.target.value)} maxLength={FIELD_LIMITS.projectGroupNama} />
             </div>
             <div>
-              <Label>Workshop</Label>
+              <Label>Bengkel</Label>
               <Input value={namaWorkshop} onChange={(e) => setNamaWorkshop(e.target.value)} maxLength={FIELD_LIMITS.namaWs} />
             </div>
             <div className="sm:col-span-2">
@@ -1270,12 +1270,10 @@ function EditModal({
                     <div className="mt-2 grid grid-cols-1 gap-2 sm:grid-cols-3">
                       <label className="text-[10px] font-semibold uppercase text-slate-400">
                         Qty
-                        <Input
-                          type="number"
-                          min={1}
+                        <QtyInput
                           max={FIELD_LIMITS.maxQty}
                           value={l.qty}
-                          onChange={(e) => patchLine(l.key, { qty: Math.max(1, Math.trunc(Number(e.target.value) || 0)) })}
+                          onCommit={(n) => patchLine(l.key, { qty: n })}
                           className="mt-0.5 h-10 rounded-md bg-white text-sm font-bold dark:bg-slate-900"
                         />
                       </label>
@@ -1322,7 +1320,7 @@ function EditModal({
               <p className="font-bold">{formatRupiah(computed.totalPenjualan)}</p>
             </div>
             <div>
-              <p className="text-slate-500">Total Profit</p>
+              <p className="text-slate-500">Total Keuntungan</p>
               <p className="font-bold text-emerald-600 dark:text-emerald-400">{formatRupiah(computed.totalProfit)}</p>
             </div>
             <div>

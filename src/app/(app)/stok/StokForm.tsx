@@ -166,7 +166,7 @@ export function StokForm({ items }: { items: Item[] }) {
                     : "text-slate-500 hover:text-slate-700"
                 }`}
               >
-                Restock (Tambah)
+                Tambah Stok
               </button>
               <button
                 type="button"
@@ -177,7 +177,7 @@ export function StokForm({ items }: { items: Item[] }) {
                     : "text-slate-500 hover:text-slate-700"
                 }`}
               >
-                Koreksi (Opname)
+                Koreksi Stok
               </button>
             </div>
 
@@ -197,7 +197,7 @@ export function StokForm({ items }: { items: Item[] }) {
                     if (e.key === "Escape") setShowSuggestions(false);
                   }}
                   maxLength={FIELD_LIMITS.search}
-                  placeholder="Ketik SKU atau nama barang..."
+                  placeholder="Ketik kode atau nama barang..."
                   autoComplete="off"
                 />
 
@@ -238,19 +238,19 @@ export function StokForm({ items }: { items: Item[] }) {
 
               {stokTab === "MASUK" ? (
                 <div>
-                  <Label>Qty Masuk</Label>
+                  <Label>Jumlah Masuk</Label>
                   <Input type="number" min={1} max={FIELD_LIMITS.maxQty} value={qtyMasuk} onChange={(e) => setQtyMasuk(e.target.value)} required />
                 </div>
               ) : (
                 <div>
-                  <Label>Stok Seharusnya (hasil opname)</Label>
+                  <Label>Stok Fisik (hasil hitung)</Label>
                   <Input
                     type="number"
                     min={0}
                     max={FIELD_LIMITS.maxQty}
                     value={stokSeharusnya}
                     onChange={(e) => setStokSeharusnya(e.target.value)}
-                    placeholder="Stok fisik hasil opname"
+                    placeholder="Stok fisik hasil hitung"
                     required
                   />
                 </div>

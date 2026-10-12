@@ -9,8 +9,8 @@ import { z } from "zod";
 import { FIELD_LIMITS } from "@/lib/fieldLimits";
 
 const loginSchema = z.object({
-  username: z.string().min(1, "Username harus diisi").max(FIELD_LIMITS.username).trim(),
-  password: z.string().min(1, "Password harus diisi").max(FIELD_LIMITS.passwordMax),
+  username: z.string().min(1, "Nama Pengguna harus diisi").max(FIELD_LIMITS.username).trim(),
+  password: z.string().min(1, "Kata Sandi harus diisi").max(FIELD_LIMITS.passwordMax),
 });
 
 // Hash dummy untuk menyamakan waktu proses saat username tidak ditemukan
@@ -40,7 +40,7 @@ export async function loginAction(_prev: unknown, formData: FormData) {
     password: formData.get("password"),
   });
   if (!parsed.success) {
-    return { error: "Username atau password salah." };
+    return { error: "Nama Pengguna atau kata sandi salah." };
   }
   const { username, password } = parsed.data;
 
@@ -63,7 +63,7 @@ export async function loginAction(_prev: unknown, formData: FormData) {
   const ok = await bcrypt.compare(password, user?.password ?? DUMMY_HASH);
 
   if (!user || !user.aktif || !ok) {
-    return { error: "Username atau password salah." };
+    return { error: "Nama Pengguna atau kata sandi salah." };
   }
 
   await createSession({ id: user.id, username: user.username, nama: user.nama, role: user.role });

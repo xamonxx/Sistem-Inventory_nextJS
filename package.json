@@ -19,6 +19,8 @@
     "db:seed:ng": "tsx prisma/seedNonGudang.ts",
     "db:seed:200": "tsx prisma/seed-200.ts",
     "db:clear": "tsx prisma/clear.ts",
+    "db:seed:dummy": "tsx prisma/seed-dummy.ts",
+    "db:clear:dummy": "tsx prisma/clear-dummy.ts",
     "db:audit:stock": "tsx scripts/fix-stock-seed-duplication.ts",
     "db:fix:stock": "tsx scripts/fix-stock-seed-duplication.ts --apply",
     "db:add-items": "tsx scripts/add-items.ts",

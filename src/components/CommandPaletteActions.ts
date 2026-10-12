@@ -38,7 +38,7 @@ async function searchGudang(q: string, role: Role): Promise<SearchResult[]> {
         id: it.id,
         type: "item",
         title: it.nama,
-        subtitle: `Barang • SKU: ${it.kode} • Harga: Rp ${Number(it.hargaJual).toLocaleString("id-ID")}`,
+        subtitle: `Barang • Kode: ${it.kode} • Harga: Rp ${Number(it.hargaJual).toLocaleString("id-ID")}`,
         link: `/barang?id=${it.id}`,
       });
     });
@@ -55,7 +55,7 @@ async function searchGudang(q: string, role: Role): Promise<SearchResult[]> {
       id: inv.id,
       type: "invoice",
       title: inv.noInvoice,
-      subtitle: `Invoice • Klien: ${inv.namaClient ?? "Pelanggan Umum"} • Total: Rp ${Number(inv.total).toLocaleString("id-ID")}`,
+      subtitle: `Invoice • Pelanggan: ${inv.namaClient ?? "Pelanggan Umum"} • Total: Rp ${Number(inv.total).toLocaleString("id-ID")}`,
       link: `/invoice?id=${inv.id}`,
     });
   });
@@ -69,7 +69,7 @@ async function searchGudang(q: string, role: Role): Promise<SearchResult[]> {
       id: c.id,
       type: "client",
       title: c.nama,
-      subtitle: `Klien/Customer • Alamat: ${c.alamat ?? "—"}`,
+      subtitle: `Pelanggan • Alamat: ${c.alamat ?? "—"}`,
       link: `/invoice?client=${encodeURIComponent(c.nama)}`,
     });
   });

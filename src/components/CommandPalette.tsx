@@ -37,23 +37,23 @@ type NavItem = {
 const ALL_NAV: NavItem[] = [
   // ===== Gudang / Kasir =====
   { title: "Dashboard", subtitle: "Ringkasan operasional harian", icon: LayoutDashboard, link: "/", roles: ["ADMIN_KASIR", "ADMIN_GUDANG"], keywords: "beranda home utama ringkasan" },
-  { title: "Transaksi POS (Kasir)", subtitle: "Mulai transaksi eceran atau proyek", icon: ShoppingCart, link: "/kasir", roles: ["ADMIN_KASIR"], keywords: "pos jual penjualan kasir eceran checkout" },
+  { title: "Transaksi Kasir", subtitle: "Mulai transaksi eceran atau proyek", icon: ShoppingCart, link: "/kasir", roles: ["ADMIN_KASIR"], keywords: "pos jual penjualan kasir eceran checkout" },
   { title: "Master Barang & Plywood", subtitle: "Katalog barang dan harga jual", icon: Boxes, link: "/barang", roles: ["ADMIN_GUDANG"], keywords: "produk sku katalog plywood material harga" },
-  { title: "Input Stok / Restok", subtitle: "Tambah mutasi masuk material", icon: PackagePlus, link: "/stok", roles: ["ADMIN_GUDANG"], keywords: "gudang inventory persediaan restok stok masuk" },
+  { title: "Input Stok / Restok", subtitle: "Catat barang masuk", icon: PackagePlus, link: "/stok", roles: ["ADMIN_GUDANG"], keywords: "gudang inventory persediaan restok stok masuk" },
   { title: "Retur / Tukar Barang", subtitle: "Pengembalian atau penggantian barang", icon: RotateCcw, link: "/retur", roles: ["ADMIN_KASIR", "ADMIN_GUDANG"], keywords: "kembali tukar ganti refund retur" },
-  { title: "Invoice & Piutang Berjalan", subtitle: "Pantau cicilan invoice dan jatuh tempo", icon: FileText, link: "/invoice", roles: ["ADMIN_KASIR", "ADMIN_GUDANG"], keywords: "tagihan piutang faktur cicilan tempo" },
-  { title: "Laporan Pendapatan & Omset", subtitle: "Analisis data penjualan bulanan", icon: BarChart3, link: "/laporan", roles: ["ADMIN_GUDANG"], keywords: "report laporan analisa omset margin penjualan export" },
-  { title: "Log Aktivitas", subtitle: "Audit trail operasional sistem", icon: History, link: "/log-aktivitas", roles: ["ADMIN_GUDANG"], keywords: "audit histori aktivitas log jejak" },
-  { title: "Pengguna", subtitle: "Manajemen akun operator", icon: Users, link: "/pengguna", roles: ["ADMIN_GUDANG"], keywords: "user akun staff operator pengguna" },
+  { title: "Invoice & Piutang Berjalan", subtitle: "Pantau cicilan invoice dan jatuh tempo", icon: FileText, link: "/invoice", roles: ["ADMIN_KASIR", "ADMIN_GUDANG"], keywords: "tagihan piutang invoice cicilan tempo" },
+  { title: "Laporan Pendapatan & Omzet", subtitle: "Analisis data penjualan bulanan", icon: BarChart3, link: "/laporan", roles: ["ADMIN_GUDANG"], keywords: "report laporan analisa omset margin penjualan export" },
+  { title: "Log Aktivitas", subtitle: "Catatan aktivitas pengguna", icon: History, link: "/log-aktivitas", roles: ["ADMIN_GUDANG"], keywords: "audit histori aktivitas log jejak" },
+  { title: "Pengguna", subtitle: "Kelola akun pengguna", icon: Users, link: "/pengguna", roles: ["ADMIN_GUDANG"], keywords: "user akun staff operator pengguna" },
 
   // ===== Non-Gudang (trading) =====
   { title: "Dashboard Non-Gudang", subtitle: "Analisa margin trading", icon: LayoutDashboard, link: "/non-gudang", roles: ["ADMIN_NONGUDANG"], keywords: "beranda ringkasan margin analisa dashboard" },
   { title: "Master Barang Non-Gudang", subtitle: "Barang dari toko sumber", icon: Boxes, link: "/non-gudang/barang", roles: ["ADMIN_NONGUDANG"], keywords: "produk katalog toko harga barang" },
-  { title: "Keranjang CO Non-Gudang", subtitle: "Susun barang toko sumber & buat invoice NG", icon: ShoppingCart, link: "/non-gudang/buat-invoice", roles: ["ADMIN_NONGUDANG"], keywords: "co keranjang buat invoice checkout beli" },
-  { title: "Riwayat Invoice Non-Gudang", subtitle: "Invoice & piutang konsumen", icon: FileText, link: "/non-gudang/invoice", roles: ["ADMIN_NONGUDANG"], keywords: "faktur tagihan piutang cicilan tempo invoice" },
+  { title: "Keranjang Invoice Non-Gudang", subtitle: "Susun barang toko sumber & buat invoice Non-Gudang", icon: ShoppingCart, link: "/non-gudang/buat-invoice", roles: ["ADMIN_NONGUDANG"], keywords: "co keranjang buat invoice checkout beli" },
+  { title: "Riwayat Invoice Non-Gudang", subtitle: "Invoice & piutang konsumen", icon: FileText, link: "/non-gudang/invoice", roles: ["ADMIN_NONGUDANG"], keywords: "invoice tagihan piutang cicilan tempo invoice" },
   { title: "Riwayat Pembelian", subtitle: "Rekap pembelian per toko sumber", icon: Store, link: "/non-gudang/pembelian", roles: ["ADMIN_NONGUDANG"], keywords: "beli pembelian modal toko supplier sumber" },
-  { title: "Konsumen", subtitle: "Master pelanggan non-gudang", icon: UserRound, link: "/non-gudang/konsumen", roles: ["ADMIN_NONGUDANG"], keywords: "pelanggan customer klien crm konsumen" },
-  { title: "Laporan Non-Gudang", subtitle: "Export & rekap per konsumen", icon: BarChart3, link: "/non-gudang/laporan", roles: ["ADMIN_NONGUDANG"], keywords: "report laporan export excel pdf rekap konsumen" },
+  { title: "Konsumen", subtitle: "Master pelanggan non-gudang", icon: UserRound, link: "/non-gudang/konsumen", roles: ["ADMIN_NONGUDANG"], keywords: "pelanggan customer pelanggan crm konsumen" },
+  { title: "Laporan Non-Gudang", subtitle: "Unduh rekap per konsumen", icon: BarChart3, link: "/non-gudang/laporan", roles: ["ADMIN_NONGUDANG"], keywords: "report laporan export excel pdf rekap konsumen" },
 ];
 
 type FlatItem = { kind: "action"; action: NavItem } | { kind: "result"; result: SearchResult };
@@ -197,7 +197,7 @@ export function CommandPalette({ role }: { role: Role }) {
             onChange={(e) => setQuery(e.target.value)}
             onKeyDown={handleKeyDown}
             maxLength={80}
-            placeholder="Cari barang, invoice, klien, menu, atau aksi..."
+            placeholder="Cari barang, invoice, pelanggan, menu, atau aksi..."
             className="w-full bg-transparent text-foreground dark:text-slate-100 outline-none placeholder:text-slate-450 dark:placeholder:text-slate-500 text-base"
           />
           <kbd className="hidden sm:inline-flex h-5 items-center gap-1 rounded border border-border dark:border-slate-800 bg-slate-50 dark:bg-slate-900 px-1.5 font-mono text-[10px] font-medium text-slate-400 dark:text-slate-500">

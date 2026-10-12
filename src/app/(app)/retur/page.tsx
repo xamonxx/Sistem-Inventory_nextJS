@@ -3,7 +3,19 @@ import { prisma } from "@/lib/prisma";
 import { ReturClient } from "./ReturClient";
 
 export default async function ReturPage() {
-  await requireUser();
+  const user = await requireUser();
+
+  if (user.role !== "ADMIN_KASIR" && user.role !== "ADMIN_GUDANG") {
+    return (
+      <div className="rounded-xl border border-red-200 bg-red-50 p-6">
+        <h1 className="text-xl font-bold text-red-800">Akses Ditolak</h1>
+        <p className="mt-2 text-sm text-red-700">
+          Menu Retur / Tukar hanya diizinkan untuk <strong>Admin Kasir</strong> dan <strong>Admin Gudang / Owner</strong>.
+        </p>
+      </div>
+    );
+  }
+
   const items = await prisma.item.findMany({ where: { aktif: true }, orderBy: { nama: "asc" } });
   const data = items.map((i) => ({ id: i.id, kode: i.kode, nama: i.nama, hargaJual: Number(i.hargaJual) }));
 

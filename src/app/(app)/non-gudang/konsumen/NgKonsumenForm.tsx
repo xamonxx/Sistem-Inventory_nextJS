@@ -120,7 +120,7 @@ export function NgKonsumenForm({ triggerClassName }: { triggerClassName?: string
               </div>
 
               <div>
-                <Label>Nama Workshop</Label>
+                <Label>Nama Bengkel</Label>
                 <Input name="namaWorkshop" defaultValue={editing?.namaWorkshop ?? ""} maxLength={FIELD_LIMITS.namaWs} placeholder="mis. WS Bengkel Las (opsional)" />
               </div>
 

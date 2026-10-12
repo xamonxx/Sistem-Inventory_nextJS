@@ -341,7 +341,7 @@ export function NgBuatInvoiceClient({
       setQ("");
       setItemDraft(EMPTY_ITEM_DRAFT);
       setSelectedCatalogId(null);
-      toast.info(`Keranjang direset untuk toko ${normalizedStore}.`);
+      toast.info(`Keranjang dikosongkan untuk toko ${normalizedStore}.`);
     } else {
       setTokoSumber(normalizedStore);
     }
@@ -359,7 +359,7 @@ export function NgBuatInvoiceClient({
     setItemDraft(EMPTY_ITEM_DRAFT);
     setSelectedCatalogId(null);
     setActiveStep(1);
-    toast.info("Keranjang CO dibersihkan.");
+    toast.info("Keranjang Invoice dibersihkan.");
   }
 
   function handleAddOrUpdateItem() {
@@ -408,8 +408,8 @@ export function NgBuatInvoiceClient({
         setItemDropdownOpen(false);
         toast.success(
           resolved.updatedExisting
-            ? `Barang "${resolved.product.nama}" diperbarui lalu ditambahkan ke CO.`
-            : `Barang "${resolved.product.nama}" ditambahkan ke CO.`
+            ? `Barang "${resolved.product.nama}" diperbarui lalu ditambahkan ke invoice.`
+            : `Barang "${resolved.product.nama}" ditambahkan ke invoice.`
         );
       }
     });
@@ -432,7 +432,7 @@ export function NgBuatInvoiceClient({
         setSelectedCatalogId(null);
         setItemDropdownOpen(false);
         setPriceConflict(null);
-        toast.success(`Barang "${forced.product.nama}" diperbarui dan ditambahkan ke CO.`);
+        toast.success(`Barang "${forced.product.nama}" diperbarui dan ditambahkan ke invoice.`);
       }
     });
   }
@@ -443,7 +443,7 @@ export function NgBuatInvoiceClient({
       return;
     }
     if (cart.length === 0) {
-      toast.warning("Keranjang CO masih kosong.");
+      toast.warning("Keranjang Invoice masih kosong.");
       return;
     }
 
@@ -573,21 +573,21 @@ export function NgBuatInvoiceClient({
           <div className="p-5 md:p-6">
             <p className="inline-flex items-center gap-2 rounded-md border border-sky-200 bg-sky-50 px-3 py-1 text-[11px] font-black uppercase tracking-[0.18em] text-[var(--primary-strong)] dark:border-sky-900/60 dark:bg-sky-950/35">
               <span className="h-1.5 w-1.5 rounded-full bg-[var(--primary)]" />
-              Keranjang CO Non-Gudang
+              Keranjang Invoice Non-Gudang
             </p>
             <h1 className="mt-5 max-w-3xl text-3xl font-black tracking-[-0.04em] text-foreground md:text-5xl">
-              Keranjang CO &amp; Buat Invoice
+              Keranjang &amp; Buat Invoice
             </h1>
             <p className="mt-3 max-w-3xl text-sm font-medium leading-6 text-slate-600 dark:text-slate-300 md:text-base">
-              Mulai dari toko sumber, input barang, cek margin, lalu generate invoice NG. Barang yang sama tetap bisa diperbarui lewat konfirmasi agar data CO aman.
+              Mulai dari toko sumber, input barang, cek margin, lalu generate invoice Non-Gudang. Barang yang sama tetap bisa diperbarui lewat konfirmasi agar data invoice aman.
             </p>
           </div>
 
           <div className="grid grid-cols-2 border-t border-[var(--glass-border)] bg-white/40 dark:bg-white/[0.02] lg:border-l lg:border-t-0">
             <CheckoutHeaderMetric label="Langkah Aktif" value={`${activeStep}/3`} hint={activeStep === 1 ? "pilih toko" : activeStep === 2 ? "input barang" : "data invoice"} icon={<FileText size={18} />} />
             <CheckoutHeaderMetric label="Toko Sumber" value={tokoSumber || "-"} hint={tokoSumber ? "siap dipakai" : "belum dipilih"} icon={<Store size={18} />} />
-            <CheckoutHeaderMetric label="Item CO" value={`${cart.length}`} hint={`${computedTotalQty} total qty`} icon={<ShoppingCart size={18} />} />
-            <CheckoutHeaderMetric label="Profit" value={formatRupiah(computed.totalProfit)} hint={`${computed.margin}% margin`} icon={<Wallet size={18} />} accent="text-emerald-600 dark:text-emerald-300" />
+            <CheckoutHeaderMetric label="Item Invoice" value={`${cart.length}`} hint={`${computedTotalQty} total qty`} icon={<ShoppingCart size={18} />} />
+            <CheckoutHeaderMetric label="Keuntungan" value={formatRupiah(computed.totalProfit)} hint={`${computed.margin}% margin`} icon={<Wallet size={18} />} accent="text-emerald-600 dark:text-emerald-300" />
           </div>
         </div>
       </header>
@@ -600,7 +600,7 @@ export function NgBuatInvoiceClient({
             style={{ width: activeStep === 1 ? "0%" : activeStep === 2 ? "40%" : "80%" }}
           />
           <StepDot step={1} activeStep={activeStep} label="Toko" done={activeStep > 1} onClick={() => setActiveStep(1)} />
-          <StepDot step={2} activeStep={activeStep} label="Barang CO" done={activeStep > 2} onClick={() => tokoSumber && setActiveStep(2)} disabled={!tokoSumber} />
+          <StepDot step={2} activeStep={activeStep} label="Barang Invoice" done={activeStep > 2} onClick={() => tokoSumber && setActiveStep(2)} disabled={!tokoSumber} />
           <StepDot step={3} activeStep={activeStep} label="Invoice" done={false} onClick={() => cart.length > 0 && setActiveStep(3)} disabled={cart.length === 0} />
         </div>
       </Card>
@@ -612,7 +612,7 @@ export function NgBuatInvoiceClient({
               <div className="flex items-center justify-between gap-3">
                 <div>
                   <h2 className="text-sm font-bold text-foreground">1. Pilih Toko Sumber</h2>
-                  <p className="mt-1 text-xs text-slate-500">Mulai CO dengan menentukan toko sumber terlebih dahulu.</p>
+                  <p className="mt-1 text-xs text-slate-500">Mulai dengan memilih toko sumber terlebih dahulu.</p>
                 </div>
                 {tokoSumber ? <Badge tone="blue">{tokoSumber}</Badge> : <Badge tone="amber">Belum dipilih</Badge>}
               </div>
@@ -651,7 +651,7 @@ export function NgBuatInvoiceClient({
                       onMouseDown={(e) => e.preventDefault()}
                       onClick={() => setStoreDropdownOpen((open) => !open)}
                       className="absolute right-3 top-1/2 flex h-7 w-7 -translate-y-1/2 items-center justify-center rounded-lg text-slate-500 transition hover:bg-[var(--surface-hover)] hover:text-foreground"
-                      aria-label="Tampilkan suggestion toko"
+                      aria-label="Tampilkan saran toko"
                     >
                       <ChevronDown size={16} className={`transition-transform ${storeDropdownOpen ? "rotate-180" : ""}`} />
                     </button>
@@ -675,7 +675,7 @@ export function NgBuatInvoiceClient({
                       </div>
                     )}
                   </div>
-                  <p className="mt-2 text-[11px] text-slate-500">Bisa diketik bebas, suggestion akan muncul bila toko sudah pernah dipakai.</p>
+                  <p className="mt-2 text-[11px] text-slate-500">Bisa diketik bebas, saran akan muncul bila toko sudah pernah dipakai.</p>
                 </div>
                 <div className="flex items-end lg:pt-[25px]">
                   <Button type="button" variant="outline" onClick={() => handleChooseStore(storeInput)} className="w-full min-w-[140px]">
@@ -695,8 +695,8 @@ export function NgBuatInvoiceClient({
               <Card className="space-y-4 rounded-2xl p-5">
                 <div className="flex items-center justify-between gap-3">
                   <div>
-                    <h2 className="text-sm font-bold text-foreground">2. Input Barang &amp; Tambahkan ke CO</h2>
-                    <p className="mt-1 text-xs text-slate-500">Ketik barang baru atau ambil dari suggestion katalog toko yang sama.</p>
+                    <h2 className="text-sm font-bold text-foreground">2. Input Barang &amp; Tambahkan ke Invoice</h2>
+                    <p className="mt-1 text-xs text-slate-500">Ketik barang baru atau ambil dari saran katalog toko yang sama.</p>
                   </div>
                   <Badge tone="slate">{storeCatalog.length} katalog toko</Badge>
                 </div>
@@ -727,7 +727,7 @@ export function NgBuatInvoiceClient({
                         onClick={() => tokoSumber && setItemDropdownOpen((open) => !open)}
                         className="absolute right-3 top-1/2 flex h-7 w-7 -translate-y-1/2 items-center justify-center rounded-lg text-slate-500 transition hover:bg-[var(--surface-hover)] hover:text-foreground disabled:opacity-40"
                         disabled={!tokoSumber}
-                        aria-label="Tampilkan suggestion barang"
+                        aria-label="Tampilkan saran barang"
                       >
                         <ChevronDown size={16} className={`transition-transform ${itemDropdownOpen ? "rotate-180" : ""}`} />
                       </button>
@@ -786,7 +786,7 @@ export function NgBuatInvoiceClient({
 
                 <div className="flex flex-wrap items-center gap-2">
                   <Button onClick={handleAddOrUpdateItem} disabled={!tokoSumber || pending}>
-                    <Plus size={14} /> {pending ? "Memproses..." : "Tambahkan ke CO"}
+                    <Plus size={14} /> {pending ? "Memproses..." : "Tambahkan ke invoice"}
                   </Button>
                   <Button
                     variant="outline"
@@ -797,7 +797,7 @@ export function NgBuatInvoiceClient({
                     }}
                     disabled={!tokoSumber}
                   >
-                    <RotateCcw size={14} /> Reset Form Barang
+                    <RotateCcw size={14} /> Kosongkan Form Barang
                   </Button>
                 </div>
 
@@ -805,14 +805,14 @@ export function NgBuatInvoiceClient({
                   <div className="flex items-start gap-2">
                     <AlertTriangle size={15} className="mt-0.5 shrink-0" />
                     <p>
-                      Jika nama barang yang sama di toko ini dimasukkan lagi tetapi harga beli atau harga jualnya berbeda, sistem akan menampilkan konfirmasi. Jika Anda pilih lanjut, data barang lama akan diperbarui lalu item CO mengikuti harga terbaru.
+                      Jika nama barang yang sama di toko ini dimasukkan lagi tetapi harga beli atau harga jualnya berbeda, sistem akan menampilkan konfirmasi. Jika Anda pilih lanjut, data barang lama akan diperbarui lalu item invoice mengikuti harga terbaru.
                     </p>
                   </div>
                 </div>
 
                 <div className="space-y-3">
                   <div className="flex items-center justify-between gap-3">
-                    <Label className="mb-0">Suggestion katalog toko ini</Label>
+                    <Label className="mb-0">Saran dari katalog toko ini</Label>
                     <Badge tone="blue">{filteredItems.length} cocok</Badge>
                   </div>
                   <div className="relative">
@@ -858,7 +858,7 @@ export function NgBuatInvoiceClient({
               <Card className="space-y-4 rounded-2xl p-5">
                 <div className="flex items-center justify-between gap-3">
                   <div>
-                    <h2 className="text-sm font-bold text-foreground">Keranjang CO</h2>
+                    <h2 className="text-sm font-bold text-foreground">Keranjang Invoice</h2>
                     <p className="mt-1 text-xs text-slate-500">Kalau barang yang sama diperbarui, harga di keranjang juga ikut diperbarui.</p>
                   </div>
                   <div className="flex items-center gap-2">
@@ -875,7 +875,7 @@ export function NgBuatInvoiceClient({
                       <Th className="text-right">Qty</Th>
                       <Th className="text-right">Modal</Th>
                       <Th className="text-right">Jual</Th>
-                      <Th className="text-right">Profit</Th>
+                      <Th className="text-right">Keuntungan</Th>
                       <Th className="text-right">Margin</Th>
                       <Th className="text-right">Aksi</Th>
                     </tr>
@@ -926,7 +926,7 @@ export function NgBuatInvoiceClient({
                     {cart.length === 0 && (
                       <tr>
                         <Td colSpan={7} className="py-10 text-center text-sm text-slate-400">
-                          Keranjang CO masih kosong.
+                          Keranjang Invoice masih kosong.
                         </Td>
                       </tr>
                     )}
@@ -941,7 +941,7 @@ export function NgBuatInvoiceClient({
               <Card className="space-y-4 rounded-2xl p-5">
                 <div className="flex items-center justify-between gap-3">
                   <div>
-                    <h2 className="text-sm font-bold text-foreground">Keranjang CO</h2>
+                    <h2 className="text-sm font-bold text-foreground">Keranjang Invoice</h2>
                     <p className="mt-1 text-xs text-slate-500">Tinjau ulang seluruh item sebelum invoice dibuat.</p>
                   </div>
                   <Badge tone="blue">{cart.length} baris</Badge>
@@ -953,7 +953,7 @@ export function NgBuatInvoiceClient({
                       <Th className="text-right">Qty</Th>
                       <Th className="text-right">Modal</Th>
                       <Th className="text-right">Jual</Th>
-                      <Th className="text-right">Profit</Th>
+                      <Th className="text-right">Keuntungan</Th>
                       <Th className="text-right">Margin</Th>
                     </tr>
                   </thead>
@@ -1036,7 +1036,7 @@ export function NgBuatInvoiceClient({
                     <Input value={namaGrup} onChange={(e) => setNamaGrup(e.target.value)} maxLength={FIELD_LIMITS.projectGroupNama} placeholder="Opsional" disabled={cart.length === 0} />
                   </div>
                   <div>
-                    <Label>Nama workshop</Label>
+                    <Label>Nama bengkel</Label>
                     <Input value={namaWorkshop} onChange={(e) => setNamaWorkshop(e.target.value)} maxLength={FIELD_LIMITS.namaWs} placeholder="Opsional" disabled={cart.length === 0} />
                   </div>
                   <div>
@@ -1103,8 +1103,8 @@ export function NgBuatInvoiceClient({
               </div>
               <div className="rounded-2xl border border-blue-100 bg-blue-50/80 p-4 text-sm text-blue-900 dark:border-blue-900/40 dark:bg-blue-950/20 dark:text-blue-200">
                 {tokoSumber
-                  ? `Toko ${tokoSumber} sudah dipakai. Lanjutkan ke input barang CO untuk mulai menyusun keranjang.`
-                  : "Setelah toko sumber dipilih, Anda akan lanjut ke halaman input barang CO."}
+                  ? `Toko ${tokoSumber} sudah dipakai. Lanjutkan ke input barang invoice untuk mulai menyusun keranjang.`
+                  : "Setelah toko sumber dipilih, Anda akan lanjut ke halaman input barang invoice."}
               </div>
             </Card>
           )}
@@ -1160,7 +1160,7 @@ export function NgBuatInvoiceClient({
             disabled={pending || cart.length === 0 || !tokoSumber}
             className="h-14 min-w-[220px] rounded-2xl px-6 text-sm font-bold shadow-lg shadow-primary-950/20"
           >
-            {pending ? "Membuat Invoice..." : "Generate Invoice NG"}
+            {pending ? "Membuat Invoice..." : "Buat Invoice"}
           </Button>
         </div>
       )}
@@ -1199,7 +1199,7 @@ export function NgBuatInvoiceClient({
                   disabled={pending || cart.length === 0 || !tokoSumber}
                   className="w-full sm:w-auto"
                 >
-                  {pending ? "Membuat Invoice..." : "Generate Invoice NG"}
+                  {pending ? "Membuat Invoice..." : "Buat Invoice"}
                 </Button>
               </>
             )}
@@ -1231,10 +1231,10 @@ export function NgBuatInvoiceClient({
                   Ganti toko sumber
                 </p>
                 <h3 id="store-change-title" className="mt-1 text-base font-black leading-snug text-foreground">
-                  Keranjang CO akan direset
+                  Keranjang Invoice akan dikosongkan
                 </h3>
                 <p className="mt-1.5 text-sm font-medium leading-6 text-[var(--text-soft)]">
-                  Mengganti toko ke <span className="font-black text-foreground">{pendingStoreChange}</span> akan mengosongkan keranjang CO saat ini.
+                  Mengganti toko ke <span className="font-black text-foreground">{pendingStoreChange}</span> akan mengosongkan keranjang invoice saat ini.
                 </p>
               </div>
               <button
@@ -1249,7 +1249,7 @@ export function NgBuatInvoiceClient({
 
             <div className="px-5 py-5">
               <div className="rounded-xl border border-sky-200/80 bg-sky-50 px-4 py-3 text-xs font-semibold leading-5 text-sky-900 dark:border-sky-400/20 dark:bg-sky-500/10 dark:text-sky-200">
-                Data barang yang sudah masuk CO akan dibersihkan agar tidak tercampur dengan katalog toko lain.
+                Data barang yang sudah masuk invoice akan dibersihkan agar tidak tercampur dengan katalog toko lain.
               </div>
             </div>
 
@@ -1264,7 +1264,7 @@ export function NgBuatInvoiceClient({
                   setPendingStoreChange(null);
                 }}
               >
-                Reset & Ganti Toko
+                Kosongkan & Ganti Toko
               </Button>
             </div>
           </div>
@@ -1351,7 +1351,7 @@ export function NgBuatInvoiceClient({
               </div>
 
               <div className="rounded-xl border border-amber-200/80 bg-amber-50 px-4 py-3 text-xs font-semibold leading-5 text-amber-900 dark:border-amber-400/20 dark:bg-amber-500/10 dark:text-amber-200">
-                Jika dilanjutkan, data katalog lama akan diperbarui dan item CO memakai harga terbaru.
+                Jika dilanjutkan, data katalog lama akan diperbarui dan item invoice memakai harga terbaru.
               </div>
             </div>
 
@@ -1387,7 +1387,7 @@ export function NgBuatInvoiceClient({
               onClick={() => setGenerated(null)}
             >
               <div
-                className={`flex h-[calc(100vh-2rem)] w-full flex-col overflow-hidden rounded-2xl border border-border bg-card shadow-2xl sm:h-[calc(100vh-2rem)] ${
+                className={`flex h-[calc(100dvh-2rem)] w-full flex-col overflow-hidden rounded-2xl border border-border bg-card shadow-2xl sm:h-[calc(100dvh-2rem)] ${
                   previewIsA4 ? "max-w-[880px]" : "max-w-md"
                 }`}
                 onClick={(e) => e.stopPropagation()}
@@ -1448,7 +1448,7 @@ export function NgBuatInvoiceClient({
                     size="sm"
                     className="w-full justify-center gap-1.5 rounded-xl border-orange-200 bg-orange-50 font-bold text-[var(--primary)] hover:bg-orange-100 dark:border-orange-800 dark:bg-orange-900/20 dark:hover:bg-orange-900/30 sm:w-auto"
                   >
-                    <Camera size={14} /> Save to Image (PNG)
+                    <Camera size={14} /> Simpan sebagai Gambar (PNG)
                   </Button>
                   <div className={`grid gap-2.5 ${previewIsA4 ? "grid-cols-1 sm:grid-cols-[80px_minmax(170px,1fr)]" : "grid-cols-[92px_minmax(0,1fr)]"}`}>
                     <Button variant="outline" size="sm" onClick={() => setGenerated(null)} className="w-full justify-center">
@@ -1601,7 +1601,7 @@ function MarginSummaryCard({
       <div className="grid grid-cols-2 gap-3">
         <MetricCard icon={<Store size={16} />} label="Total Modal" value={formatRupiah(totalModal)} />
         <MetricCard icon={<ShoppingCart size={16} />} label="Total Penjualan" value={formatRupiah(totalPenjualan)} />
-        <MetricCard icon={<Wallet size={16} />} label="Profit" value={formatRupiah(totalProfit)} accent="text-emerald-600" />
+        <MetricCard icon={<Wallet size={16} />} label="Keuntungan" value={formatRupiah(totalProfit)} accent="text-emerald-600" />
         <MetricCard icon={<FileText size={16} />} label="Margin / Markup" value={`${margin}% / ${markup}%`} />
       </div>
     </Card>

@@ -3,7 +3,7 @@
 import { Fragment, useState, useTransition, useMemo, useRef, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { createReturn, findTransactionByCode } from "./actions";
-import { Button, Card, Input, Label, Select, Table, Th, Td, CharCounter } from "@/components/ui";
+import { Button, Card, Input, QtyInput, Label, Select, Table, Th, Td, CharCounter } from "@/components/ui";
 import { Pagination, usePagination } from "@/components/Pagination";
 import { FIELD_LIMITS } from "@/lib/fieldLimits";
 import { formatRupiah } from "@/lib/utils";
@@ -25,6 +25,7 @@ import {
   Repeat2,
   Wallet,
   Camera,
+  AlertTriangle,
 } from "lucide-react";
 import { Nota, type NotaData } from "@/components/Nota";
 import { printArea } from "@/lib/print";
@@ -151,7 +152,7 @@ export function ReturClient({
 
   function updateReturnQty(transactionItemId: number, qty: number, maxQty: number) {
     if (qty > maxQty) {
-      toast.warning(`Qty retur tidak boleh melebihi qty beli (${maxQty})`);
+      toast.warning(`Jumlah retur tidak boleh melebihi jumlah beli (${maxQty})`);
       qty = maxQty;
     }
     setRetItems((prev) => prev.map((x) => (x.transactionItemId === transactionItemId ? { ...x, qty: Math.max(1, qty) } : x)));
@@ -211,6 +212,14 @@ export function ReturClient({
   const totalRetur = retItems.reduce((acc, x) => acc + x.harga * x.qty, 0);
   const totalGanti = repItems.reduce((acc, x) => acc + x.harga * x.qty, 0);
   const selisih = totalGanti - totalRetur; // positive: customer pays; negative: refund customer
+
+  // Ringkasan untuk langkah penyelesaian
+  const jumlahRetur = retItems.reduce((acc, x) => acc + x.qty, 0);
+  const jumlahGanti = repItems.reduce((acc, x) => acc + x.qty, 0);
+  const adaPengganti = tipe === "TUKAR" && repItems.length > 0;
+  const hasilSelisih: "TAGIHAN" | "REFUND" | "PAS" = selisih > 0 ? "TAGIHAN" : selisih < 0 ? "REFUND" : "PAS";
+  // Nilai pengganti jauh melebihi barang yang dikembalikan: kemungkinan salah ketik jumlah/barang.
+  const nilaiJanggal = adaPengganti && totalRetur > 0 && totalGanti >= 1_000_000 && totalGanti > totalRetur * 20;
 
   const returnItems = useMemo(() => origTrx?.items ?? [], [origTrx?.items]);
   const showReturnItemTools = returnItems.length > 5;
@@ -296,9 +305,9 @@ export function ReturClient({
           judul: tipe === "TUKAR" ? "NOTA TUKAR BARANG" : "NOTA RETUR BARANG",
           catatan:
             selisihVal > 0
-              ? `Selisih wajib dibayar: ${formatRupiah(selisihVal)}`
+              ? `Selisih yang ditagihkan: ${formatRupiah(selisihVal)}`
               : selisihVal < 0
-              ? `Refund ke pelanggan: ${formatRupiah(Math.abs(selisihVal))}`
+              ? `Uang dikembalikan ke pelanggan: ${formatRupiah(Math.abs(selisihVal))}`
               : "Tidak ada selisih.",
         });
 
@@ -328,7 +337,7 @@ export function ReturClient({
       `Total Retur : ${formatRupiah(totalRetur)}\n` +
       (tipe === "TUKAR" ? `Total Pengganti: ${formatRupiah(totalGanti)}\n` : "") +
       `Selisih     : ${formatRupiah(selisih)}\n` +
-      `Keterangan  : ${selisih > 0 ? "Pelanggan membayar selisih" : selisih < 0 ? "Refund oleh toko" : "Selesai"}\n\n` +
+      `Keterangan  : ${selisih > 0 ? "Selisih ditagihkan ke pelanggan" : selisih < 0 ? "Refund oleh toko" : "Selesai"}\n\n` +
       `Terima kasih.`;
 
     window.open(`https://wa.me/${no}?text=${encodeURIComponent(pesan)}`, "_blank");
@@ -507,8 +516,8 @@ export function ReturClient({
                   <Th className="w-12 text-center">Pilih</Th>
                   <Th>Barang</Th>
                   <Th className="text-right">Harga Nota</Th>
-                  <Th className="w-28 text-center">Qty Beli</Th>
-                  <Th className="w-36 text-center">Qty Diretur</Th>
+                  <Th className="w-28 text-center">Jumlah Beli</Th>
+                  <Th className="w-36 text-center">Jumlah Diretur</Th>
                   <Th className="text-right">Total Nilai</Th>
                 </tr>
               </thead>
@@ -535,12 +544,10 @@ export function ReturClient({
                       <Td className="text-center font-mono text-xs font-semibold">{it.qty} unit</Td>
                       <Td>
                         {isSelected && selected ? (
-                          <Input
-                            type="number"
-                            min={1}
+                          <QtyInput
                             max={it.availableForReturn}
                             value={selected.qty}
-                            onChange={(e) => updateReturnQty(it.transactionItemId, parseInt(e.target.value) || 1, it.availableForReturn)}
+                            onCommit={(n) => updateReturnQty(it.transactionItemId, n, it.availableForReturn)}
                             className="h-9 text-center font-mono font-semibold"
                           />
                         ) : (
@@ -593,7 +600,7 @@ export function ReturClient({
                 <div className="flex items-center gap-3 text-primary-800 dark:text-primary-300">
                   <ArrowUpCircle size={24} className="text-primary-600 dark:text-primary-400" />
                   <div>
-                    <p className="text-xs font-bold uppercase">Nilai Pengembalian (+)</p>
+                    <p className="text-xs font-bold uppercase">Nilai Barang Dikembalikan</p>
                     <p className="mt-0.5 text-[10px] text-primary-600 dark:text-primary-400">Stok barang akan bertambah di kartu gudang.</p>
                   </div>
                 </div>
@@ -695,12 +702,11 @@ export function ReturClient({
                         >
                           <Minus size={14} />
                         </button>
-                        <input
-                          type="number"
-                          min={1}
+                        <QtyInput
+                          bare
                           max={FIELD_LIMITS.maxQty}
                           value={l.qty}
-                          onChange={(e) => updateRepQty(l.itemId, parseInt(e.target.value) || 1)}
+                          onCommit={(n) => updateRepQty(l.itemId, n)}
                           className="h-8 w-14 rounded-md border border-border text-center font-mono text-sm font-bold"
                         />
                         <button
@@ -729,7 +735,7 @@ export function ReturClient({
               <div className="flex items-center gap-3 text-rose-800">
                 <ArrowDownCircle size={24} className="text-rose-500" />
                 <div>
-                  <p className="text-xs font-bold uppercase">Nilai Pengganti (-)</p>
+                  <p className="text-xs font-bold uppercase">Nilai Barang Pengganti</p>
                   <p className="mt-0.5 text-[10px] text-rose-600">Stok barang pengganti akan berkurang dari gudang.</p>
                 </div>
               </div>
@@ -762,61 +768,104 @@ export function ReturClient({
               <Wallet size={20} />
             </div>
             <div>
-              <h2 className="text-base font-bold text-foreground">Penyelesaian Selisih</h2>
-              <p className="text-xs text-slate-500">Verifikasi nominal sebelum transaksi disimpan.</p>
+              <h2 className="text-base font-bold text-foreground">Ringkasan &amp; Penyelesaian</h2>
+              <p className="text-xs text-slate-500">Periksa kembali. Stok dan tagihan baru berubah setelah Anda menyimpan.</p>
             </div>
           </div>
 
-          <div className="space-y-6 px-6 pb-6">
-            {/* Big settlement highlight */}
+          <div className="space-y-5 px-6 pb-6">
+            {/* Hasil akhir */}
             <div
               className={`rounded-2xl border p-5 text-center ${
-                selisih > 0
-                  ? "border-red-100 dark:border-red-500/25 bg-red-50 dark:bg-red-500/10"
-                  : selisih < 0
-                  ? "border-primary-100 dark:border-primary-500/25 bg-primary-50 dark:bg-primary-500/10"
+                hasilSelisih === "TAGIHAN"
+                  ? "border-amber-200 bg-amber-50 dark:border-amber-500/25 dark:bg-amber-500/10"
+                  : hasilSelisih === "REFUND"
+                  ? "border-primary-100 bg-primary-50 dark:border-primary-500/25 dark:bg-primary-500/10"
                   : "border-border bg-slate-50 dark:bg-slate-900"
               }`}
             >
               <p className="text-xs font-bold uppercase tracking-wider text-slate-500">
-                {selisih > 0 ? "Selisih Tagihan Pelanggan" : selisih < 0 ? "Uang Refund Toko" : "Penukaran Seimbang"}
+                {hasilSelisih === "TAGIHAN"
+                  ? "Pelanggan perlu membayar tambahan"
+                  : hasilSelisih === "REFUND"
+                  ? "Uang dikembalikan ke pelanggan"
+                  : "Tidak ada selisih"}
               </p>
               <p
                 className={`mt-1 font-mono text-4xl font-extrabold ${
-                  selisih > 0 ? "text-red-600 dark:text-red-400" : selisih < 0 ? "text-primary-600 dark:text-primary-400" : "text-foreground"
+                  hasilSelisih === "TAGIHAN"
+                    ? "text-amber-700 dark:text-amber-400"
+                    : hasilSelisih === "REFUND"
+                    ? "text-primary-600 dark:text-primary-400"
+                    : "text-foreground"
                 }`}
               >
-                {formatRupiah(Math.abs(selisih))}
+                {hasilSelisih === "PAS" ? formatRupiah(0) : formatRupiah(Math.abs(selisih))}
+              </p>
+              <p className="mt-1.5 text-xs text-slate-500">
+                {hasilSelisih === "TAGIHAN"
+                  ? "Nilai barang pengganti lebih besar daripada barang yang dikembalikan."
+                  : hasilSelisih === "REFUND"
+                  ? adaPengganti
+                    ? "Nilai barang yang dikembalikan lebih besar daripada barang pengganti."
+                    : "Pelanggan mengembalikan barang tanpa mengambil barang pengganti."
+                  : "Nilai barang yang dikembalikan sama dengan barang pengganti."}
               </p>
             </div>
 
-            <div className="space-y-3 rounded-xl border border-border bg-card p-4 text-xs">
-              <div className="flex justify-between border-b border-dashed border-border pb-2">
-                <span className="font-semibold text-slate-500">Total Nilai Barang Retur (+)</span>
-                <span className="font-mono font-bold text-primary-600">{formatRupiah(totalRetur)}</span>
+            {nilaiJanggal && (
+              <div className="flex items-start gap-2.5 rounded-xl border border-amber-300 bg-amber-50 p-3 text-xs text-amber-800 dark:border-amber-500/30 dark:bg-amber-500/10 dark:text-amber-300">
+                <AlertTriangle size={16} className="mt-0.5 shrink-0" />
+                <p>
+                  Nilai barang pengganti jauh lebih besar daripada barang yang dikembalikan. Periksa kembali jumlah dan jenis
+                  barang pengganti sebelum menyimpan.
+                </p>
               </div>
-              {tipe === "TUKAR" && (
-                <div className="flex justify-between border-b border-dashed border-border pb-2">
-                  <span className="font-semibold text-slate-500">Total Nilai Barang Pengganti (-)</span>
-                  <span className="font-mono font-bold text-red-600">{formatRupiah(totalGanti)}</span>
+            )}
+
+            {/* Perhitungan */}
+            <div className="space-y-3 rounded-xl border border-border bg-card p-4 text-xs">
+              <div className="flex items-start justify-between gap-3 border-b border-dashed border-border pb-3">
+                <div>
+                  <p className="font-semibold text-foreground">Barang dikembalikan pelanggan</p>
+                  <p className="mt-0.5 text-slate-500">{jumlahRetur} unit · {retItems.length} jenis barang</p>
+                </div>
+                <span className="font-mono text-sm font-bold text-foreground">{formatRupiah(totalRetur)}</span>
+              </div>
+              {adaPengganti && (
+                <div className="flex items-start justify-between gap-3 border-b border-dashed border-border pb-3">
+                  <div>
+                    <p className="font-semibold text-foreground">Barang pengganti yang diambil</p>
+                    <p className="mt-0.5 text-slate-500">{jumlahGanti} unit · {repItems.length} jenis barang</p>
+                  </div>
+                  <span className="font-mono text-sm font-bold text-foreground">{formatRupiah(totalGanti)}</span>
                 </div>
               )}
-              <div className="pt-1 leading-relaxed text-slate-600">
-                {selisih > 0 ? (
-                  <span>
-                    <strong className="text-red-700">ℹ️ Tagihan Baru:</strong> Pelanggan membayar selisih{" "}
-                    <strong>{formatRupiah(selisih)}</strong>. Sistem mencatat piutang &amp; membuat invoice otomatis.
-                  </span>
-                ) : selisih < 0 ? (
-                  <span>
-                    <strong className="text-primary-700">ℹ️ Pengembalian Dana:</strong> Kasir mengembalikan{" "}
-                    <strong>{formatRupiah(Math.abs(selisih))}</strong> tunai kepada pelanggan.
-                  </span>
-                ) : (
-                  <span>
-                    <strong>ℹ️ Seimbang:</strong> Nilai barang yang ditukar pas. Tidak ada tagihan / pengembalian uang.
-                  </span>
-                )}
+
+              <div className="space-y-1.5 pt-1 leading-relaxed text-slate-600 dark:text-slate-300">
+                <p className="font-bold text-foreground">Yang terjadi saat disimpan:</p>
+                <ul className="list-disc space-y-1 pl-4">
+                  <li>
+                    Stok bertambah: <strong>{jumlahRetur} unit</strong> barang yang dikembalikan masuk kembali ke gudang.
+                  </li>
+                  {adaPengganti && (
+                    <li>
+                      Stok berkurang: <strong>{jumlahGanti} unit</strong> barang pengganti keluar dari gudang.
+                    </li>
+                  )}
+                  {hasilSelisih === "TAGIHAN" && (
+                    <li>
+                      Dibuat <strong>invoice tagihan {formatRupiah(selisih)}</strong> yang belum dibayar. Pelanggan bisa
+                      membayarnya nanti lewat menu Invoice &amp; Piutang.
+                    </li>
+                  )}
+                  {hasilSelisih === "REFUND" && (
+                    <li>
+                      Serahkan <strong>uang tunai {formatRupiah(Math.abs(selisih))}</strong> kepada pelanggan.
+                    </li>
+                  )}
+                  {hasilSelisih === "PAS" && <li>Tidak ada tagihan maupun pengembalian uang.</li>}
+                </ul>
               </div>
             </div>
 
@@ -826,14 +875,14 @@ export function ReturClient({
               <Button type="button" variant="outline" onClick={() => setStep(3)}>
                 <ArrowLeft size={14} /> Kembali
               </Button>
-              <Button
-                type="button"
-                onClick={submitReturnExchange}
-                disabled={pending}
-                className="font-bold"
-                variant={selisih > 0 ? "danger" : "success"}
-              >
-                {pending ? "Menyimpan Transaksi..." : tipe === "TUKAR" ? "Simpan & Tukar Barang" : "Simpan Retur Barang"}
+              <Button type="button" onClick={submitReturnExchange} disabled={pending} className="font-bold">
+                {pending
+                  ? "Menyimpan..."
+                  : tipe === "TUKAR"
+                  ? hasilSelisih === "TAGIHAN"
+                    ? "Simpan & Buat Tagihan"
+                    : "Simpan Penukaran"
+                  : "Simpan Retur Barang"}
               </Button>
             </div>
           </div>
@@ -877,7 +926,7 @@ export function ReturClient({
                 size="sm"
                 className="w-full h-9 bg-orange-50 hover:bg-orange-100 border-orange-200 text-[var(--primary)] font-bold gap-1.5 rounded-xl cursor-pointer"
               >
-                <Camera size={13} /> Save to Image (PNG)
+                <Camera size={13} /> Simpan sebagai Gambar (PNG)
               </Button>
             </div>
           </div>

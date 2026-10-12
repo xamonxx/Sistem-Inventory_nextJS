@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from "react";
 import { usePathname, useRouter } from "next/navigation";
-import { Plus, ShoppingCart, Boxes, FileText, RotateCcw } from "lucide-react";
+import { Plus, ShoppingCart, Boxes, FileText, RotateCcw, PackagePlus } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 export function FloatingActionButton({ role }: { role?: string }) {
@@ -23,9 +23,10 @@ export function FloatingActionButton({ role }: { role?: string }) {
   }, []);
 
   const allActions = [
-    { label: "POS Transaksi Baru", icon: ShoppingCart, color: "text-primary-700 dark:text-primary-300 bg-primary-50 dark:bg-primary-950/40", link: "/kasir", roles: ["ADMIN_KASIR"] },
-    { label: "CO Non-Gudang Baru", icon: FileText, color: "text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-950/40", link: "/non-gudang/buat-invoice", roles: ["ADMIN_NONGUDANG"] },
+    { label: "Transaksi Kasir Baru", icon: ShoppingCart, color: "text-primary-700 dark:text-primary-300 bg-primary-50 dark:bg-primary-950/40", link: "/kasir", roles: ["ADMIN_KASIR"] },
+    { label: "Invoice Non-Gudang Baru", icon: FileText, color: "text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-950/40", link: "/non-gudang/buat-invoice", roles: ["ADMIN_NONGUDANG"] },
     { label: "Tambah Barang Baru", icon: Boxes, color: "text-primary-600 dark:text-primary-400 bg-primary-50 dark:bg-primary-950/40", link: "/barang?new=true", roles: ["ADMIN_GUDANG"] },
+    { label: "Barang Masuk / Restok", icon: PackagePlus, color: "text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/40", link: "/stok/masuk", roles: ["ADMIN_GUDANG"] },
     { label: "Buat Invoice Baru", icon: FileText, color: "text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-950/40", link: "/kasir?type=PROJECT", roles: ["ADMIN_KASIR"] },
     { label: "Proses Retur / Tukar", icon: RotateCcw, color: "text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-950/40", link: "/retur", roles: ["ADMIN_KASIR", "ADMIN_GUDANG"] },
   ];

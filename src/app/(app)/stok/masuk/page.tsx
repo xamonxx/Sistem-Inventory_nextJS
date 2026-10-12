@@ -40,7 +40,7 @@ export default async function StockInPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold tracking-tight">Penerimaan Barang / Restock Batch</h1>
+        <h1 className="text-2xl font-bold tracking-tight">Penerimaan Barang / Restok</h1>
         <p className="text-sm text-muted">
           Catat penerimaan material baru dari supplier. Harga beli master barang akan diperbarui otomatis sesuai input.
         </p>

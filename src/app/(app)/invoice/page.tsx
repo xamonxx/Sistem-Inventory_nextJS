@@ -8,6 +8,18 @@ export const revalidate = 60;
 
 export default async function InvoicePage() {
   const user = await requireUser();
+
+  if (user.role !== "ADMIN_KASIR" && user.role !== "ADMIN_GUDANG") {
+    return (
+      <div className="rounded-xl border border-red-200 bg-red-50 p-6">
+        <h1 className="text-xl font-bold text-red-800">Akses Ditolak</h1>
+        <p className="mt-2 text-sm text-red-700">
+          Menu Invoice hanya diizinkan untuk <strong>Admin Kasir</strong> dan <strong>Admin Gudang / Owner</strong>.
+        </p>
+      </div>
+    );
+  }
+
   const canBayar = user.role === "ADMIN_KASIR";
 
   // Query invoices with selective field fetching (optimized from deep includes)
@@ -196,7 +208,7 @@ export default async function InvoicePage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-extrabold tracking-tight text-foreground">Invoices &amp; Piutang Dagang</h1>
+        <h1 className="text-2xl font-extrabold tracking-tight text-foreground">Invoice &amp; Piutang</h1>
         <p className="text-xs font-semibold text-slate-500 mt-1">
           Lacak pembayaran piutang berjalan, verifikasi tanggal jatuh tempo, dan input cicilan kas.
         </p>

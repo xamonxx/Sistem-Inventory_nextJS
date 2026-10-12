@@ -25,7 +25,7 @@ export default async function StokPage({
       <div className="rounded-xl border border-red-200 bg-red-50 p-6">
         <h1 className="text-xl font-bold text-red-800">Akses Ditolak</h1>
         <p className="mt-2 text-sm text-red-700">
-          Menu Kartu Stok &amp; Riwayat Mutasi hanya diizinkan untuk <strong>Admin Gudang / Owner</strong>.
+          Menu Kartu Stok &amp; Riwayat Pergerakan hanya diizinkan untuk <strong>Admin Gudang / Owner</strong>.
         </p>
       </div>
     );
@@ -114,7 +114,7 @@ export default async function StokPage({
     <div className="space-y-6">
       <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight">Kartu Stok &amp; Riwayat Mutasi</h1>
+          <h1 className="text-2xl font-bold tracking-tight">Kartu Stok &amp; Riwayat Pergerakan</h1>
           <p className="text-sm text-muted">Lihat pergerakan persediaan barang masuk, penjualan, retur, dan penyesuaian.</p>
         </div>
       </div>

@@ -16,14 +16,14 @@ const ROLES = ["ADMIN_KASIR", "ADMIN_GUDANG"] as const;
 const usernameField = z
   .string()
   .trim()
-  .min(3, "Username minimal 3 karakter")
-  .max(FIELD_LIMITS.username, `Username maksimal ${FIELD_LIMITS.username} karakter`)
-  .regex(/^[a-zA-Z0-9._-]+$/, "Username hanya boleh huruf, angka, titik, underscore, dan strip");
+  .min(3, "Nama Pengguna minimal 3 karakter")
+  .max(FIELD_LIMITS.username, `Nama Pengguna maksimal ${FIELD_LIMITS.username} karakter`)
+  .regex(/^[a-zA-Z0-9._-]+$/, "Nama Pengguna hanya boleh huruf, angka, titik, underscore, dan strip");
 
 const passwordField = z
   .string()
-  .min(FIELD_LIMITS.passwordMin, `Password minimal ${FIELD_LIMITS.passwordMin} karakter`)
-  .max(FIELD_LIMITS.passwordMax, `Password maksimal ${FIELD_LIMITS.passwordMax} karakter`);
+  .min(FIELD_LIMITS.passwordMin, `Kata sandi minimal ${FIELD_LIMITS.passwordMin} karakter`)
+  .max(FIELD_LIMITS.passwordMax, `Kata Sandi maksimal ${FIELD_LIMITS.passwordMax} karakter`);
 
 const schema = z.object({
   id: dbId.optional(),
@@ -78,7 +78,7 @@ export async function saveUser(_prev: unknown, formData: FormData): Promise<Acti
       });
     } else {
       if (!d.password) {
-        return { error: `Password baru minimal ${FIELD_LIMITS.passwordMin} karakter.` };
+        return { error: `Kata sandi baru minimal ${FIELD_LIMITS.passwordMin} karakter.` };
       }
       const created = await prisma.user.create({
         data: {
@@ -99,7 +99,7 @@ export async function saveUser(_prev: unknown, formData: FormData): Promise<Acti
     }
   } catch (e) {
     if (e instanceof Prisma.PrismaClientKnownRequestError && e.code === "P2002") {
-      return { error: `Username "${d.username}" sudah dipakai.` };
+      return { error: `Nama Pengguna "${d.username}" sudah dipakai.` };
     }
     return safeError(e, "Gagal menyimpan pengguna.");
   }
@@ -153,7 +153,7 @@ export async function resetPassword(id: number, passBaru: string): Promise<Actio
       entitasId: parsed.data.id,
     });
   } catch (e) {
-    return safeError(e, "Gagal mereset password.");
+    return safeError(e, "Gagal mengatur ulang kata sandi.");
   }
 
   return { ok: true };

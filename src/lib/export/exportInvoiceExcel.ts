@@ -20,13 +20,18 @@ import {
   safeText,
   safePercent,
   safeDate,
-  pad2,
   applyBorder,
   applyHeaderStyle,
   autoFitColumns,
   writeSheetHeader,
   writeEmptyNotice,
+  setPrintHeaderRow,
+  writeSectionTitle,
   fillRow,
+  DUE_DAYS,
+  MS_PER_DAY,
+  buildExportFileName,
+  downloadWorkbook,
 } from "./excelStyles";
 
 // ===================== TIPE DATA INPUT =====================
@@ -70,14 +75,11 @@ export interface ExportInvoicePayload {
   invoices: ExportInvoice[];
 }
 
-const DUE_DAYS = 30;
-const MS_PER_DAY = 86_400_000;
-
 // ===================== HELPER DOMAIN =====================
 
 const STATUS_LABEL: Record<string, string> = {
-  DRAFT: "Draft",
-  PENDING: "Pending",
+  DRAFT: "Draf",
+  PENDING: "Belum Lunas",
   PARTIAL: "Cicilan (Partial)",
   PAID: "Lunas",
   OVERDUE: "Terlambat",
@@ -156,12 +158,11 @@ function addRingkasanSheet(wb: Workbook, rows: EnrichedInvoice[], meta: MetaInfo
 
   // ---- KPI utama ----
   let row = startRow;
-  ws.getCell(row, 1).value = "Ringkasan Piutang Dagang";
-  ws.getCell(row, 1).font = { bold: true, size: 12, color: { argb: COLOR.headerText } };
+  writeSectionTitle(ws, row, "Ringkasan Piutang Dagang", 4);
   row += 1;
 
   const kpiHeader = row;
-  ["KPI", "Nilai", "Persentase Acuan", "Keterangan", ""].forEach((h, i) => (ws.getCell(kpiHeader, i + 1).value = h));
+  ["KPI", "Nilai", "Persentase Acuan", "Keterangan"].forEach((h, i) => (ws.getCell(kpiHeader, i + 1).value = h));
   applyHeaderStyle(ws, kpiHeader, 4);
   row += 1;
 
@@ -182,6 +183,7 @@ function addRingkasanSheet(wb: Workbook, rows: EnrichedInvoice[], meta: MetaInfo
   const kpiStart = row;
   for (const k of kpis) {
     ws.getCell(row, 1).value = k.kpi;
+    ws.getCell(row, 1).font = { bold: true };
     const vCell = ws.getCell(row, 2);
     vCell.value = k.value;
     if (k.fmt === "rp") vCell.numFmt = FMT_RUPIAH;
@@ -200,8 +202,7 @@ function addRingkasanSheet(wb: Workbook, rows: EnrichedInvoice[], meta: MetaInfo
   row += 1;
 
   // ---- Breakdown per status ----
-  ws.getCell(row, 1).value = "Rincian per Status";
-  ws.getCell(row, 1).font = { bold: true, size: 12, color: { argb: COLOR.headerText } };
+  writeSectionTitle(ws, row, "Rincian per Status", lastCol);
   row += 1;
   const stHeader = row;
   ["Status", "Jumlah Invoice", "Total Tagihan", "Sisa Piutang", "% dari Total Tagihan"].forEach(
@@ -238,11 +239,10 @@ function addRingkasanSheet(wb: Workbook, rows: EnrichedInvoice[], meta: MetaInfo
   row += 1;
 
   // ---- Ringkasan aging (belum lunas) ----
-  ws.getCell(row, 1).value = "Ringkasan Umur Piutang (Belum Lunas)";
-  ws.getCell(row, 1).font = { bold: true, size: 12, color: { argb: COLOR.headerText } };
+  writeSectionTitle(ws, row, "Ringkasan Umur Piutang (Belum Lunas)", lastCol);
   row += 1;
   const agHeader = row;
-  ["Kategori Aging", "Jumlah Invoice", "Sisa Piutang", "% dari Piutang Aktif", "Status Risiko"].forEach(
+  ["Kelompok Umur Piutang", "Jumlah Invoice", "Sisa Piutang", "% dari Piutang Aktif", "Status Risiko"].forEach(
     (h, i) => (ws.getCell(agHeader, i + 1).value = h)
   );
   applyHeaderStyle(ws, agHeader, lastCol);
@@ -271,14 +271,15 @@ function addRingkasanSheet(wb: Workbook, rows: EnrichedInvoice[], meta: MetaInfo
       pCell.numFmt = FMT_PERCENT;
     }
     ws.getCell(row, 5).value = risk;
+    ws.getCell(row, 5).alignment = { horizontal: "center" };
     fillRow(ws, row, 1, 1, fill);
+    fillRow(ws, row, 5, 5, fill);
     row++;
   }
   applyBorder(ws, agHeader, row - 1, lastCol);
 
   autoFitColumns(ws, lastCol);
   ws.getColumn(4).width = Math.max(ws.getColumn(4).width ?? 10, 40);
-  ws.views = [{ state: "frozen", ySplit: startRow - 1 }];
 }
 
 // ===================== SHEET 2: DAFTAR INVOICE =====================
@@ -294,7 +295,7 @@ function addDaftarInvoiceSheet(wb: Workbook, rows: EnrichedInvoice[], meta: Meta
     "No. Transaksi",
     "Tanggal",
     "Jatuh Tempo",
-    "Klien / Pelanggan",
+    "Pelanggan",
     "Proyek",
     "WS",
     "Total Tagihan",
@@ -302,7 +303,7 @@ function addDaftarInvoiceSheet(wb: Workbook, rows: EnrichedInvoice[], meta: Meta
     "Sisa Piutang",
     "% Terbayar",
     "Umur (Hari)",
-    "Kategori Aging",
+    "Kelompok Umur Piutang",
     "Verifikasi (x)",
     "Status",
   ].forEach((h, i) => (ws.getCell(headerRow, i + 1).value = h));
@@ -385,7 +386,7 @@ function addDaftarInvoiceSheet(wb: Workbook, rows: EnrichedInvoice[], meta: Meta
   applyBorder(ws, headerRow, tableLastRow, lastCol);
 
   autoFitColumns(ws, lastCol);
-  ws.views = [{ state: "frozen", xSplit: 1, ySplit: headerRow }];
+  setPrintHeaderRow(ws, headerRow);
   ws.autoFilter = { from: { row: headerRow, column: 1 }, to: { row: tableLastRow, column: lastCol } };
 }
 
@@ -397,7 +398,7 @@ function addRincianBarangSheet(wb: Workbook, rows: EnrichedInvoice[], meta: Meta
   const startRow = writeSheetHeader(ws, lastCol, meta);
 
   const headerRow = startRow;
-  ["No. Invoice", "Tanggal", "Klien", "Kode Barang", "Nama Barang", "Qty", "Harga Satuan", "Subtotal"].forEach(
+  ["No. Invoice", "Tanggal", "Pelanggan", "Kode Barang", "Nama Barang", "Qty", "Harga Satuan", "Subtotal"].forEach(
     (h, i) => (ws.getCell(headerRow, i + 1).value = h)
   );
   applyHeaderStyle(ws, headerRow, lastCol);
@@ -447,7 +448,7 @@ function addRincianBarangSheet(wb: Workbook, rows: EnrichedInvoice[], meta: Meta
   applyBorder(ws, headerRow, tableLastRow, lastCol);
 
   autoFitColumns(ws, lastCol);
-  ws.views = [{ state: "frozen", ySplit: headerRow }];
+  setPrintHeaderRow(ws, headerRow);
   ws.autoFilter = { from: { row: headerRow, column: 1 }, to: { row: tableLastRow, column: lastCol } };
 }
 
@@ -459,7 +460,7 @@ function addRiwayatPembayaranSheet(wb: Workbook, rows: EnrichedInvoice[], meta: 
   const startRow = writeSheetHeader(ws, lastCol, meta);
 
   const headerRow = startRow;
-  ["No. Invoice", "Klien", "Tanggal Bayar", "Tipe", "Jumlah", "Keterangan"].forEach(
+  ["No. Invoice", "Pelanggan", "Tanggal Bayar", "Tipe", "Jumlah", "Keterangan"].forEach(
     (h, i) => (ws.getCell(headerRow, i + 1).value = h)
   );
   applyHeaderStyle(ws, headerRow, lastCol);
@@ -509,28 +510,28 @@ function addRiwayatPembayaranSheet(wb: Workbook, rows: EnrichedInvoice[], meta: 
   applyBorder(ws, headerRow, tableLastRow, lastCol);
 
   autoFitColumns(ws, lastCol);
-  ws.views = [{ state: "frozen", ySplit: headerRow }];
+  setPrintHeaderRow(ws, headerRow);
   ws.autoFilter = { from: { row: headerRow, column: 1 }, to: { row: tableLastRow, column: lastCol } };
 }
 
 // ===================== ENTRYPOINT =====================
 
 export function buildInvoiceFileName(date = new Date()): string {
-  return `Invoices-Piutang-${date.getFullYear()}-${pad2(date.getMonth() + 1)}-${pad2(date.getDate())}.xlsx`;
+  return buildExportFileName("Invoice-Piutang", date);
 }
 
 /** Bangun workbook 4 sheet dari data invoice (dipisah agar mudah diuji). */
 export async function buildInvoiceWorkbook(payload: ExportInvoicePayload): Promise<Workbook> {
   const ExcelJS = (await import("exceljs")).default;
   const wb: Workbook = new ExcelJS.Workbook();
-  wb.creator = "Sistem Inventory ERP";
+  wb.creator = "Sistem Inventory";
   wb.created = new Date();
 
   const now = new Date();
   const rows = payload.invoices.map((inv) => enrich(inv, now));
 
   const meta: MetaInfo = {
-    reportName: "Invoices & Piutang Dagang",
+    reportName: "Invoice & Piutang",
     period: payload.filterLabel && payload.filterLabel.trim().length > 0 ? payload.filterLabel : "Semua tagihan (tanpa filter)",
     exportDate: now,
     userName: safeText(payload.userName),
@@ -548,19 +549,6 @@ export async function buildInvoiceWorkbook(payload: ExportInvoicePayload): Promi
 export async function exportInvoiceExcel(payload: ExportInvoicePayload): Promise<string> {
   const wb = await buildInvoiceWorkbook(payload);
   const fileName = buildInvoiceFileName();
-
-  const buffer = await wb.xlsx.writeBuffer();
-  const blob = new Blob([buffer], {
-    type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-  });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement("a");
-  a.href = url;
-  a.download = fileName;
-  document.body.appendChild(a);
-  a.click();
-  document.body.removeChild(a);
-  URL.revokeObjectURL(url);
-
+  await downloadWorkbook(wb, fileName);
   return fileName;
 }

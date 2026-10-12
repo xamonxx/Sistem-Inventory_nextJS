@@ -20,8 +20,8 @@ import { ThemeToggle } from "@/components/ThemeToggle";
 
 const FEATURES = [
   { icon: Boxes, label: "Stok gudang akurat & real-time" },
-  { icon: ReceiptText, label: "Kasir POS cepat, invoice otomatis" },
-  { icon: BarChart3, label: "Omset & margin terpantau tiap hari" },
+  { icon: ReceiptText, label: "Kasir cepat, invoice otomatis" },
+  { icon: BarChart3, label: "Omzet & margin terpantau tiap hari" },
 ];
 
 export default function LoginPage() {
@@ -154,14 +154,14 @@ export default function LoginPage() {
             {/* Form */}
             <form action={formAction} className="space-y-5">
               <div>
-                <Label htmlFor="username" className="text-[13px] font-semibold">Username</Label>
+                <Label htmlFor="username" className="text-[13px] font-semibold">Nama Pengguna</Label>
                 <div className="relative mt-2">
                   <User size={16} className="pointer-events-none absolute left-3.5 top-1/2 z-10 -translate-y-1/2 text-slate-400 dark:text-slate-500" />
                   <Input
                     id="username"
                     name="username"
                     maxLength={FIELD_LIMITS.username}
-                    placeholder="Masukkan username"
+                    placeholder="Masukkan nama pengguna"
                     autoFocus
                     className="h-12 pl-10 text-[15px]"
                     onKeyDown={(e) => {
@@ -175,7 +175,7 @@ export default function LoginPage() {
               </div>
 
               <div>
-                <Label htmlFor="password" className="text-[13px] font-semibold">Password</Label>
+                <Label htmlFor="password" className="text-[13px] font-semibold">Kata Sandi</Label>
                 <div className="relative mt-2">
                   <Lock size={16} className="pointer-events-none absolute left-3.5 top-1/2 z-10 -translate-y-1/2 text-slate-400 dark:text-slate-500" />
                   <Input
@@ -189,7 +189,7 @@ export default function LoginPage() {
                   <button
                     type="button"
                     onClick={() => setShowPassword(!showPassword)}
-                    className="absolute right-3.5 top-1/2 z-10 flex h-7 w-7 -translate-y-1/2 cursor-pointer select-none items-center justify-center rounded-md text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-700 dark:text-slate-500 dark:hover:bg-slate-800 dark:hover:text-slate-300"
+                    className="absolute right-1.5 top-1/2 z-10 flex h-10 w-10 -translate-y-1/2 cursor-pointer select-none items-center justify-center rounded-md text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-700 dark:text-slate-500 dark:hover:bg-slate-800 dark:hover:text-slate-300"
                     aria-label={showPassword ? "Sembunyikan password" : "Tampilkan password"}
                   >
                     {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}

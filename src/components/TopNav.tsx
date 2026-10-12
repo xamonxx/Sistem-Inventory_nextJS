@@ -58,7 +58,7 @@ export function TopNav({ nama, role }: TopNavProps) {
          className="chrome-soft-panel flex w-full max-w-[420px] cursor-pointer items-center justify-between rounded-2xl px-4 py-2.5 text-[var(--chrome-muted)] backdrop-blur-xl backdrop-saturate-150 transition-[border-color,color,box-shadow] hover:border-[var(--chrome-active-border)] hover:text-[var(--chrome-ink)]"
        >
          <span className="flex items-center gap-2.5 text-[13px] font-semibold">
-           <Search size={16} strokeWidth={2.5} /> Cari barang, invoice, klien...
+           <Search size={16} strokeWidth={2.5} /> Cari barang, invoice, pelanggan...
          </span>
          <span className="flex items-center gap-0.5 rounded-md border border-[var(--chrome-active-border)] bg-sky-500/10 px-2 py-1 font-mono text-[10px] font-bold text-[var(--primary)] shadow-[0_8px_18px_rgba(14,165,233,0.12)]">
            <Keyboard size={11} /> Ctrl+K
@@ -89,7 +89,7 @@ export function TopNav({ nama, role }: TopNavProps) {
             <div className="leading-tight text-left select-none">
               <p className="text-xs font-bold text-[var(--chrome-ink)]">{nama}</p>
               <p className="mt-0.5 text-[10px] font-bold uppercase tracking-wider text-[var(--primary)]">
-                {role === "ADMIN_KASIR" ? "Kasir POS" : role === "ADMIN_NONGUDANG" ? "Non-Gudang" : "Gudang & Logistik"}
+                {role === "ADMIN_KASIR" ? "Kasir" : role === "ADMIN_NONGUDANG" ? "Non-Gudang" : "Gudang & Logistik"}
               </p>
             </div>
             <ChevronDown size={16} className={`text-[var(--chrome-muted)] transition-transform ${isProfileOpen ? "rotate-180" : ""}`} />
@@ -104,7 +104,7 @@ export function TopNav({ nama, role }: TopNavProps) {
                 <div className="min-w-0">
                   <p className="truncate text-sm font-bold text-foreground">{nama}</p>
                   <p className="mt-0.5 text-[10px] font-bold uppercase tracking-wider text-[var(--primary)]">
-                    {role === "ADMIN_KASIR" ? "Kasir POS" : role === "ADMIN_NONGUDANG" ? "Non-Gudang" : "Gudang & Logistik"}
+                    {role === "ADMIN_KASIR" ? "Kasir" : role === "ADMIN_NONGUDANG" ? "Non-Gudang" : "Gudang & Logistik"}
                   </p>
                 </div>
               </div>

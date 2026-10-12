@@ -1,8 +1,9 @@
 "use client";
 
 import * as React from "react";
+import { createPortal } from "react-dom";
 import { cn } from "@/lib/utils";
-import { ChevronDown, Check } from "lucide-react";
+import { ChevronDown, Check, Search } from "lucide-react";
 
 export function Button({
   className,
@@ -57,6 +58,53 @@ export const Input = React.forwardRef<HTMLInputElement, React.InputHTMLAttribute
   }
 );
 Input.displayName = "Input";
+
+/**
+ * Input jumlah (bilangan bulat >= min). Selama mengetik, teks boleh kosong sehingga
+ * bisa dihapus dengan backspace; ke state induk hanya diteruskan nilai yang valid.
+ * Saat fokus hilang, tampilan dikembalikan ke nilai terakhir yang valid.
+ * `bare` memakai <input> polos (tanpa gaya Input) untuk kontrol yang sudah punya gaya sendiri.
+ */
+export function QtyInput({
+  value,
+  onCommit,
+  min = 1,
+  bare,
+  className,
+  onBlur,
+  ...props
+}: Omit<React.InputHTMLAttributes<HTMLInputElement>, "value" | "onChange" | "type"> & {
+  value: number;
+  onCommit: (n: number) => void;
+  min?: number;
+  bare?: boolean;
+}) {
+  const [text, setText] = React.useState(String(value));
+
+  React.useEffect(() => {
+    setText((t) => (parseInt(t, 10) === value ? t : String(value)));
+  }, [value]);
+
+  const common = {
+    type: "number" as const,
+    inputMode: "numeric" as const,
+    min,
+    value: text,
+    onChange: (e: React.ChangeEvent<HTMLInputElement>) => {
+      const v = e.target.value;
+      setText(v);
+      const n = parseInt(v, 10);
+      if (Number.isFinite(n) && n >= min) onCommit(n);
+    },
+    onBlur: (e: React.FocusEvent<HTMLInputElement>) => {
+      setText(String(value));
+      onBlur?.(e);
+    },
+    ...props,
+  };
+
+  return bare ? <input className={className} {...common} /> : <Input className={className} {...common} />;
+}
 
 function normalizeCurrencyInput(value: string | number | null | undefined): string {
   const digits = String(value ?? "").replace(/\D/g, "");
@@ -259,6 +307,7 @@ export function Select({
   required,
   hideChevron,
   displayValue,
+  searchable,
   ...props
 }: Omit<React.SelectHTMLAttributes<HTMLSelectElement>, "value" | "onChange"> & {
   value?: string | number;
@@ -266,6 +315,8 @@ export function Select({
   onChange?: (e: React.ChangeEvent<HTMLSelectElement>) => void;
   hideChevron?: boolean;
   displayValue?: React.ReactNode;
+  /** Tampilkan kotak cari di dalam menu. Default: aktif otomatis bila pilihan > 8. */
+  searchable?: boolean;
 }) {
   const options = React.useMemo(() => {
     return React.Children.toArray(children)
@@ -293,12 +344,129 @@ export function Select({
   }, [value]);
 
   const [isOpen, setIsOpen] = React.useState(false);
+  const [mounted, setMounted] = React.useState(false);
   const containerRef = React.useRef<HTMLDivElement>(null);
+  const buttonRef = React.useRef<HTMLButtonElement>(null);
+  const menuRef = React.useRef<HTMLDivElement>(null);
   const hiddenSelectRef = React.useRef<HTMLSelectElement>(null);
+  const searchRef = React.useRef<HTMLInputElement>(null);
+  const listRef = React.useRef<HTMLDivElement>(null);
+  const [query, setQuery] = React.useState("");
+  const [activeIdx, setActiveIdx] = React.useState(0);
+  const canSearch = searchable ?? options.length > 8;
+
+  const filtered = React.useMemo(() => {
+    const words = query.toLowerCase().split(/s+/).filter(Boolean);
+    if (words.length === 0) return options;
+    return options.filter((o) => {
+      const label = o.label.toLowerCase();
+      return words.every((w) => label.includes(w));
+    });
+  }, [options, query]);
+
+  const [menuStyle, setMenuStyle] = React.useState<{
+    top: number;
+    left: number;
+    minWidth: number;
+    maxWidth: number;
+    visibility: "hidden" | "visible";
+  }>({
+    top: 0,
+    left: 0,
+    minWidth: 0,
+    maxWidth: 400,
+    visibility: "hidden",
+  });
+
+  React.useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  const updatePosition = React.useCallback(() => {
+    const trigger = buttonRef.current ?? containerRef.current;
+    if (!trigger) return;
+
+    const rect = trigger.getBoundingClientRect();
+    const viewportPadding = 12;
+    const menuEl = menuRef.current;
+    const menuHeight = menuEl?.offsetHeight ?? 0;
+    const menuWidth = menuEl?.offsetWidth ?? rect.width;
+
+    let left = rect.left;
+    if (left + menuWidth > window.innerWidth - viewportPadding) {
+      left = Math.max(viewportPadding, window.innerWidth - menuWidth - viewportPadding);
+    }
+    left = Math.max(viewportPadding, left);
+
+    let top = rect.bottom + 6;
+    if (menuHeight && top + menuHeight > window.innerHeight - viewportPadding) {
+      const spaceAbove = rect.top - viewportPadding;
+      const spaceBelow = window.innerHeight - viewportPadding - rect.bottom;
+      if (spaceAbove > spaceBelow && spaceAbove >= 100) {
+        top = Math.max(viewportPadding, rect.top - menuHeight - 6);
+      }
+    }
+
+    const maxWidth = Math.max(rect.width, Math.min(window.innerWidth - viewportPadding * 2, 420));
+    setMenuStyle((s) =>
+      s.top === top && s.left === left && s.minWidth === rect.width && s.maxWidth === maxWidth && s.visibility === "visible"
+        ? s
+        : { top, left, minWidth: rect.width, maxWidth, visibility: "visible" }
+    );
+  }, []);
+
+  // Ukur sebelum paint agar render pertama tidak muncul di posisi/ukuran belum final
+  React.useLayoutEffect(() => {
+    if (!isOpen) {
+      setMenuStyle((s) => (s.visibility === "hidden" ? s : { ...s, visibility: "hidden" }));
+      setQuery("");
+      return;
+    }
+
+    updatePosition();
+    const frame = window.requestAnimationFrame(updatePosition);
+    window.addEventListener("resize", updatePosition);
+    window.addEventListener("scroll", updatePosition, true);
+
+    return () => {
+      window.cancelAnimationFrame(frame);
+      window.removeEventListener("resize", updatePosition);
+      window.removeEventListener("scroll", updatePosition, true);
+    };
+  }, [isOpen, updatePosition]);
+
+  // Tinggi menu berubah saat hasil filter berubah: hitung ulang posisi (bisa membuka ke atas/bawah).
+  React.useLayoutEffect(() => {
+    if (isOpen) updatePosition();
+  }, [isOpen, filtered.length, updatePosition]);
+
+  // Fokus ke kotak cari begitu menu terlihat; sorot pilihan yang sedang aktif.
+  React.useEffect(() => {
+    if (!isOpen || menuStyle.visibility !== "visible") return;
+    if (canSearch) searchRef.current?.focus({ preventScroll: true });
+  }, [isOpen, menuStyle.visibility, canSearch]);
+
+  React.useEffect(() => {
+    if (!isOpen) return;
+    const i = filtered.findIndex((o) => o.value === internalValue && !o.disabled);
+    setActiveIdx(i >= 0 ? i : Math.max(0, filtered.findIndex((o) => !o.disabled)));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isOpen, query]);
+
+  React.useEffect(() => {
+    if (!isOpen) return;
+    listRef.current?.querySelector<HTMLElement>(`[data-idx="${activeIdx}"]`)?.scrollIntoView({ block: "nearest" });
+  }, [isOpen, activeIdx]);
 
   React.useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
-      if (containerRef.current && !containerRef.current.contains(event.target as Node)) {
+      const target = event.target as Node;
+      if (
+        containerRef.current &&
+        !containerRef.current.contains(target) &&
+        menuRef.current &&
+        !menuRef.current.contains(target)
+      ) {
         setIsOpen(false);
       }
     }
@@ -364,6 +532,7 @@ export function Select({
       </select>
 
       <button
+        ref={buttonRef}
         type="button"
         onClick={() => setIsOpen(!isOpen)}
         className={cn(
@@ -383,21 +552,68 @@ export function Select({
         )}
       </button>
 
-      {isOpen && (
-          <div className="absolute left-0 z-[46] mt-2 max-h-60 w-max min-w-full max-w-[calc(100vw-2rem)] overflow-y-auto rounded-lg border border-slate-200/90 bg-white/96 p-1.5 shadow-[0_22px_55px_-24px_rgba(15,23,42,0.24)] backdrop-blur-2xl animate-in fade-in duration-100 ease-out dark:border-sky-300/18 dark:bg-slate-900/95">
-          {options.length === 0 ? (
-            <div className="px-3 py-2 text-xs text-slate-400 text-center">Tidak ada pilihan</div>
+      {isOpen && mounted && typeof document !== "undefined" && createPortal(
+        <div
+          ref={menuRef}
+          style={{
+            top: `${menuStyle.top}px`,
+            left: `${menuStyle.left}px`,
+            minWidth: `${menuStyle.minWidth}px`,
+            maxWidth: `${menuStyle.maxWidth}px`,
+            visibility: menuStyle.visibility,
+            zIndex: 2147483005,
+          }}
+          className="fixed flex max-h-72 flex-col overflow-hidden rounded-lg border border-slate-200/90 bg-white/96 p-1.5 shadow-[0_22px_55px_-24px_rgba(15,23,42,0.24)] backdrop-blur-2xl dark:border-sky-300/18 dark:bg-slate-900/95"
+        >
+          {canSearch && (
+            <div className="relative mb-1.5 shrink-0">
+              <Search size={13} className="pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2 text-[var(--text-muted-2)]" />
+              <input
+                ref={searchRef}
+                type="text"
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "ArrowDown" || e.key === "ArrowUp") {
+                    e.preventDefault();
+                    if (filtered.length === 0) return;
+                    const dir = e.key === "ArrowDown" ? 1 : -1;
+                    let i = activeIdx;
+                    for (let n = 0; n < filtered.length; n++) {
+                      i = (i + dir + filtered.length) % filtered.length;
+                      if (!filtered[i].disabled) break;
+                    }
+                    setActiveIdx(i);
+                  } else if (e.key === "Enter") {
+                    e.preventDefault();
+                    const opt = filtered[activeIdx];
+                    if (opt && !opt.disabled) handleSelect(opt.value);
+                  }
+                }}
+                placeholder="Ketik untuk mencari..."
+                autoComplete="off"
+                aria-label="Cari pilihan"
+                className="h-9 w-full rounded-md border border-slate-200/90 bg-transparent pl-8 pr-2 text-xs font-semibold text-foreground outline-none placeholder:font-medium placeholder:text-[var(--text-muted-2)] focus:border-[var(--primary)] dark:border-sky-300/18"
+              />
+            </div>
+          )}
+          <div ref={listRef} className="min-h-0 flex-1 overflow-y-auto">
+          {filtered.length === 0 ? (
+            <div className="px-3 py-3 text-center text-xs text-slate-400">{options.length === 0 ? "Tidak ada pilihan" : "Tidak ada hasil yang cocok"}</div>
           ) : (
-            options.map((opt) => {
+            filtered.map((opt, idx) => {
               const isSelected = opt.value === internalValue;
               return (
                 <button
                   key={opt.value}
+                  data-idx={idx}
                   type="button"
                   onClick={() => handleSelect(opt.value)}
+                  onMouseMove={() => idx !== activeIdx && !opt.disabled && setActiveIdx(idx)}
                   disabled={opt.disabled}
                   className={cn(
-                  "flex w-full items-center justify-between rounded-md px-3 py-2 text-left text-xs font-bold text-[var(--text-soft)] transition-[background-color,color] select-none hover:bg-sky-50/80 hover:text-foreground cursor-pointer disabled:opacity-50 disabled:pointer-events-none dark:hover:bg-sky-400/10 dark:hover:text-white",
+                    "flex w-full items-center justify-between rounded-md px-3 py-2 text-left text-xs font-bold text-[var(--text-soft)] transition-[background-color,color] select-none hover:bg-sky-50/80 hover:text-foreground cursor-pointer disabled:opacity-50 disabled:pointer-events-none dark:hover:bg-sky-400/10 dark:hover:text-white",
+                    canSearch && idx === activeIdx && !isSelected && "bg-sky-50/80 text-foreground dark:bg-sky-400/10 dark:text-white",
                     isSelected && "bg-[var(--primary)]/10 text-[var(--primary)] hover:bg-[var(--primary)]/15 hover:text-[var(--primary)] dark:text-sky-200"
                   )}
                 >
@@ -407,7 +623,9 @@ export function Select({
               );
             })
           )}
-        </div>
+          </div>
+        </div>,
+        document.body
       )}
     </div>
   );

@@ -44,31 +44,32 @@ export async function bayarNgInvoice(input: BayarNgInvoiceInput) {
   if (!parsed.success) return { error: firstIssue(parsed.error) };
   const data = parsed.data;
 
-  const inv = await prisma.ngInvoice.findUnique({
-    where: { id: data.invoiceId },
-    select: { id: true, noInvoice: true, totalPenjualan: true, totalDibayar: true, status: true },
-  });
-  if (!inv) return { error: "Invoice non-gudang tidak ditemukan." };
-
-  const total = new Prisma.Decimal(inv.totalPenjualan);
-  const sudah = new Prisma.Decimal(inv.totalDibayar);
-  const sisa = total.sub(sudah);
-  if (sisa.lte(0)) return { error: "Invoice ini sudah lunas." };
-
-  // Anti-overpay: batasi pembayaran ke sisa piutang.
-  const bayar = Prisma.Decimal.min(new Prisma.Decimal(data.jumlah), sisa);
-  const totalDibayar = sudah.add(bayar);
-  const lunas = totalDibayar.gte(total);
-  const status: "PARTIAL" | "LUNAS" = lunas ? "LUNAS" : "PARTIAL";
-
   try {
-    const newPayment = await prisma.$transaction(async (tx) => {
+    const result = await prisma.$transaction(async (tx) => {
+      const inv = await tx.ngInvoice.findUnique({
+        where: { id: data.invoiceId },
+        select: { id: true, noInvoice: true, totalPenjualan: true, totalDibayar: true },
+      });
+      if (!inv) return { ok: false as const, error: "Invoice non-gudang tidak ditemukan." };
+
+      const total = new Prisma.Decimal(inv.totalPenjualan);
+      const sudah = new Prisma.Decimal(inv.totalDibayar);
+      const sisa = total.sub(sudah);
+      if (sisa.lte(0)) return { ok: false as const, error: "Invoice ini sudah lunas." };
+
+      // Anti-overpay: batasi pembayaran ke sisa piutang berdasarkan nilai
+      // terbaru yang dibaca di dalam transaksi serializable.
+      const bayar = Prisma.Decimal.min(new Prisma.Decimal(data.jumlah), sisa);
+      const totalDibayar = sudah.add(bayar);
+      const lunas = totalDibayar.gte(total);
+      const status: "PARTIAL" | "LUNAS" = lunas ? "LUNAS" : "PARTIAL";
+
       await tx.ngInvoice.update({
         where: { id: data.invoiceId },
         data: { totalDibayar, status },
       });
 
-      return tx.ngPayment.create({
+      const payment = await tx.ngPayment.create({
         data: {
           invoiceId: data.invoiceId,
           tanggal: data.tanggal ?? new Date(),
@@ -78,14 +79,26 @@ export async function bayarNgInvoice(input: BayarNgInvoiceInput) {
           userId: user.id,
         },
       });
-    });
+      return {
+        ok: true as const,
+        payment,
+        noInvoice: inv.noInvoice,
+        bayar,
+        lunas,
+        status,
+        totalDibayar,
+        sisa: total.sub(totalDibayar),
+      };
+    }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable });
+
+    if (!result.ok) return { error: result.error };
 
     await logActivity({
       userId: user.id,
       aksi: "BAYAR_NG_INVOICE",
       entitas: "NgInvoice",
       entitasId: data.invoiceId,
-      detail: { noInvoice: inv.noInvoice, bayar: Number(bayar), lunas, tipe: data.tipe },
+      detail: { noInvoice: result.noInvoice, bayar: Number(result.bayar), lunas: result.lunas, tipe: data.tipe },
     });
 
     revalidatePath("/non-gudang/invoice");
@@ -93,15 +106,15 @@ export async function bayarNgInvoice(input: BayarNgInvoiceInput) {
 
     return {
       ok: true,
-      status,
-      totalDibayar: Number(totalDibayar),
-      sisa: Number(total.sub(totalDibayar)),
+      status: result.status,
+      totalDibayar: Number(result.totalDibayar),
+      sisa: Number(result.sisa),
       payment: {
-        id: newPayment.id,
-        tanggal: newPayment.tanggal.toISOString(),
-        tipe: newPayment.tipe,
-        jumlah: Number(newPayment.jumlah),
-        keterangan: newPayment.keterangan ?? "",
+        id: result.payment.id,
+        tanggal: result.payment.tanggal.toISOString(),
+        tipe: result.payment.tipe,
+        jumlah: Number(result.payment.jumlah),
+        keterangan: result.payment.keterangan ?? "",
       },
     };
   } catch (error) {
@@ -121,7 +134,7 @@ const updateNgInvoiceSchema = z.object({
   namaKonsumen: optionalText(FIELD_LIMITS.namaClient, "Nama konsumen"),
   namaGrup: optionalText(FIELD_LIMITS.projectGroupNama, "Nama grup"),
   alamat: optionalText(FIELD_LIMITS.alamat, "Alamat"),
-  namaWorkshop: optionalText(FIELD_LIMITS.namaWs, "Nama workshop"),
+  namaWorkshop: optionalText(FIELD_LIMITS.namaWs, "Nama bengkel"),
   paymentMethod: z.nativeEnum(NgPaymentType),
   namaBank: optionalText(FIELD_LIMITS.namaBank, "Nama bank"),
   noRekening: optionalText(FIELD_LIMITS.noRekening, "Nomor rekening"),

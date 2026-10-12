@@ -11,6 +11,7 @@ import { FIELD_LIMITS } from "@/lib/fieldLimits";
 import { dbId, money, qtyPositive, optionalText, safeError, firstIssue } from "@/lib/validation";
 import { buildReturnItemCreateData } from "@/lib/returnRules";
 import { createInvoiceVerifyUrl } from "@/lib/invoiceVerify";
+import { validateStockDemand } from "@/lib/inventoryRules";
 
 const returnItemSchema = z.object({
   transactionItemId: dbId,
@@ -31,9 +32,9 @@ const schema = z.object({
   returnItems: z.array(returnItemSchema).min(1, "Minimal 1 barang diretur.").max(200, "Terlalu banyak item."),
   replacementItems: z.array(replacementItemSchema).max(200, "Terlalu banyak item.").optional().default([]),
   alasan: optionalText(FIELD_LIMITS.alasan, "Alasan"),
-  namaClient: optionalText(FIELD_LIMITS.namaClient, "Nama klien"),
+  namaClient: optionalText(FIELD_LIMITS.namaClient, "Nama pelanggan"),
   alamat: optionalText(FIELD_LIMITS.alamat, "Alamat"),
-  namaWs: optionalText(FIELD_LIMITS.namaWs, "Nama workshop"),
+  namaWs: optionalText(FIELD_LIMITS.namaWs, "Nama bengkel"),
 }).refine((d) => {
   if (d.tipe === "TUKAR" && d.replacementItems.length === 0) return false;
   return true;
@@ -110,7 +111,7 @@ export async function createReturn(payload: ReturPayload) {
 
     let replacementItems: { itemId: number; nama: string; hargaJual: number; qtyReplacement: number }[] = [];
     if (d.tipe === "TUKAR" && d.replacementItems.length > 0) {
-      const repIds = d.replacementItems.map((r) => r.itemId);
+      const repIds = Array.from(new Set(d.replacementItems.map((r) => r.itemId)));
       const repItemsFromDb = await tx.item.findMany({ where: { id: { in: repIds } } });
       const repItemMap = new Map(repItemsFromDb.map((i) => [i.id, i]));
       for (const ri of d.replacementItems) {
@@ -124,6 +125,34 @@ export async function createReturn(payload: ReturPayload) {
           hargaJual: Number(item.hargaJual),
           qtyReplacement: ri.qtyReplacement,
         });
+      }
+
+      const requestedByItem = new Map<number, number>();
+      for (const item of replacementItems) {
+        requestedByItem.set(item.itemId, (requestedByItem.get(item.itemId) ?? 0) + item.qtyReplacement);
+      }
+      const incomingByItem = new Map<number, number>();
+      for (const item of d.returnItems) {
+        incomingByItem.set(item.itemId, (incomingByItem.get(item.itemId) ?? 0) + item.qtyReturned);
+      }
+      const ledgerRows = await tx.stockLedger.groupBy({
+        by: ["itemId"],
+        where: { itemId: { in: repIds } },
+        _sum: { qty: true },
+      });
+      const ledgerMap = new Map(ledgerRows.map((row) => [row.itemId, row._sum.qty ?? 0]));
+      const stockValidation = validateStockDemand(
+        repItemsFromDb.map((item) => ({
+          nama: item.nama,
+          aktif: item.aktif,
+          stokAwal: item.stokAwal,
+          ledgerQty: ledgerMap.get(item.id) ?? 0,
+          requestedQty: requestedByItem.get(item.id) ?? 0,
+          incomingQty: incomingByItem.get(item.id) ?? 0,
+        }))
+      );
+      if (!stockValidation.ok) {
+        return { ok: false, error: stockValidation.error };
       }
     }
 

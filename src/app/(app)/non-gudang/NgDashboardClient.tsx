@@ -58,14 +58,14 @@ export function NgDashboardClient({
 
   const primaryStats = [
     { icon: TrendingUp, tone: "blue" as const, label: "Total Omzet", value: formatRupiah(summary.totalOmzet), hint: "Penjualan ke konsumen" },
-    { icon: BarChart3, tone: "emerald" as const, label: "Total Profit", value: formatRupiah(summary.totalProfit), hint: "Omzet - pembelian" },
+    { icon: BarChart3, tone: "emerald" as const, label: "Total Keuntungan", value: formatRupiah(summary.totalProfit), hint: "Omzet - pembelian" },
     { icon: Percent, tone: "amber" as const, label: "Margin", value: `${summary.margin.toFixed(2)}%`, hint: `Markup ${summary.markup.toFixed(2)}%` },
     { icon: Wallet, tone: "amber" as const, label: "Sisa Piutang", value: formatRupiah(summary.totalPiutang), hint: "Belum tertagih" },
   ];
 
   const secondaryStats = [
     { icon: ShoppingBag, tone: "slate" as const, label: "Total Pembelian", value: formatRupiah(summary.totalPembelian), hint: "Modal beli seluruh toko" },
-    { icon: FileText, tone: "blue" as const, label: "Jumlah Invoice", value: String(summary.jumlahInvoice), hint: `Lunas ${summary.jumlahLunas} | Tempo ${summary.jumlahTempo} | Partial ${summary.jumlahPartial}` },
+    { icon: FileText, tone: "blue" as const, label: "Jumlah Invoice", value: String(summary.jumlahInvoice), hint: `Lunas ${summary.jumlahLunas} | Tempo ${summary.jumlahTempo} | Sebagian ${summary.jumlahPartial}` },
     { icon: Store, tone: "emerald" as const, label: "Toko Sumber Aktif", value: String(perToko.length), hint: "Toko dengan transaksi" },
     { icon: AlertTriangle, tone: summary.jumlahTerlambat > 0 ? ("amber" as const) : ("slate" as const), label: "Invoice Terlambat", value: String(summary.jumlahTerlambat), hint: "Belum lunas dan lewat tempo" },
   ];
@@ -97,10 +97,10 @@ export function NgDashboardClient({
     setExporting(true);
     try {
       const name = await exportNgExcel({ userName, period: periodeLabel, analisa });
-      toast.success(`Export berhasil: ${name}`);
+      toast.success(`Berhasil diunduh: ${name}`);
     } catch (error) {
       console.error("Export NG Excel gagal:", error);
-      toast.error("Export Excel gagal, coba lagi.");
+      toast.error("Gagal mengunduh Excel, coba lagi.");
     } finally {
       setExporting(false);
     }
@@ -167,7 +167,7 @@ export function NgDashboardClient({
                   className="h-12 flex-1 font-black"
                 >
                   <Download size={15} />
-                  {exporting ? "Mengekspor..." : "Export Excel"}
+                  {exporting ? "Mengunduh..." : "Unduh Excel"}
                 </Button>
               </div>
             </div>
@@ -251,7 +251,7 @@ export function NgDashboardClient({
                     <Th>Nama Barang</Th>
                     <Th className="text-right">Qty</Th>
                     <Th className="text-right">Omzet</Th>
-                    <Th className="text-right">Profit</Th>
+                    <Th className="text-right">Keuntungan</Th>
                     <Th className="text-right">Margin</Th>
                   </tr>
                 </thead>
@@ -410,7 +410,7 @@ function ProdukMobileList({ rows }: { rows: NgAnalisa["topProduk"] }) {
           </div>
           <div className="mt-3 grid grid-cols-2 gap-2 text-xs">
             <MiniValue label="Omzet" value={formatRupiah(row.omzet)} />
-            <MiniValue label="Profit" value={formatRupiah(row.profit)} accent />
+            <MiniValue label="Keuntungan" value={formatRupiah(row.profit)} accent />
           </div>
         </article>
       ))}

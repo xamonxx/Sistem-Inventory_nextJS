@@ -19,13 +19,13 @@ const createNgInvoiceSchema = z
     namaKonsumen: optionalText(FIELD_LIMITS.namaClient, "Nama konsumen"),
     namaGrup: optionalText(FIELD_LIMITS.projectGroupNama, "Nama grup"),
     alamat: optionalText(FIELD_LIMITS.alamat, "Alamat"),
-    namaWorkshop: optionalText(FIELD_LIMITS.namaWs, "Nama workshop"),
+    namaWorkshop: optionalText(FIELD_LIMITS.namaWs, "Nama bengkel"),
     paymentStatus: z.enum(["LUNAS", "TEMPO"]),
     paymentMethod: z.nativeEnum(NgPaymentType),
     namaBank: optionalText(FIELD_LIMITS.namaBank, "Nama bank"),
     noRekening: optionalText(FIELD_LIMITS.noRekening, "Nomor rekening"),
     atasNama: optionalText(FIELD_LIMITS.atasNama, "Atas nama"),
-    items: z.array(z.object({ produkId: dbId, qty: qtyPositive })).min(1, "Keranjang CO masih kosong."),
+    items: z.array(z.object({ produkId: dbId, qty: qtyPositive })).min(1, "Keranjang Invoice masih kosong."),
   })
   .superRefine((data, ctx) => {
     if (data.paymentMethod === "TRANSFER") {
@@ -118,7 +118,7 @@ export async function createNgInvoice(input: CreateNgInvoiceInput) {
   }
 
   if (products.some((product) => product.namaToko !== data.namaToko)) {
-    return { error: "Semua barang di CO harus berasal dari toko sumber yang sama." };
+    return { error: "Semua barang di invoice harus berasal dari toko sumber yang sama." };
   }
 
   const productMap = new Map(products.map((product) => [product.id, product]));

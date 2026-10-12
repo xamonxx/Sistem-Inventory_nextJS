@@ -33,7 +33,7 @@ export function ThemeToggle() {
       type="button"
       className="chrome-icon-button relative flex h-11 w-11 cursor-pointer select-none items-center justify-center rounded-xl backdrop-blur-xl backdrop-saturate-150 transition animate-in fade-in duration-200"
       title={isDark ? "Ubah ke mode terang" : "Ubah ke mode gelap"}
-      aria-label="Toggle theme"
+      aria-label="Ganti tema terang/gelap"
     >
       {isDark ? (
         <Sun size={20} className="text-amber-400" />

@@ -23,6 +23,7 @@ import {
   boundedInt,
 } from "../src/lib/validation";
 import { FIELD_LIMITS } from "../src/lib/fieldLimits";
+import { validateStockDemand } from "../src/lib/inventoryRules";
 
 let passed = 0;
 let failed = 0;
@@ -133,6 +134,52 @@ ok("tolak test.php", !allowedExt.test("test.php"));
 ok("tolak image.jpg.php", !allowedExt.test("image.jpg.php"));
 ok("tolak shell.sh", !allowedExt.test("shell.sh"));
 ok("terima foto.jpg", allowedExt.test("foto.jpg"));
+
+console.log("\n=== aturan stok server ===");
+ok(
+  "tolak pengeluaran melebihi stok tersedia",
+  !validateStockDemand([
+    { nama: "Barang A", aktif: true, stokAwal: 10, ledgerQty: -4, requestedQty: 7 },
+  ]).ok
+);
+ok(
+  "terima pengeluaran sesuai stok tersedia",
+  validateStockDemand([
+    { nama: "Barang A", aktif: true, stokAwal: 10, ledgerQty: -4, requestedQty: 6 },
+  ]).ok
+);
+ok(
+  "tolak penjualan baru barang nonaktif",
+  !validateStockDemand([
+    { nama: "Barang Arsip", aktif: false, stokAwal: 10, ledgerQty: 0, requestedQty: 1 },
+  ]).ok
+);
+ok(
+  "edit invoice memperhitungkan stok lama yang dikembalikan",
+  validateStockDemand([
+    {
+      nama: "Barang A",
+      aktif: true,
+      stokAwal: 10,
+      ledgerQty: -8,
+      currentReservedQty: 5,
+      requestedQty: 7,
+    },
+  ]).ok
+);
+ok(
+  "tukar barang memperhitungkan stok yang masuk dari retur",
+  validateStockDemand([
+    {
+      nama: "Barang A",
+      aktif: true,
+      stokAwal: 1,
+      ledgerQty: -1,
+      incomingQty: 1,
+      requestedQty: 1,
+    },
+  ]).ok
+);
 
 console.log(`\n================ RINGKASAN ================`);
 console.log(`  LULUS : ${passed}`);

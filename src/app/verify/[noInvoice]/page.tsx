@@ -163,7 +163,7 @@ export default async function VerifyInvoicePage({
                   )}
                 </div>
                 <div>
-                  <p className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wide">Status Jaringan</p>
+                  <p className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wide">Koneksi</p>
                   <p className={`text-sm font-semibold ${isAlreadyVerified ? "text-slate-650 dark:text-slate-400" : localNetwork ? "text-primary-700 dark:text-primary-400" : "text-amber-700 dark:text-amber-450"}`}>
                     {isAlreadyVerified ? "Terverifikasi (Jaringan Tersimpan)" : localNetwork ? "Lokal (Toko) — Terpercaya" : "Eksternal"}
                   </p>
@@ -185,7 +185,7 @@ export default async function VerifyInvoicePage({
 
             <div className="bg-slate-50 dark:bg-slate-900/50 rounded-xl p-4 space-y-2">
               <div className="flex justify-between text-xs">
-                <span className="text-slate-500 dark:text-slate-400">Klien</span>
+                <span className="text-slate-500 dark:text-slate-400">Pelanggan</span>
                 <span className="font-bold text-foreground dark:text-slate-200">{invoice.namaClient ?? invoice.client?.nama ?? "-"}</span>
               </div>
               <div className="flex justify-between text-xs">

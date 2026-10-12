@@ -18,6 +18,7 @@ export const FIELD_LIMITS = {
   // Master barang
   kodeBarang: 30,
   namaBarang: 120,
+  kategoriBarang: 40,
 
   // Pengguna
   username: 30,

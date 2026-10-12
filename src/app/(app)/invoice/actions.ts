@@ -9,6 +9,14 @@ import { logActivity } from "@/lib/activity";
 import { dbId, money, safeError, firstIssue } from "@/lib/validation";
 import { FIELD_LIMITS } from "@/lib/fieldLimits";
 import { invoiceItemPayloadSchema } from "@/lib/invoiceRules";
+import { InventoryRuleError, validateStockDemand } from "@/lib/inventoryRules";
+
+class InvoiceRuleError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "InvoiceRuleError";
+  }
+}
 
 const bayarSchema = z.object({
   invoiceId: dbId,
@@ -81,9 +89,9 @@ const updateInvoiceSchema = z.object({
   id: dbId,
   noInvoice: z.string().min(1, "Nomor invoice wajib diisi.").max(30, "Nomor invoice terlalu panjang."),
   tanggal: z.coerce.date(),
-  namaClient: z.string().min(1, "Nama klien wajib diisi.").max(FIELD_LIMITS.namaClient, "Nama klien terlalu panjang."),
+  namaClient: z.string().min(1, "Nama pelanggan wajib diisi.").max(FIELD_LIMITS.namaClient, "Nama pelanggan terlalu panjang."),
   alamat: z.string().max(FIELD_LIMITS.alamat, "Alamat terlalu panjang.").nullable().optional(),
-  namaWs: z.string().max(FIELD_LIMITS.namaWs, "Nama workshop terlalu panjang.").nullable().optional(),
+  namaWs: z.string().max(FIELD_LIMITS.namaWs, "Nama bengkel terlalu panjang.").nullable().optional(),
   // Info pembayaran (opsional) — tampil di bagian PEMBAYARAN pada invoice/nota.
   namaBank: z.string().max(FIELD_LIMITS.namaBank, "Nama bank terlalu panjang.").nullable().optional(),
   noRekening: z.string().max(FIELD_LIMITS.noRekening, "No. rekening terlalu panjang.").nullable().optional(),
@@ -414,35 +422,6 @@ export async function updateInvoiceAndItems(
   });
   if (!inv) return { error: "Invoice tidak ditemukan." };
 
-  // Guard: barang yang sudah punya riwayat retur/tukar direferensikan oleh
-  // ReturnItem (FK transactionItemId). Menghapusnya saat edit invoice akan
-  // melanggar foreign key dan menggagalkan seluruh proses. Blokir lebih awal
-  // dengan pesan yang jelas alih-alih error generik.
-  if (inv.transactionId) {
-    const existingTxItems = await prisma.transactionItem.findMany({
-      where: { transactionId: inv.transactionId },
-      select: { id: true, itemId: true, namaSnapshot: true },
-    });
-    const returnedRefs = await prisma.returnItem.findMany({
-      where: { transactionItemId: { in: existingTxItems.map((x) => x.id) } },
-      select: { transactionItemId: true },
-    });
-    if (returnedRefs.length > 0) {
-      const returnedTxItemIds = new Set(returnedRefs.map((r) => r.transactionItemId));
-      const keptItemIds = new Set(invoiceItems.filter((p) => p.qty > 0).map((p) => p.itemId));
-      const blocked = existingTxItems
-        .filter((x) => returnedTxItemIds.has(x.id) && !keptItemIds.has(x.itemId))
-        .map((x) => x.namaSnapshot);
-      if (blocked.length > 0) {
-        return {
-          error:
-            `Barang berikut tidak bisa dihapus dari invoice karena sudah memiliki riwayat retur/tukar: ` +
-            `${blocked.join(", ")}. Batalkan/sesuaikan retur terkait terlebih dahulu.`,
-        };
-      }
-    }
-  }
-
   try {
     await prisma.$transaction(async (tx) => {
       await tx.invoice.update({
@@ -478,13 +457,64 @@ export async function updateInvoiceAndItems(
           where: { transactionId: txId },
         });
 
+        const returnedQtyRows = await tx.returnItem.groupBy({
+          by: ["transactionItemId"],
+          where: { transactionItemId: { in: existingTxItems.map((item) => item.id) } },
+          _sum: { qtyReturned: true },
+        });
+        const desiredQtyMap = new Map(invoiceItems.map((item) => [item.itemId, item.qty]));
+        for (const returned of returnedQtyRows) {
+          const existingItem = existingTxItems.find((item) => item.id === returned.transactionItemId);
+          if (!existingItem) continue;
+          const returnedQty = returned._sum.qtyReturned ?? 0;
+          const desiredQty = desiredQtyMap.get(existingItem.itemId) ?? 0;
+          if (desiredQty < returnedQty) {
+            throw new InvoiceRuleError(
+              `Qty "${existingItem.namaSnapshot}" tidak boleh lebih kecil dari jumlah yang sudah diretur (${returnedQty}).`
+            );
+          }
+        }
+
+        const desiredItems = invoiceItems.filter((item) => item.qty > 0);
+        const desiredIds = desiredItems.map((item) => item.itemId);
+        const masterItems = await tx.item.findMany({
+          where: { id: { in: desiredIds } },
+        });
+        if (masterItems.length !== desiredIds.length) {
+          throw new InventoryRuleError("Salah satu barang tidak ditemukan di database.");
+        }
+        const masterMap = new Map(masterItems.map((item) => [item.id, item]));
+        const existingMap = new Map(existingTxItems.map((item) => [item.itemId, item]));
+        const ledgerRows = await tx.stockLedger.groupBy({
+          by: ["itemId"],
+          where: { itemId: { in: desiredIds } },
+          _sum: { qty: true },
+        });
+        const ledgerMap = new Map(ledgerRows.map((row) => [row.itemId, row._sum.qty ?? 0]));
+        const stockValidation = validateStockDemand(
+          desiredItems.map((payloadItem) => {
+            const item = masterMap.get(payloadItem.itemId)!;
+            return {
+              nama: item.nama,
+              aktif: item.aktif,
+              stokAwal: item.stokAwal,
+              ledgerQty: ledgerMap.get(item.id) ?? 0,
+              currentReservedQty: existingMap.get(item.id)?.qty ?? 0,
+              requestedQty: payloadItem.qty,
+            };
+          })
+        );
+        if (!stockValidation.ok) {
+          throw new InventoryRuleError(stockValidation.error);
+        }
+
         for (const payloadItem of invoiceItems) {
           const matched = existingTxItems.find((x) => x.itemId === payloadItem.itemId);
           
           if (!matched) {
             if (payloadItem.qty <= 0) continue;
-            const itemObj = await tx.item.findUnique({ where: { id: payloadItem.itemId } });
-            if (!itemObj) continue;
+            const itemObj = masterMap.get(payloadItem.itemId);
+            if (!itemObj) throw new InventoryRuleError("Barang tidak ditemukan di database.");
 
             const subtotal = new Prisma.Decimal(itemObj.hargaJual).mul(payloadItem.qty);
             await tx.transactionItem.create({
@@ -583,13 +613,17 @@ export async function updateInvoiceAndItems(
       });
       if (updatedInv) {
         const newTotal = Number(updatedInv.total);
-        const newTotalDibayar = Math.min(Number(updatedInv.totalDibayar), newTotal);
-        const lunas = newTotalDibayar >= newTotal;
-        const nextStatus = lunas ? "LUNAS" : newTotalDibayar > 0 ? "PARTIAL" : "PENDING";
+        const totalDibayar = Number(updatedInv.totalDibayar);
+        if (totalDibayar > newTotal) {
+          throw new InvoiceRuleError(
+            `Total invoice baru tidak boleh lebih kecil dari pembayaran yang sudah tercatat (Rp ${totalDibayar.toLocaleString("id-ID")}).`
+          );
+        }
+        const lunas = totalDibayar >= newTotal;
+        const nextStatus = lunas ? "LUNAS" : totalDibayar > 0 ? "PARTIAL" : "PENDING";
         await tx.invoice.update({
           where: { id: val.id },
           data: {
-            totalDibayar: newTotalDibayar,
             status: nextStatus,
           },
         });
@@ -607,6 +641,7 @@ export async function updateInvoiceAndItems(
     revalidatePath("/invoice");
     return { ok: true };
   } catch (e) {
+    if (e instanceof InventoryRuleError || e instanceof InvoiceRuleError) return { error: e.message };
     return safeError(e, "Gagal mengubah rincian invoice.");
   }
 }

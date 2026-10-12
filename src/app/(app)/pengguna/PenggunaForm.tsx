@@ -90,7 +90,7 @@ export function PenggunaForm() {
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                 <div className="space-y-1">
                   <div className="flex items-center justify-between gap-2">
-                    <Label className="mb-0">Username</Label>
+                    <Label className="mb-0">Nama Pengguna</Label>
                     <CharCounter value={username} max={FIELD_LIMITS.username} />
                   </div>
                   <Input
@@ -114,7 +114,7 @@ export function PenggunaForm() {
                     name="nama"
                     value={nama}
                     onChange={(e) => setNama(e.target.value)}
-                    placeholder="Nama lengkap operator"
+                    placeholder="Nama lengkap petugas"
                     required
                     maxLength={FIELD_LIMITS.nama}
                   />
@@ -123,15 +123,15 @@ export function PenggunaForm() {
 
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                 <div className="space-y-1">
-                  <Label>Role Otorisasi</Label>
+                  <Label>Peran Pengguna</Label>
                   <Select name="role" required className="w-full">
-                    <option value="ADMIN_KASIR">Admin Kasir (POS)</option>
+                    <option value="ADMIN_KASIR">Admin Kasir</option>
                     <option value="ADMIN_GUDANG">Admin Gudang (Logistik)</option>
                   </Select>
                 </div>
                 <div className="space-y-1">
                   <div className="flex items-center justify-between gap-2">
-                    <Label className="mb-0">Password</Label>
+                    <Label className="mb-0">Kata Sandi</Label>
                     <CharCounter value={password} max={FIELD_LIMITS.passwordMax} />
                   </div>
                   <div className="relative">

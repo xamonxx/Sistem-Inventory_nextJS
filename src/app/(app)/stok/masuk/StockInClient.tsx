@@ -3,7 +3,7 @@
 import { useState, useTransition, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { submitStockIn } from "./actions";
-import { Button, Card, CurrencyInput, Input, Label, Select, Table, Th, Td, CharCounter } from "@/components/ui";
+import { Button, Card, CurrencyInput, Input, QtyInput, Label, Select, Table, Th, Td, CharCounter } from "@/components/ui";
 import { FIELD_LIMITS } from "@/lib/fieldLimits";
 import { formatRupiah } from "@/lib/utils";
 import { Plus, Trash2, ArrowLeft, Save, Printer } from "lucide-react";
@@ -65,8 +65,8 @@ export function StockInClient({ items }: { items: ItemOption[] }) {
   function handleSubmit() {
     setError("");
     if (lines.length === 0) {
-      toast.error("Batch restok masih kosong.");
-      return setError("Batch restok masih kosong.");
+      toast.error("Daftar penerimaan masih kosong.");
+      return setError("Daftar penerimaan masih kosong.");
     }
 
     start(async () => {
@@ -83,7 +83,7 @@ export function StockInClient({ items }: { items: ItemOption[] }) {
       }
 
       if (res && "ok" in res) {
-        toast.success("Batch restok berhasil disimpan!");
+        toast.success("Penerimaan barang berhasil disimpan!");
         setReceipt({
           supplierName,
           referenceNo,
@@ -134,7 +134,7 @@ export function StockInClient({ items }: { items: ItemOption[] }) {
               </div>
               <div>
                 <div className="flex items-center justify-between gap-2">
-                  <Label className="mb-0">No. Referensi / Nota Uang</Label>
+                  <Label className="mb-0">No. Referensi / Nota</Label>
                   <CharCounter value={referenceNo} max={FIELD_LIMITS.referenceNo} />
                 </div>
                 <Input
@@ -189,12 +189,11 @@ export function StockInClient({ items }: { items: ItemOption[] }) {
                         </Select>
                       </Td>
                       <Td>
-                        <Input
-                          type="number"
-                          min={1}
+                        <QtyInput
                           max={FIELD_LIMITS.maxQty}
                           value={l.qty}
-                          onChange={(e) => updateRow(index, "qty", parseInt(e.target.value) || 1)}
+                          placeholder="1"
+                          onCommit={(n) => updateRow(index, "qty", n)}
                           className="text-center font-mono font-semibold"
                         />
                       </Td>
@@ -224,7 +223,7 @@ export function StockInClient({ items }: { items: ItemOption[] }) {
                 {lines.length === 0 && (
                   <tr>
                     <Td colSpan={5} className="py-12 text-center text-muted">
-                      Batch restok kosong. Klik &quot;Tambah Baris Barang&quot; di bawah untuk memulai.
+                      Daftar penerimaan masih kosong. Klik &quot;Tambah Baris Barang&quot; di bawah untuk memulai.
                     </Td>
                   </tr>
                 )}
@@ -281,7 +280,7 @@ export function StockInClient({ items }: { items: ItemOption[] }) {
           <div className="w-full max-w-lg rounded-2xl bg-card p-6 shadow-2xl border border-border">
             <div className="border-b border-border pb-3 text-center">
               <p className="text-base font-bold text-foreground">PUTRA CORPORATION SOFTWARE</p>
-              <p className="text-xs text-slate-500">Penerimaan &amp; Restok Barang Batch</p>
+              <p className="text-xs text-slate-500">Penerimaan &amp; Restok Barang</p>
             </div>
             <div className="py-3 text-xs space-y-1">
               {receipt.supplierName && <p><strong>Supplier:</strong> {receipt.supplierName}</p>}
@@ -295,7 +294,7 @@ export function StockInClient({ items }: { items: ItemOption[] }) {
                 <tr>
                   <Th className="py-1">Material</Th>
                   <Th className="py-1 text-center">Qty</Th>
-                  <Th className="py-1 text-right">Unit Cost</Th>
+                  <Th className="py-1 text-right">Harga Beli per Unit</Th>
                   <Th className="py-1 text-right">Subtotal</Th>
                 </tr>
               </thead>

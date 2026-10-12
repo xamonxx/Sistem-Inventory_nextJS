@@ -42,7 +42,7 @@ export function DashboardCharts({ revenueTrend, topItems, projectSales, showMarg
       {/* Revenue & Margin Trend */}
       <div className={`${cardClass} ${!showMargin ? "lg:col-span-2" : ""}`}>
         <h3 className="mb-4 text-xs font-bold text-foreground uppercase tracking-wider">
-          {showMargin ? "Tren Omset & Margin Kotor" : "Tren Omset"}
+          {showMargin ? "Tren Omzet & Margin Kotor" : "Tren Omzet"}
         </h3>
         <div className="h-72">
           <ResponsiveContainer width="100%" height="100%">
@@ -71,7 +71,7 @@ export function DashboardCharts({ revenueTrend, topItems, projectSales, showMarg
                 formatter={(v: unknown) => [formatRupiah(v as number), undefined]}
               />
               <Legend verticalAlign="top" height={36} iconType="circle" />
-              <Area name="Omset" type="monotone" dataKey="omset" stroke="#0284c7" strokeWidth={2.5} fillOpacity={1} fill="url(#colorOmset)" />
+              <Area name="Omzet" type="monotone" dataKey="omset" stroke="#0284c7" strokeWidth={2.5} fillOpacity={1} fill="url(#colorOmset)" />
               {showMargin && (
                 <Area name="Margin" type="monotone" dataKey="margin" stroke="#10b981" strokeWidth={2} fillOpacity={1} fill="url(#colorMargin)" />
               )}
@@ -82,7 +82,7 @@ export function DashboardCharts({ revenueTrend, topItems, projectSales, showMarg
 
       {/* Sales by Project */}
       <div className={cardClass}>
-        <h3 className="mb-4 text-xs font-bold text-foreground uppercase tracking-wider">Omset Berdasarkan Proyek</h3>
+        <h3 className="mb-4 text-xs font-bold text-foreground uppercase tracking-wider">Omzet Berdasarkan Proyek</h3>
         <div className="h-72">
           {projectSales.length === 0 ? (
             <div className="h-full flex items-center justify-center text-xs text-slate-400">Belum ada data penjualan proyek.</div>
@@ -96,7 +96,7 @@ export function DashboardCharts({ revenueTrend, topItems, projectSales, showMarg
                   contentStyle={{ backgroundColor: "var(--glass-bg-strong)", border: "1px solid var(--glass-border)", borderRadius: "12px", boxShadow: "var(--glass-shadow)", color: "var(--foreground)", backdropFilter: "blur(18px) saturate(160%)" }}
                   formatter={(v: unknown) => [formatRupiah(v as number), undefined]}
                 />
-                <Bar name="Omset" dataKey="total" fill="#0284c7" radius={[0, 6, 6, 0]} />
+                <Bar name="Omzet" dataKey="total" fill="#0284c7" radius={[0, 6, 6, 0]} />
               </BarChart>
             </ResponsiveContainer>
           )}
@@ -105,7 +105,7 @@ export function DashboardCharts({ revenueTrend, topItems, projectSales, showMarg
 
       {/* Top Selling Items */}
       <div className={cardClass}>
-        <h3 className="mb-4 text-xs font-bold text-foreground uppercase tracking-wider">10 Barang Terlaris (Qty)</h3>
+        <h3 className="mb-4 text-xs font-bold text-foreground uppercase tracking-wider">10 Barang Terlaris (Jumlah)</h3>
         <div className="h-72 ">
           {topItems.length === 0 ? (
             <div className="h-full flex items-center justify-center text-xs text-slate-400">Belum ada data penjualan.</div>
@@ -116,7 +116,7 @@ export function DashboardCharts({ revenueTrend, topItems, projectSales, showMarg
                 <XAxis dataKey="nama" tick={{ fontSize: 9, fill: "#94a3b8" }} />
                 <YAxis tick={{ fontSize: 10, fill: "#94a3b8" }} />
                 <Tooltip contentStyle={{ backgroundColor: "var(--glass-bg-strong)", border: "1px solid var(--glass-border)", borderRadius: "12px", boxShadow: "var(--glass-shadow)", color: "var(--foreground)", backdropFilter: "blur(18px) saturate(160%)" }} />
-                <Bar name="Qty Terjual" dataKey="qty" fill="#0284c7" radius={[6, 6, 0, 0]} />
+                <Bar name="Jumlah Terjual" dataKey="qty" fill="#0284c7" radius={[6, 6, 0, 0]} />
               </BarChart>
             </ResponsiveContainer>
           )}

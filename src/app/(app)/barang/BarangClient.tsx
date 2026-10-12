@@ -8,6 +8,7 @@ import { getItemHistory, toggleAktif, logBarcodePrint, deleteItems } from "./act
 import QRCode from "qrcode";
 import { Button, Card, Input, Label, Select, Table, Th, Td, Badge } from "@/components/ui";
 import { FIELD_LIMITS } from "@/lib/fieldLimits";
+import { ITEM_CATEGORIES, type ItemCategory } from "@/lib/itemCategories";
 import { Drawer } from "@/components/Drawer";
 import { formatRupiah, formatTanggal, cn } from "@/lib/utils";
 import { printArea } from "@/lib/print";
@@ -36,6 +37,7 @@ export type ItemData = {
   id: number;
   kode: string;
   nama: string;
+  kategori: string | null;
   hargaBeli: number;
   hargaJual: number;
   stokAwal: number;
@@ -62,6 +64,7 @@ export function BarangClient({
 }) {
   const [items, setItems] = useState<ItemData[]>(initialItems);
   const [q, setQ] = useState("");
+  const [categoryFilter, setCategoryFilter] = useState<"ALL" | ItemCategory>("ALL");
   const [statusFilter, setStatusFilter] = useState<"ALL" | "ACTIVE" | "INACTIVE">("ALL");
   const [stockCondition, setStockCondition] = useState<"ALL" | "LOW" | "NEGATIVE">("ALL");
   const [selectedItem, setSelectedItem] = useState<ItemData | null>(null);
@@ -121,7 +124,10 @@ export function BarangClient({
     return items.filter((it) => {
       const matchesSearch =
         it.nama.toLowerCase().includes(q.toLowerCase()) ||
-        it.kode.toLowerCase().includes(q.toLowerCase());
+        it.kode.toLowerCase().includes(q.toLowerCase()) ||
+        (it.kategori ?? "").toLowerCase().includes(q.toLowerCase());
+
+      const matchesCategory = categoryFilter === "ALL" || it.kategori === categoryFilter;
 
       const matchesStatus =
         statusFilter === "ALL" ||
@@ -133,9 +139,9 @@ export function BarangClient({
         (stockCondition === "LOW" && it.stok >= 0 && it.stok < it.minStok) ||
         (stockCondition === "NEGATIVE" && it.stok < 0);
 
-      return matchesSearch && matchesStatus && matchesStock;
+      return matchesSearch && matchesCategory && matchesStatus && matchesStock;
     });
-  }, [items, q, statusFilter, stockCondition]);
+  }, [items, q, categoryFilter, statusFilter, stockCondition]);
 
   // Total nilai aset persediaan = Σ (harga beli × stok akhir) untuk hasil saringan
   const totalAset = useMemo(
@@ -148,7 +154,7 @@ export function BarangClient({
 
   useEffect(() => {
     setCurrentPage(1);
-  }, [q, statusFilter, stockCondition]);
+  }, [q, categoryFilter, statusFilter, stockCondition]);
 
   const paginatedItems = useMemo(() => {
     const start = (currentPage - 1) * itemsPerPage;
@@ -178,6 +184,7 @@ export function BarangClient({
           id: item.id,
           kode: item.kode,
           nama: item.nama,
+          kategori: item.kategori ?? "MATERIAL",
           hargaBeli: item.hargaBeli,
           hargaJual: item.hargaJual,
           stokAwal: item.stokAwal,
@@ -215,6 +222,7 @@ export function BarangClient({
           id: undefined,
           kode: "",
           nama: `${item.nama} (Duplikat)`,
+          kategori: item.kategori ?? "MATERIAL",
           hargaBeli: Number(item.hargaBeli),
           hargaJual: Number(item.hargaJual),
           stokAwal: 0, // Reset physical stock to 0 for duplicated product
@@ -292,9 +300,9 @@ export function BarangClient({
         {[
           { label: "Total Katalog Barang", value: `${stats.total} item`, desc: "Semua material terdaftar", icon: Boxes, tone: "blue" },
           ...(canEdit ? [{ label: "Total Nilai Aset", value: formatRupiah(stats.asset), desc: "Total modal persediaan", icon: Coins, tone: "indigo" }] : []),
-          { label: "Produk Aktif POS", value: `${stats.active} item`, desc: "Dapat dijual oleh Kasir", icon: ArrowUpRight, tone: "green" },
-          { label: "Stok Menipis (Kritis)", value: `${stats.low} item`, desc: "Di bawah batas safety", icon: ArrowDownRight, tone: "amber" },
-          { label: "Stok Minus", value: `${stats.negative} item`, desc: "Perlu rekonsiliasi stok", icon: ShieldAlert, tone: "red" },
+          { label: "Barang Aktif di Kasir", value: `${stats.active} item`, desc: "Dapat dijual oleh Kasir", icon: ArrowUpRight, tone: "green" },
+          { label: "Stok Menipis", value: `${stats.low} item`, desc: "Di bawah stok minimum", icon: ArrowDownRight, tone: "amber" },
+          { label: "Stok Minus", value: `${stats.negative} item`, desc: "Perlu dicocokkan dengan stok fisik", icon: ShieldAlert, tone: "red" },
         ].map((card) => {
           const Icon = card.icon;
           const toneColors: Record<string, string> = {
@@ -326,25 +334,36 @@ export function BarangClient({
       </section>
 
       {/* 2. Filters Toolbar */}
-      <Card className="flex flex-col gap-3 p-4 lg:flex-row lg:items-center lg:gap-4">
+      <Card className="relative z-20 flex flex-col gap-3 p-4 lg:flex-row lg:items-center lg:gap-4">
         <div className="relative w-full lg:flex-1">
           <Search size={16} className="pointer-events-none absolute left-3 top-3 z-10 text-[var(--text-soft)]" />
           <Input
             value={q}
             onChange={(e) => setQ(e.target.value)}
             maxLength={FIELD_LIMITS.search}
-            placeholder="Cari SKU, barcode, atau nama..."
+            placeholder="Cari kode, barcode, atau nama..."
             className="pl-9 h-10 rounded-xl"
           />
         </div>
         <div className="flex flex-col gap-2.5 sm:flex-row sm:flex-wrap sm:items-center lg:flex-nowrap lg:shrink-0">
+          <Select
+            value={categoryFilter}
+            onChange={(e) => setCategoryFilter(e.target.value as "ALL" | ItemCategory)}
+            className="h-10 w-full rounded-xl text-xs font-bold sm:w-44"
+          >
+            <option value="ALL">Semua Kategori</option>
+            {ITEM_CATEGORIES.map((kategori) => (
+              <option key={kategori} value={kategori}>{kategori}</option>
+            ))}
+          </Select>
+
           <Select
             value={statusFilter}
             onChange={(e) => setStatusFilter(e.target.value as any)}
             className="h-10 w-full rounded-xl text-xs font-bold sm:w-40"
           >
             <option value="ALL">Semua Status</option>
-            <option value="ACTIVE">Aktif (POS)</option>
+            <option value="ACTIVE">Aktif (tampil di kasir)</option>
             <option value="INACTIVE">Diarsipkan</option>
           </Select>
 
@@ -365,7 +384,7 @@ export function BarangClient({
                 variant="outline"
                 className="h-10 flex-1 rounded-xl px-4 text-xs font-bold gap-2 sm:flex-none"
               >
-                <Printer size={14} /> Lembar SO (PDF)
+                <Printer size={14} /> Lembar Stock Opname
               </Button>
 
               <div ref={soOptionsRef} className="relative shrink-0">
@@ -373,13 +392,13 @@ export function BarangClient({
                   onClick={() => setShowSOOptions(!showSOOptions)}
                   variant="outline"
                   className="h-10 rounded-xl px-3 text-xs font-bold gap-1.5"
-                  title="Opsi Cetak Lembar SO"
+                  title="Opsi Cetak Stock Opname"
                 >
                   <SlidersHorizontal size={14} />
                 </Button>
                 {showSOOptions && (
                   <div className="absolute right-0 z-30 mt-2 w-56 rounded-xl border border-border bg-card p-3.5 shadow-lg animate-in fade-in slide-in-from-top-1 duration-150">
-                    <p className="text-[10px] font-bold uppercase tracking-wider text-[var(--text-muted-2)] mb-2">Opsi Lembar SO</p>
+                    <p className="text-[10px] font-bold uppercase tracking-wider text-[var(--text-muted-2)] mb-2">Opsi Stock Opname</p>
                     <label className="flex items-center gap-2 text-xs font-semibold text-[var(--text-soft)] cursor-pointer select-none">
                       <input
                         type="checkbox"
@@ -445,6 +464,7 @@ export function BarangClient({
                   <div className="min-w-0">
                     <p className="font-mono text-[11px] font-bold text-[var(--primary)]">{it.kode}</p>
                     <p className="mt-0.5 font-semibold leading-snug text-foreground line-clamp-2">{it.nama}</p>
+                    {it.kategori && <Badge tone="blue" className="mt-1 text-[8px]">{it.kategori}</Badge>}
                   </div>
                 </div>
                 <Badge tone={it.aktif ? "green" : "slate"}>{it.aktif ? "Aktif" : "Arsip"}</Badge>
@@ -522,8 +542,9 @@ export function BarangClient({
                   />
                 </Th>
               )}
-              <Th>Kode SKU</Th>
+              <Th>Kode Barang</Th>
               <Th>Nama Barang</Th>
+              <Th>Kategori</Th>
               <Th className="text-right">Harga Beli</Th>
               <Th className="text-right">Harga Jual</Th>
               <Th className="text-right w-28">Stok Awal</Th>
@@ -561,6 +582,7 @@ export function BarangClient({
                     {it.kode}
                   </Td>
                   <Td className="font-semibold text-foreground">{it.nama}</Td>
+                  <Td><Badge tone="blue" className="text-[8px]">{it.kategori ?? "-"}</Badge></Td>
                   <Td className="text-right font-mono text-xs">
                     {canEdit ? formatRupiah(it.hargaBeli) : "🔒 Dibatasi"}
                   </Td>
@@ -607,7 +629,7 @@ export function BarangClient({
 
             {paginatedItems.length === 0 && (
               <tr>
-                <Td colSpan={canEdit ? 10 : 9} className="py-16 text-center text-slate-400 select-none">
+                <Td colSpan={canEdit ? 11 : 10} className="py-16 text-center text-slate-400 select-none">
                   <Boxes className="mx-auto text-slate-200 mb-2" size={32} />
                   <p className="font-semibold text-sm">Barang Tidak Ditemukan</p>
                   <p className="text-xs">Katalog kosong atau pencarian tidak cocok.</p>
@@ -618,7 +640,7 @@ export function BarangClient({
           {filteredItems.length > 0 && canEdit && (
           <tfoot>
               <tr className="bg-[var(--surface-2)] font-bold">
-                <Td colSpan={7} className="text-right text-xs uppercase tracking-wider text-[var(--text-soft)]">
+                <Td colSpan={8} className="text-right text-xs uppercase tracking-wider text-[var(--text-soft)]">
                   Total Nilai Aset Persediaan ({filteredItems.length} item)
                 </Td>
                 <Td className={cn(
@@ -703,11 +725,12 @@ export function BarangClient({
             {/* General pricing & SKU info */}
             <div className="grid grid-cols-2 gap-4">
               <div className="rounded-xl border border-border p-4 bg-[var(--surface-2)]">
-                <p className="text-[10px] font-bold text-[var(--text-muted-2)] uppercase mb-1">Kode SKU Barang</p>
+                <p className="text-[10px] font-bold text-[var(--text-muted-2)] uppercase mb-1">Kode Barang</p>
                 <p className="font-mono font-bold text-foreground text-sm">{selectedItem.kode}</p>
+                <p className="mt-1 text-[10px] font-bold text-[var(--primary)]">{selectedItem.kategori ?? "Tanpa kategori"}</p>
               </div>
               <div className="rounded-xl border border-border p-4 bg-[var(--surface-2)]">
-                <p className="text-[10px] font-bold text-[var(--text-muted-2)] uppercase mb-1">Status Penjualan POS</p>
+                <p className="text-[10px] font-bold text-[var(--text-muted-2)] uppercase mb-1">Status Penjualan</p>
                 <div className="mt-0.5">
                   <Badge tone={selectedItem.aktif ? "green" : "slate"}>
                     {selectedItem.aktif ? "Aktif" : "Diarsipkan"}
@@ -721,13 +744,13 @@ export function BarangClient({
               <Label>Struktur Harga</Label>
               <div className="grid grid-cols-2 gap-4 border border-border p-4 rounded-xl">
                 <div>
-                  <span className="text-[10px] font-bold text-[var(--text-muted-2)] uppercase">Harga Modal (COGS)</span>
+                  <span className="text-[10px] font-bold text-[var(--text-muted-2)] uppercase">Harga Modal</span>
                   <p className="font-bold font-mono text-foreground text-sm mt-1">
                     {canEdit ? formatRupiah(selectedItem.hargaBeli) : "🔒 Dibatasi"}
                   </p>
                 </div>
                 <div>
-                  <span className="text-[10px] font-bold text-[var(--text-muted-2)] uppercase">Harga Jual POS</span>
+                  <span className="text-[10px] font-bold text-[var(--text-muted-2)] uppercase">Harga Jual</span>
                   <p className="font-bold font-mono text-[var(--primary)] text-sm mt-1">
                     {formatRupiah(selectedItem.hargaJual)}
                   </p>
@@ -753,7 +776,7 @@ export function BarangClient({
                   </span>
                 </div>
                 <div>
-                  <span className="text-[var(--text-muted-2)] block mb-1">Safety Stock (Min)</span>
+                  <span className="text-[var(--text-muted-2)] block mb-1">Stok Minimum</span>
                   <span className="text-foreground text-sm font-bold font-mono">{selectedItem.minStok} unit</span>
                 </div>
               </div>
@@ -774,17 +797,17 @@ export function BarangClient({
                       <Th className="py-2.5">Tipe</Th>
                       <Th className="py-2.5 text-right">Kuantitas</Th>
                       <Th className="py-2.5">Keterangan</Th>
-                      <Th className="py-2.5">Operator</Th>
+                      <Th className="py-2.5">Petugas</Th>
                     </tr>
                   </thead>
                   <tbody>
                     {loadingHistory ? (
                       <tr>
-                        <Td colSpan={5} className="py-8 text-center text-slate-400">Memuat data mutasi...</Td>
+                        <Td colSpan={5} className="py-8 text-center text-slate-400">Memuat riwayat stok...</Td>
                       </tr>
                     ) : itemHistory.length === 0 ? (
                       <tr>
-                        <Td colSpan={5} className="py-8 text-center text-slate-400">Belum ada mutasi stok.</Td>
+                        <Td colSpan={5} className="py-8 text-center text-slate-400">Belum ada pergerakan stok.</Td>
                       </tr>
                     ) : (
                       itemHistory.map((h) => (
@@ -823,7 +846,7 @@ export function BarangClient({
           <div onClick={(e) => e.stopPropagation()} className="my-4 w-full overflow-hidden rounded-2xl bg-card shadow-2xl border border-border max-w-4xl">
             <div className="flex items-center justify-between gap-2 border-b border-border px-4 py-3">
               <p className="text-sm font-semibold text-foreground">
-                Pratinjau Lembar Stock Opname (SO)
+                Pratinjau Lembar Stock Opname
               </p>
               <div className="flex items-center gap-2">
                 <Button size="sm" onClick={() => printArea({ className: "print-format-a4" })}>
@@ -834,7 +857,7 @@ export function BarangClient({
                 </button>
               </div>
             </div>
-            <div className="overflow-auto bg-[var(--paper-2)] p-6" style={{ maxHeight: "calc(100vh - 120px)" }}>
+            <div className="overflow-auto bg-[var(--paper-2)] p-6" style={{ maxHeight: "calc(100dvh - 120px)" }}>
               {/* Document print area */}
               <div className="so-sheet print-area print-a4-preview mx-auto origin-top overflow-visible rounded-xl border border-border bg-white p-8 shadow-[0_4px_24px_-8px_rgba(15,23,42,0.18)]">
                 <div className="space-y-6 text-[#10201e] font-sans">
@@ -848,7 +871,7 @@ export function BarangClient({
                         <p>Total Item: <span className="font-semibold">{filteredItems.length} barang</span></p>
                       </div>
                       <div className="text-right">
-                        <p>Kondisi Stok: <span className="font-semibold">{stockCondition === "LOW" ? "Stok Kritis" : stockCondition === "NEGATIVE" ? "Stok Minus" : "Semua"}</span></p>
+                        <p>Kondisi Stok: <span className="font-semibold">{stockCondition === "LOW" ? "Stok Menipis" : stockCondition === "NEGATIVE" ? "Stok Minus" : "Semua"}</span></p>
                         <p>Status Barang: <span className="font-semibold">{statusFilter === "ACTIVE" ? "Aktif" : statusFilter === "INACTIVE" ? "Diarsipkan" : "Semua"}</span></p>
                       </div>
                     </div>
@@ -859,7 +882,7 @@ export function BarangClient({
                     <thead>
                       <tr className="so-table-head">
                         <th className="text-center w-8">No</th>
-                        <th className="text-left w-24">Kode SKU</th>
+                        <th className="text-left w-24">Kode Barang</th>
                         <th className="text-left">Nama Barang</th>
                         {showSystemStock && <th className="text-right w-20">Stok Sistem</th>}
                         <th className="text-center w-24">Stok Fisik</th>

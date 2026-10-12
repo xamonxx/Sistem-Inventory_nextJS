@@ -1,20 +1,6 @@
 import { requireUser } from "@/lib/auth";
-import { laporanMargin, barangTerlaris, laporanStok, laporanPiutang, type ReportRange } from "@/lib/reports";
+import { laporanMargin, barangTerlaris, laporanStok, laporanPiutang, parseReportRange } from "@/lib/reports";
 import { LaporanClient } from "./LaporanClient";
-
-/** Parse "YYYY-MM-DD" jadi rentang inklusif (awal hari s/d akhir hari). */
-function parseRange(from?: string, to?: string): ReportRange {
-  const range: ReportRange = {};
-  if (from && /^\d{4}-\d{2}-\d{2}$/.test(from)) {
-    const d = new Date(`${from}T00:00:00`);
-    if (!Number.isNaN(d.getTime())) range.from = d;
-  }
-  if (to && /^\d{4}-\d{2}-\d{2}$/.test(to)) {
-    const d = new Date(`${to}T23:59:59.999`);
-    if (!Number.isNaN(d.getTime())) range.to = d;
-  }
-  return range;
-}
 
 export default async function LaporanPage({
   searchParams,
@@ -35,7 +21,7 @@ export default async function LaporanPage({
   }
 
   const sp = await searchParams;
-  const range = parseRange(sp.from, sp.to);
+  const range = parseReportRange(sp.from, sp.to);
   const periodeLabel = sp.label && sp.label.trim().length > 0 ? sp.label : "Semua Waktu";
 
   // Fetch reports on server-side (mengikuti rentang periode aktif).
@@ -48,8 +34,8 @@ export default async function LaporanPage({
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold tracking-tight">Analitik &amp; Laporan ERP</h1>
-        <p className="text-sm text-muted">Akses data performa penjualan harian, sisa outstanding piutang, dan valuasi aset persediaan gudang.</p>
+        <h1 className="text-2xl font-bold tracking-tight">Analisis &amp; Laporan</h1>
+        <p className="text-sm text-muted">Akses data performa penjualan harian, sisa piutang, dan valuasi aset persediaan gudang.</p>
       </div>
 
       <LaporanClient

@@ -236,22 +236,22 @@ export default async function DashboardPage({
   // Build KPIs based on Selected Mode
   const kpiCards = isOwnerMode
     ? [
-        { label: "Omset Bulan Ini", value: formatRupiah(omsetMonth), desc: "Penjualan kotor bulan berjalan", icon: TrendingUp, tone: "success" },
+        { label: "Omzet Bulan Ini", value: formatRupiah(omsetMonth), desc: "Penjualan kotor bulan berjalan", icon: TrendingUp, tone: "success" },
         { label: "Margin Kotor", value: isGudang ? formatRupiah(marginTotal) : "Terkunci", desc: "Berdasarkan filter tanggal", icon: Layers, tone: "blue" },
-        { label: "Outstanding Piutang", value: formatRupiah(outstandingReceivables), desc: `${unpaidInvoices.length} invoice aktif`, icon: Wallet, tone: "amber" },
+        { label: "Piutang Belum Dibayar", value: formatRupiah(outstandingReceivables), desc: `${unpaidInvoices.length} invoice aktif`, icon: Wallet, tone: "amber" },
         { label: "Nilai Aset Gudang", value: isGudang ? formatRupiah(totalAssetValue) : "Terkunci", desc: "Total nilai modal persediaan", icon: Package, tone: "slate" },
         { label: "Proyek Konstruksi", value: String(activeProjectsCount), desc: "Proyek aktif terdaftar", icon: Building2, tone: "blue" },
-        { label: "Pelanggan Terdaftar", value: String(activeClientsCount), desc: "Customer di dalam CRM", icon: Users, tone: "primary" },
+        { label: "Pelanggan Terdaftar", value: String(activeClientsCount), desc: "Pelanggan yang sudah terdaftar", icon: Users, tone: "primary" },
       ]
     : [
-        { label: "Omset Hari Ini", value: formatRupiah(omsetToday), desc: "Total penjualan hari ini", icon: TrendingUp, tone: "success" },
+        { label: "Omzet Hari Ini", value: formatRupiah(omsetToday), desc: "Total penjualan hari ini", icon: TrendingUp, tone: "success" },
         { label: "Transaksi Hari Ini", value: `${transactionsTodayCount} trx`, desc: "Invoice kasir terbuat", icon: FileText, tone: "blue" },
-        { label: "Stok Kritis (Safety)", value: `${lowStockItems.length} barang`, desc: "Stok di bawah batas minimum", icon: AlertTriangle, tone: "amber" },
-        { label: "Stok Minus Gudang", value: `${negativeStockItems.length} barang`, desc: "Koreksi fisik dibutuhkan", icon: CircleAlert, tone: "red" },
+        { label: "Stok Menipis", value: `${lowStockItems.length} barang`, desc: "Stok di bawah stok minimum", icon: AlertTriangle, tone: "amber" },
+        { label: "Stok Minus Gudang", value: `${negativeStockItems.length} barang`, desc: "Perlu dicek ke gudang", icon: CircleAlert, tone: "red" },
         ...(user.role !== "ADMIN_KASIR"
           ? [
-              { label: "Operator Aktif", value: `${await prisma.user.count({ where: { aktif: true } })} user`, desc: "Total staf terdaftar", icon: Users, tone: "primary" },
-              { label: "Aktivitas Hari Ini", value: `${logsTodayCount} logs`, desc: "Audit trail log operasional", icon: Clock, tone: "slate" },
+              { label: "Petugas Aktif", value: `${await prisma.user.count({ where: { aktif: true } })} pengguna`, desc: "Total staf terdaftar", icon: Users, tone: "primary" },
+              { label: "Aktivitas Hari Ini", value: `${logsTodayCount} aktivitas`, desc: "Catatan aktivitas pengguna", icon: Clock, tone: "slate" },
             ]
           : []),
       ];
@@ -272,18 +272,18 @@ export default async function DashboardPage({
         <div>
           <p className="u-label flex items-center gap-2.5 text-[var(--primary)]">
             <span className="inline-block h-[3px] w-7 rounded-full bg-gradient-to-r from-[var(--primary)] via-sky-400 to-amber-400" />
-            Sistem ERP Putra Corp
+            Sistem Inventory Putra Corp
           </p>
           <h1 className="mt-3 text-2xl font-extrabold text-foreground tracking-normal">
             {isOwnerMode ? "Owner Business Dashboard" : "Operational Workspace"}
           </h1>
           <p className="mt-2 max-w-2xl text-sm font-medium leading-6 text-[var(--text-soft)]">
-            Selamat datang kembali, <span className="font-bold text-foreground">{user.nama}</span>. Pantau omset, stok kritis, dan aktivitas gudang dari satu ruang kerja.
+            Selamat datang kembali, <span className="font-bold text-foreground">{user.nama}</span>. Pantau omzet, stok menipis, dan aktivitas gudang dari satu ruang kerja.
           </p>
           <div className="mt-4 flex flex-wrap gap-2">
             <span className="dashboard-chip inline-flex items-center gap-2 rounded-full px-3 py-1.5 text-[11px] font-bold text-[var(--text-soft)] backdrop-blur-xl backdrop-saturate-150">
               <ShieldCheck size={13} className="text-[var(--primary)]" />
-              Live inventory
+              Stok terkini
             </span>
             <span className="dashboard-chip inline-flex items-center gap-2 rounded-full px-3 py-1.5 text-[11px] font-bold text-[var(--text-soft)] backdrop-blur-xl backdrop-saturate-150">
               <Clock size={13} className="text-amber-500" />
@@ -340,7 +340,7 @@ export default async function DashboardPage({
                 className="inline-flex h-11 flex-1 cursor-pointer items-center justify-center gap-2 rounded-lg bg-gradient-to-br from-[var(--primary)] to-sky-500 px-5 text-xs font-bold text-white shadow-lg shadow-sky-500/20 transition-all hover:brightness-105 xl:flex-none"
               >
                 <Filter size={14} />
-                Saring
+                Terapkan
               </button>
               {params.from || params.to ? (
                 <Link
@@ -366,7 +366,7 @@ export default async function DashboardPage({
                 <AlertTriangle size={18} strokeWidth={2.4} />
               </div>
               <div>
-                <h3 className="font-display text-sm font-bold text-foreground leading-tight">Alert Center</h3>
+                <h3 className="font-display text-sm font-bold text-foreground leading-tight">Pusat Peringatan</h3>
                 <p className="text-xs text-muted mt-0.5">Peringatan stok gudang yang perlu ditindaklanjuti.</p>
               </div>
             </div>
@@ -389,7 +389,7 @@ export default async function DashboardPage({
                   </div>
                   <div className="min-w-0 flex-1">
                     <p className="text-[11px] font-bold uppercase tracking-wide text-red-700 dark:text-red-400">Stok Minus Gudang</p>
-                    <p className="text-[10px] text-red-600/70 dark:text-red-400/60">Perlu koreksi fisik segera</p>
+                    <p className="text-[10px] text-red-600/70 dark:text-red-400/60">Perlu dicek ke gudang</p>
                   </div>
                   <span className="text-2xl font-extrabold tabular-nums text-red-600 dark:text-red-400 leading-none">{negativeStockItems.length}</span>
                 </div>
@@ -422,8 +422,8 @@ export default async function DashboardPage({
                     <AlertTriangle size={17} strokeWidth={2.4} />
                   </div>
                   <div className="min-w-0 flex-1">
-                    <p className="text-[11px] font-bold uppercase tracking-wide text-amber-700 dark:text-amber-400">Stok Kritis</p>
-                    <p className="text-[10px] text-amber-600/70 dark:text-amber-400/60">Di bawah batas aman (safety)</p>
+                    <p className="text-[11px] font-bold uppercase tracking-wide text-amber-700 dark:text-amber-400">Stok Menipis</p>
+                    <p className="text-[10px] text-amber-600/70 dark:text-amber-400/60">Di bawah stok minimum</p>
                   </div>
                   <span className="text-2xl font-extrabold tabular-nums text-amber-600 dark:text-amber-400 leading-none">{lowStockItems.length}</span>
                 </div>
@@ -523,9 +523,9 @@ export default async function DashboardPage({
           <div className="liquid-panel space-y-5 rounded-2xl p-6 backdrop-blur-2xl backdrop-saturate-150">
             <div>
               <h3 className="font-display text-base font-bold text-foreground dark:text-slate-100 flex items-center gap-2.5">
-                <Clock size={17} className="text-[var(--primary)]" /> Riwayat Audit Operasional
+                <Clock size={17} className="text-[var(--primary)]" /> Riwayat Aktivitas
               </h3>
-              <p className="text-xs text-slate-500 dark:text-slate-400 mt-1.5">Log audit aktivitas staf kasir dan gudang terbaru.</p>
+              <p className="text-xs text-slate-500 dark:text-slate-400 mt-1.5">Catatan aktivitas staf kasir dan gudang terbaru.</p>
             </div>
 
             <div className="relative border-l border-border dark:border-slate-800 pl-4 ml-2 space-y-5">

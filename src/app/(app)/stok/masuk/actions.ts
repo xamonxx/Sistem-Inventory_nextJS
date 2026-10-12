@@ -8,6 +8,7 @@ import { requireRole } from "@/lib/auth";
 import { logActivity } from "@/lib/activity";
 import { FIELD_LIMITS } from "@/lib/fieldLimits";
 import { dbId, money, qtyPositive, optionalText, safeError, firstIssue } from "@/lib/validation";
+import { InventoryRuleError } from "@/lib/inventoryRules";
 
 const itemSchema = z.object({
   itemId: dbId,
@@ -37,10 +38,10 @@ export async function submitStockIn(payload: StockInPayload) {
     const result = await prisma.$transaction(async (tx) => {
       let totalAmount = new Prisma.Decimal(0);
       const itemIds = Array.from(new Set(d.items.map((line) => line.itemId)));
-      const items = await tx.item.findMany({ where: { id: { in: itemIds } } });
+      const items = await tx.item.findMany({ where: { id: { in: itemIds }, aktif: true } });
       const itemMap = new Map(items.map((item) => [item.id, item]));
       if (items.length !== itemIds.length) {
-        throw new Error("Salah satu barang tidak ditemukan.");
+        throw new InventoryRuleError("Salah satu barang tidak ditemukan atau sudah nonaktif.");
       }
 
       // Create a unified note details string
@@ -104,6 +105,7 @@ export async function submitStockIn(payload: StockInPayload) {
 
     return result;
   } catch (error) {
+    if (error instanceof InventoryRuleError) return { error: error.message };
     return safeError(error, "Gagal menyimpan batch stock-in.");
   }
 }

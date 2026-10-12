@@ -54,7 +54,7 @@ export function NgPembelianClient({
     { icon: ShoppingBag, tone: "blue" as const, label: "Total Pembelian", value: formatRupiah(summary.totalPembelian), hint: "Modal beli seluruh toko" },
     { icon: FileText, tone: "slate" as const, label: "Jumlah Pembelian", value: String(summary.jumlahInvoice), hint: `Rata-rata ${formatRupiah(averagePurchase)}` },
     { icon: Store, tone: "emerald" as const, label: "Toko Sumber", value: String(summary.jumlahToko), hint: strongestStore ? `Terbesar: ${strongestStore.namaToko}` : "Belum ada toko" },
-    { icon: Boxes, tone: "amber" as const, label: "Total Qty", value: `${summary.totalQty} unit`, hint: "Barang dibeli" },
+    { icon: Boxes, tone: "amber" as const, label: "Total Jumlah", value: `${summary.totalQty} unit`, hint: "Barang dibeli" },
   ];
 
   const filteredInvoices = useMemo(() => {
@@ -207,7 +207,7 @@ export function NgPembelianClient({
               <Table variant="plain" className="rounded-lg border border-slate-200 dark:border-slate-800" tableClassName="min-w-[820px]">
                 <thead>
                   <tr>
-                    <Th className="w-16">Rank</Th>
+                    <Th className="w-16">Peringkat</Th>
                     <Th>Toko Sumber</Th>
                     <Th className="text-right">Pembelian</Th>
                     <Th className="text-right">Qty</Th>

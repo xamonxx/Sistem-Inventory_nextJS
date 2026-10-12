@@ -42,7 +42,7 @@ const KEUANGAN: Item[] = [
 const NON_GUDANG: Item[] = [
   { href: "/non-gudang", label: "Dashboard", icon: LayoutDashboard, roles: ["ADMIN_NONGUDANG"] },
   { href: "/non-gudang/barang", label: "Master Barang", icon: Boxes, roles: ["ADMIN_NONGUDANG"] },
-  { href: "/non-gudang/buat-invoice", label: "Keranjang CO", icon: ShoppingCart, roles: ["ADMIN_NONGUDANG"] },
+  { href: "/non-gudang/buat-invoice", label: "Keranjang Invoice", icon: ShoppingCart, roles: ["ADMIN_NONGUDANG"] },
   { href: "/non-gudang/invoice", label: "Riwayat Invoice", icon: FileText, roles: ["ADMIN_NONGUDANG"] },
   { href: "/non-gudang/pembelian", label: "Riwayat Pembelian", icon: Store, roles: ["ADMIN_NONGUDANG"] },
   { href: "/non-gudang/konsumen", label: "Konsumen", icon: UserRound, roles: ["ADMIN_NONGUDANG"] },
@@ -152,7 +152,7 @@ function SidebarContent({
                 isCollapsed ? "lg:justify-center lg:px-0" : "",
                 active
                   ? "chrome-nav-link-active"
-                  : "chrome-nav-link border-transparent"
+                  : "chrome-nav-link border-[var(--chrome-border)]"
               )}
             >
               {/* Active rail — only for full-width rows (expanded desktop + mobile
@@ -264,7 +264,7 @@ function SidebarContent({
             )}>
               <p className="font-display text-sm font-black uppercase tracking-tight text-[var(--chrome-ink)]">PUTRA CORP</p>
               <div className="mt-0.5 w-max rounded-[4px] border border-[var(--chrome-border)] bg-white/10 px-1.5 py-0.5 text-[8px] font-black uppercase tracking-[0.18em] text-[var(--chrome-soft)] select-none">
-                SOFTWARE ERP
+                SISTEM INVENTORY
               </div>
             </div>
           </div>
@@ -351,7 +351,7 @@ function SidebarContent({
             )}>
               <p className="truncate text-xs font-bold text-[var(--chrome-ink)]">{nama}</p>
               <p className="mt-0.5 select-none text-[9px] font-bold uppercase tracking-wider text-[var(--chrome-soft)]">
-                {role === "ADMIN_KASIR" ? "KASIR POS" : role === "ADMIN_NONGUDANG" ? "NON-GUDANG" : "GUDANG LOGISTIK"}
+                {role === "ADMIN_KASIR" ? "KASIR" : role === "ADMIN_NONGUDANG" ? "NON-GUDANG" : "GUDANG LOGISTIK"}
               </p>
             </div>
           </button>

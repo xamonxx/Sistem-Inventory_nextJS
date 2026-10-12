@@ -208,9 +208,9 @@ export function InvoiceClient({ initialInvoices, canBayar, userName }: InvoiceCl
   const [exporting, setExporting] = useState(false);
   const statusLabelMap: Record<string, string> = {
     ALL: "Semua Tagihan",
-    PENDING: "Belum Lunas (Pending)",
-    PAID: "Lunas (Paid)",
-    DRAFT: "Draft",
+    PENDING: "Belum Lunas",
+    PAID: "Lunas",
+    DRAFT: "Draf",
   };
 
   async function handleExportExcel() {
@@ -228,10 +228,10 @@ export function InvoiceClient({ initialInvoices, canBayar, userName }: InvoiceCl
         filterLabel: filterParts.join(" • "),
         invoices: filteredInvoices,
       });
-      toast.success("Export Excel berhasil");
+      toast.success("Excel berhasil diunduh");
     } catch (err) {
       console.error("Export Excel gagal:", err);
-      toast.error("Export Excel gagal, silakan coba lagi");
+      toast.error("Gagal mengunduh Excel, silakan coba lagi");
     } finally {
       setExporting(false);
     }
@@ -419,7 +419,7 @@ export function InvoiceClient({ initialInvoices, canBayar, userName }: InvoiceCl
         {[
           { label: "Total Piutang Aktif", value: formatRupiah(stats.totalReceivable), desc: "Piutang belum terbayar", icon: Wallet, tone: "amber" },
           { label: "Total Pembayaran Diterima", value: formatRupiah(stats.totalPaid), desc: "Lunas/cicilan terkumpul", icon: CheckCircle, tone: "green" },
-          { label: "Invoices Pending", value: `${stats.pendingCount} invoice`, desc: "Belum lunas sepenuhnya", icon: Clock, tone: "blue" },
+          { label: "Invoice Belum Lunas", value: `${stats.pendingCount} invoice`, desc: "Belum lunas sepenuhnya", icon: Clock, tone: "blue" },
         ].map((card, idx, arr) => {
           const Icon = card.icon;
           const toneColors: Record<string, string> = {
@@ -454,7 +454,7 @@ export function InvoiceClient({ initialInvoices, canBayar, userName }: InvoiceCl
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               maxLength={FIELD_LIMITS.search}
-              placeholder="Cari invoice, klien..."
+              placeholder="Cari invoice, pelanggan..."
               className="h-11 rounded-2xl pl-11 pr-4"
             />
           </div>
@@ -466,9 +466,9 @@ export function InvoiceClient({ initialInvoices, canBayar, userName }: InvoiceCl
               className="h-11 w-full rounded-2xl text-xs font-bold sm:w-[200px] lg:shrink-0"
             >
               <option value="ALL">Semua Tagihan</option>
-              <option value="PENDING">Belum Lunas (Pending)</option>
-              <option value="PAID">Lunas (Paid)</option>
-              <option value="DRAFT">Draft</option>
+              <option value="PENDING">Belum Lunas</option>
+              <option value="PAID">Lunas</option>
+              <option value="DRAFT">Draf</option>
             </Select>
 
             <PeriodFilter
@@ -495,7 +495,7 @@ export function InvoiceClient({ initialInvoices, canBayar, userName }: InvoiceCl
               disabled={exporting}
               className="h-11 w-full rounded-2xl border-primary-200 bg-primary-50 px-4 text-primary-700 hover:bg-primary-100 disabled:cursor-not-allowed disabled:opacity-60 sm:w-auto lg:shrink-0"
             >
-              <Download size={14} /> {exporting ? "Mengekspor..." : "Export Excel"}
+              <Download size={14} /> {exporting ? "Mengunduh..." : "Unduh Excel"}
             </Button>
 
             {canBayar && selectedInvoiceIds.length > 0 && (
@@ -558,15 +558,15 @@ export function InvoiceClient({ initialInvoices, canBayar, userName }: InvoiceCl
                       />
                     )}
                     {inv.status === "PAID" && <Badge tone="green">Lunas</Badge>}
-                    {inv.status === "PARTIAL" && <Badge tone="blue">Partial</Badge>}
-                    {inv.status === "PENDING" && <Badge tone="amber">Pending</Badge>}
-                    {inv.status === "DRAFT" && <Badge tone="slate">Draft</Badge>}
+                    {inv.status === "PARTIAL" && <Badge tone="blue">Sebagian</Badge>}
+                    {inv.status === "PENDING" && <Badge tone="amber">Belum Lunas</Badge>}
+                    {inv.status === "DRAFT" && <Badge tone="slate">Draf</Badge>}
                   </div>
                 </div>
 
                 <div className="mt-3 grid grid-cols-1 gap-2 text-xs">
                   <div>
-                    <p className="font-bold uppercase tracking-wide text-[var(--text-muted-2)]">Klien</p>
+                    <p className="font-bold uppercase tracking-wide text-[var(--text-muted-2)]">Pelanggan</p>
                     <p className="mt-0.5 font-semibold text-foreground break-words">{inv.namaClient}</p>
                   </div>
                   {showProject && (
@@ -653,7 +653,7 @@ export function InvoiceClient({ initialInvoices, canBayar, userName }: InvoiceCl
               )}
               <Th>No. Invoice</Th>
               <Th>Tanggal</Th>
-              <Th>Klien / Pelanggan</Th>
+              <Th>Pelanggan</Th>
               {showProject && <Th>Proyek</Th>}
               <Th className="text-right">Total Tagihan</Th>
               {showPaid && <Th className="text-right">Telah Dibayar</Th>}
@@ -714,16 +714,16 @@ export function InvoiceClient({ initialInvoices, canBayar, userName }: InvoiceCl
                   </Td>
                   <Td className="text-center select-none" onClick={(e) => e.stopPropagation()}>
                     {inv.status === "PAID" && <Badge tone="green">Lunas</Badge>}
-                    {inv.status === "PARTIAL" && <Badge tone="blue">Partial</Badge>}
-                    {inv.status === "PENDING" && <Badge tone="amber">Pending</Badge>}
-                    {inv.status === "DRAFT" && <Badge tone="slate">Draft</Badge>}
+                    {inv.status === "PARTIAL" && <Badge tone="blue">Sebagian</Badge>}
+                    {inv.status === "PENDING" && <Badge tone="amber">Belum Lunas</Badge>}
+                    {inv.status === "DRAFT" && <Badge tone="slate">Draf</Badge>}
                   </Td>
                   <Td className="text-center" onClick={(e) => e.stopPropagation()}>
                     <div className="flex items-center justify-center gap-1.5">
                       <button
                         onClick={() => setSelectedInvoice(inv)}
                         className="flex h-9 w-9 items-center justify-center rounded-xl bg-[var(--surface-2)] border border-border text-[var(--text-soft)] hover:bg-[var(--primary)] hover:text-white transition cursor-pointer"
-                        title="Buka detail drawer"
+                        title="Buka rincian"
                       >
                         <Eye size={14} />
                       </button>
@@ -843,8 +843,8 @@ export function InvoiceClient({ initialInvoices, canBayar, userName }: InvoiceCl
                 : selectedInvoice.status === "PARTIAL"
                 ? { label: "Cicilan Aktif", chip: "blue" as const, Icon: Wallet, tint: "bg-[color:rgba(59,130,246,0.12)]", ring: "border-[color:rgba(96,165,250,0.40)]", ink: "text-blue-800 dark:text-blue-300", bar: "bg-blue-500" }
                 : selectedInvoice.status === "DRAFT"
-                ? { label: "Draft", chip: "slate" as const, Icon: FileText, tint: "bg-[var(--surface-2)]", ring: "border-border", ink: "text-[var(--text-soft)]", bar: "bg-slate-400" }
-                : { label: "Pending", chip: "amber" as const, Icon: Clock, tint: "bg-[color:rgba(245,158,11,0.12)]", ring: "border-[color:rgba(251,191,36,0.40)]", ink: "text-amber-800 dark:text-amber-300", bar: "bg-amber-500" };
+                ? { label: "Draf", chip: "slate" as const, Icon: FileText, tint: "bg-[var(--surface-2)]", ring: "border-border", ink: "text-[var(--text-soft)]", bar: "bg-slate-400" }
+                : { label: "Belum Lunas", chip: "amber" as const, Icon: Clock, tint: "bg-[color:rgba(245,158,11,0.12)]", ring: "border-[color:rgba(251,191,36,0.40)]", ink: "text-amber-800 dark:text-amber-300", bar: "bg-amber-500" };
               const StateIcon = state.Icon;
               const paidPct = selectedInvoice.total > 0
                 ? Math.min(100, Math.round((selectedInvoice.totalDibayar / selectedInvoice.total) * 100))
@@ -890,7 +890,7 @@ export function InvoiceClient({ initialInvoices, canBayar, userName }: InvoiceCl
             {/* Quick Actions Panel */}
             <div className="flex flex-wrap gap-2">
               <Button size="sm" variant="outline" className="h-9 px-3 text-xs font-semibold rounded-xl flex items-center gap-1.5 shadow-xs border-border" onClick={() => setPrintFormat("a4")}>
-                <Printer size={14} className="stroke-[2]" /> Cetak Faktur
+                <Printer size={14} className="stroke-[2]" /> Cetak Invoice
               </Button>
               <Button size="sm" variant="outline" className="h-9 px-3 text-xs font-semibold rounded-xl flex items-center gap-1.5 shadow-xs border-border" onClick={() => setPrintFormat("thermal")}>
                 <Printer size={14} className="stroke-[2]" /> Thermal (80mm)
@@ -928,7 +928,7 @@ export function InvoiceClient({ initialInvoices, canBayar, userName }: InvoiceCl
                       onChange={(e) => setPaymentMethod(e.target.value as "CASH" | "TRANSFER")}
                       className="h-10 text-xs bg-card border border-border rounded-xl w-full"
                     >
-                      <option value="CASH">Tunai (Cash)</option>
+                      <option value="CASH">Tunai</option>
                       <option value="TRANSFER">Transfer Bank</option>
                     </Select>
                   </div>
@@ -1011,7 +1011,7 @@ export function InvoiceClient({ initialInvoices, canBayar, userName }: InvoiceCl
                 )}
               </div>
               <p className="text-xs text-slate-500 leading-relaxed">
-                Scan QR code pada faktur untuk verifikasi. Hasil verifikasi tercatat otomatis di audit trail.
+                Scan QR code pada invoice untuk verifikasi. Hasil verifikasi tercatat otomatis di Log Aktivitas.
               </p>
               {selectedInvoice.verifyUrl && (
                 <div className="flex items-center justify-between gap-2 text-xs text-[var(--text-soft)] bg-[var(--surface-2)] rounded-xl p-3 border border-border break-all font-mono shadow-3xs">
@@ -1036,7 +1036,7 @@ export function InvoiceClient({ initialInvoices, canBayar, userName }: InvoiceCl
               <div className="rounded-2xl border border-border p-5 bg-card shadow-sm space-y-2">
                 <div className="flex items-center gap-1.5 text-[var(--text-muted-2)]">
                   <User size={13} className="stroke-[2.5]" />
-                  <p className="text-[10px] font-extrabold uppercase tracking-wider">Informasi Klien</p>
+                  <p className="text-[10px] font-extrabold uppercase tracking-wider">Informasi Pelanggan</p>
                 </div>
                 <div className="space-y-1">
                   <p className="text-sm font-extrabold text-foreground">{selectedInvoice.namaClient}</p>
@@ -1046,7 +1046,7 @@ export function InvoiceClient({ initialInvoices, canBayar, userName }: InvoiceCl
               <div className="rounded-2xl border border-border p-5 bg-card shadow-sm space-y-2">
                 <div className="flex items-center gap-1.5 text-[var(--text-muted-2)]">
                   <Building2 size={13} className="stroke-[2.5]" />
-                  <p className="text-[10px] font-extrabold uppercase tracking-wider">Informasi Proyek &amp; WS</p>
+                  <p className="text-[10px] font-extrabold uppercase tracking-wider">Informasi Proyek &amp; Bengkel</p>
                 </div>
                 <div className="space-y-1">
                   <p className="text-sm font-extrabold text-foreground">{selectedInvoice.projectName ?? "Eceran / Umum"}</p>
@@ -1177,7 +1177,7 @@ export function InvoiceClient({ initialInvoices, canBayar, userName }: InvoiceCl
                 size="sm"
                 className="bg-orange-50 dark:bg-orange-900/20 hover:bg-orange-100 dark:hover:bg-orange-900/30 border-orange-200 dark:border-orange-800 text-[var(--primary)] font-bold gap-1.5 rounded-xl cursor-pointer"
               >
-                <Camera size={14} /> Save to Image (PNG)
+                <Camera size={14} /> Simpan sebagai Gambar (PNG)
               </Button>
               <div className="flex flex-col sm:flex-row gap-2.5">
               <Button variant="outline" size="sm" onClick={() => setPrintFormat(null)}>Tutup</Button>

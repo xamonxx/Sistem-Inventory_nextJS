@@ -12,13 +12,15 @@
  * - HPP (modal) per barang diturunkan dari: HPP = Omset - Laba Kotor (margin).
  */
 
-import type { Workbook } from "exceljs";
+import type { Workbook, Cell } from "exceljs";
+import type { StokKeluarRow } from "@/lib/reports";
 import {
   COLOR,
   FMT_RUPIAH,
   FMT_PERCENT,
   FMT_INT,
   FMT_DATE,
+  FMT_DATETIME,
   PERCENT_NA,
   TEXT_NA,
   type MetaInfo,
@@ -26,13 +28,18 @@ import {
   safeText,
   safePercent,
   safeDate,
-  pad2,
   applyBorder,
   applyHeaderStyle,
   autoFitColumns,
   writeSheetHeader,
   writeEmptyNotice,
+  setPrintHeaderRow,
+  writeSectionTitle,
   fillRow,
+  DUE_DAYS,
+  MS_PER_DAY,
+  buildExportFileName,
+  downloadWorkbook,
 } from "./excelStyles";
 
 // ===================== TIPE DATA INPUT (sesuai props halaman) =====================
@@ -55,6 +62,11 @@ export interface TerlarisRow {
 export interface StokRow {
   kode: string;
   nama: string;
+  kategori?: string | null;
+  /** Mutasi sepanjang waktu: stokAwal + stokMasuk - stokKeluar = stokAkhir. */
+  stokAwal?: number;
+  stokMasuk?: number;
+  stokKeluar?: number;
   stokAkhir: number;
   minStok: number;
   hargaBeli: number;
@@ -82,6 +94,8 @@ export interface ExportAnalyticPayload {
   terlaris: TerlarisRow[];
   stokData: StokRow[];
   piutangData: PiutangRow[];
+  /** Riwayat stok keluar (ledger KELUAR + koreksi minus) dalam periode aktif. */
+  stokKeluar?: { rows: StokKeluarRow[]; truncated: boolean };
 }
 
 // ===================== KONSTANTA THRESHOLD (mudah diubah) =====================
@@ -175,15 +189,15 @@ function addRingkasanSheet(wb: Workbook, payload: ExportAnalyticPayload, meta: M
       pct: isGudang ? pctMargin : "skip",
       status: isGudang ? sMargin.status : TEXT_NA,
       fill: isGudang ? sMargin.fill : undefined,
-      note: "Laba kotor setelah modal (Margin / Omset)",
+      note: "Laba kotor setelah modal (Margin / Omzet)",
     },
     {
-      kpi: "Outstanding Piutang",
+      kpi: "Piutang Belum Dibayar",
       value: totalPiutang,
       pct: pctPiutang,
       status: sPiutang.status,
       fill: sPiutang.fill,
-      note: "Tagihan belum tertagih (Piutang / Omset)",
+      note: "Tagihan belum tertagih (Piutang / Omzet)",
     },
     {
       kpi: "Nilai Aset Persediaan",
@@ -191,7 +205,7 @@ function addRingkasanSheet(wb: Workbook, payload: ExportAnalyticPayload, meta: M
       pct: isGudang ? pctAset : "skip",
       status: isGudang ? sAset.status : TEXT_NA,
       fill: isGudang ? sAset.fill : undefined,
-      note: "Valuasi stok gudang (Aset / Omset)",
+      note: "Valuasi stok gudang (Aset / Omzet)",
     },
   ];
 
@@ -199,6 +213,7 @@ function addRingkasanSheet(wb: Workbook, payload: ExportAnalyticPayload, meta: M
   const firstDataRow = r;
   for (const ln of lines) {
     ws.getCell(r, 1).value = ln.kpi;
+    ws.getCell(r, 1).font = { bold: true };
     const valCell = ws.getCell(r, 2);
     if (typeof ln.value === "number") {
       valCell.value = ln.value;
@@ -225,13 +240,17 @@ function addRingkasanSheet(wb: Workbook, payload: ExportAnalyticPayload, meta: M
   applyBorder(ws, headerRow, lastDataRow, lastCol);
   autoFitColumns(ws, lastCol);
   ws.getColumn(5).width = 42;
-  ws.views = [{ state: "frozen", ySplit: headerRow }];
-  ws.autoFilter = { from: { row: headerRow, column: 1 }, to: { row: lastDataRow, column: lastCol } };
-  // referensi var supaya tidak unused di mode non-gudang
+  setPrintHeaderRow(ws, headerRow);
   void firstDataRow;
 }
 
 // ===================== SHEET 2: PENJUALAN =====================
+
+function kontribusiLabel(pct: number | null): { status: string; note: string } {
+  if (pct !== null && pct >= 0.2) return { status: "Produk Utama", note: "Kontribusi >= 20% omzet" };
+  if (pct !== null && pct >= 0.1) return { status: "Produk Potensial", note: "Kontribusi 10% - 19% omzet" };
+  return { status: "Produk Pendukung", note: "Kontribusi < 10% omzet" };
+}
 
 function addPenjualanSheet(wb: Workbook, payload: ExportAnalyticPayload, meta: MetaInfo) {
   const ws = wb.addWorksheet("Penjualan");
@@ -240,15 +259,15 @@ function addPenjualanSheet(wb: Workbook, payload: ExportAnalyticPayload, meta: M
 
   const rows = [...payload.marginData].sort((a, b) => safeNumber(b.omset) - safeNumber(a.omset));
   const totalOmset = rows.reduce((a, x) => a + safeNumber(x.omset), 0);
+  const totalQty = rows.reduce((a, x) => a + safeNumber(x.qtyTerjual), 0);
 
-  // ---- Tabel utama: omset per barang ----
+  // ---- Tabel utama: omzet per barang (agregat periode) ----
   let row = startRow;
-  ws.getCell(row, 1).value = "Daftar Omset Produk Terjual";
-  ws.getCell(row, 1).font = { bold: true, size: 12, color: { argb: COLOR.headerText } };
+  writeSectionTitle(ws, row, "Omzet per Barang (urut omzet terbesar)", lastCol);
   row += 1;
 
   const headerRow = row;
-  ["No. / Tgl Transaksi", "Kode Barang", "Nama Barang", "Qty Terjual", "Total Penjualan", "Kontribusi Omset", "Status", "Keterangan"].forEach(
+  ["No", "Kode Barang", "Nama Barang", "Jumlah Terjual", "Total Penjualan", "Kontribusi Omzet", "Kategori Kontribusi", "Keterangan"].forEach(
     (h, i) => (ws.getCell(headerRow, i + 1).value = h)
   );
   applyHeaderStyle(ws, headerRow, lastCol);
@@ -258,10 +277,12 @@ function addPenjualanSheet(wb: Workbook, payload: ExportAnalyticPayload, meta: M
     writeEmptyNotice(ws, row, lastCol);
     row += 1;
   } else {
-    for (const it of rows) {
+    rows.forEach((it, idx) => {
       const omset = safeNumber(it.omset);
       const pct = safePercent(omset, totalOmset);
-      ws.getCell(row, 1).value = TEXT_NA; // data agregat per-barang: tanpa no/tgl transaksi
+      const k = kontribusiLabel(pct);
+      ws.getCell(row, 1).value = idx + 1;
+      ws.getCell(row, 1).alignment = { horizontal: "center" };
       ws.getCell(row, 2).value = safeText(it.kode);
       ws.getCell(row, 3).value = safeText(it.nama);
       ws.getCell(row, 4).value = safeNumber(it.qtyTerjual);
@@ -274,41 +295,31 @@ function addPenjualanSheet(wb: Workbook, payload: ExportAnalyticPayload, meta: M
         pctCell.value = pct;
         pctCell.numFmt = FMT_PERCENT;
       }
-      // status kontribusi
-      let st = "Produk Pendukung";
-      let note = "Kontribusi < 10% omset";
-      if (pct !== null && pct >= 0.2) {
-        st = "Produk Utama";
-        note = "Kontribusi >= 20% omset";
-      } else if (pct !== null && pct >= 0.1) {
-        st = "Produk Potensial";
-        note = "Kontribusi 10% - 19% omset";
-      }
-      ws.getCell(row, 7).value = st;
+      ws.getCell(row, 7).value = k.status;
       ws.getCell(row, 7).alignment = { horizontal: "center" };
-      ws.getCell(row, 8).value = note;
+      if (k.status === "Produk Utama") fillRow(ws, row, 7, 7, COLOR.green);
+      else if (k.status === "Produk Potensial") fillRow(ws, row, 7, 7, COLOR.blue);
+      ws.getCell(row, 8).value = k.note;
       row++;
-    }
-    // baris total
+    });
     ws.getCell(row, 3).value = "TOTAL PENJUALAN";
-    ws.getCell(row, 3).font = { bold: true };
+    ws.getCell(row, 4).value = totalQty;
+    ws.getCell(row, 4).numFmt = FMT_INT;
     ws.getCell(row, 5).value = totalOmset;
     ws.getCell(row, 5).numFmt = FMT_RUPIAH;
-    ws.getCell(row, 5).font = { bold: true };
     fillRow(ws, row, 1, lastCol, COLOR.totalBg);
     row++;
   }
   const mainLastRow = row - 1;
   applyBorder(ws, headerRow, mainLastRow, lastCol);
 
-  // ---- Bagian Top 10 Barang Terlaris ----
+  // ---- Top 10 barang terlaris (volume) ----
   row += 1;
-  ws.getCell(row, 1).value = "Top 10 Barang Terlaris (Volume)";
-  ws.getCell(row, 1).font = { bold: true, size: 12, color: { argb: COLOR.headerText } };
+  writeSectionTitle(ws, row, "Top 10 Barang Terlaris (berdasarkan jumlah)", 7);
   row += 1;
 
   const topHeaderRow = row;
-  ["Ranking", "Kode Barang", "Nama Barang", "Total Qty", "Total Omset", "Kontribusi Omset", "Keterangan Analisis"].forEach(
+  ["Ranking", "Kode Barang", "Nama Barang", "Total Jumlah", "Total Omzet", "Kontribusi Omzet", "Keterangan Analisis"].forEach(
     (h, i) => (ws.getCell(topHeaderRow, i + 1).value = h)
   );
   applyHeaderStyle(ws, topHeaderRow, 7);
@@ -336,18 +347,15 @@ function addPenjualanSheet(wb: Workbook, payload: ExportAnalyticPayload, meta: M
         pctCell.value = pct;
         pctCell.numFmt = FMT_PERCENT;
       }
-      let note = "Produk pendukung (kontribusi < 10%)";
-      if (pct !== null && pct >= 0.2) note = "Produk utama (kontribusi >= 20%)";
-      else if (pct !== null && pct >= 0.1) note = "Produk potensial (kontribusi 10% - 19%)";
-      ws.getCell(row, 7).value = note;
+      ws.getCell(row, 7).value = kontribusiLabel(pct).status;
       row++;
     });
   }
   applyBorder(ws, topHeaderRow, row - 1, 7);
 
   autoFitColumns(ws, lastCol);
-  ws.getColumn(7).width = 30;
-  ws.views = [{ state: "frozen", ySplit: headerRow }];
+  ws.getColumn(1).width = 8;
+  setPrintHeaderRow(ws, headerRow);
   ws.autoFilter = { from: { row: headerRow, column: 1 }, to: { row: mainLastRow, column: lastCol } };
 }
 
@@ -370,7 +378,7 @@ function addMarginSheet(wb: Workbook, payload: ExportAnalyticPayload, meta: Meta
   const rows = [...payload.marginData].sort((a, b) => safeNumber(b.omset) - safeNumber(a.omset));
 
   const headerRow = startRow;
-  ["Kode Barang", "Nama Barang", "Qty Terjual", "Omset", "Modal / HPP", "Laba Kotor", "Persentase Margin", "Status Margin", "Keterangan"].forEach(
+  ["Kode Barang", "Nama Barang", "Jumlah Terjual", "Omzet", "Modal / HPP", "Laba Kotor", "Persentase Margin", "Status Margin", "Keterangan"].forEach(
     (h, i) => (ws.getCell(headerRow, i + 1).value = h)
   );
   applyHeaderStyle(ws, headerRow, lastCol);
@@ -392,7 +400,7 @@ function addMarginSheet(wb: Workbook, payload: ExportAnalyticPayload, meta: Meta
     for (const it of rows) {
       const omset = safeNumber(it.omset);
       const laba = safeNumber(it.margin);
-      const hpp = omset - laba; // HPP diturunkan: Omset - Laba Kotor
+      const hpp = omset - laba; // HPP diturunkan: Omzet - Laba Kotor
       const pct = safePercent(laba, omset);
       const s = statusMargin(pct);
 
@@ -435,20 +443,23 @@ function addMarginSheet(wb: Workbook, payload: ExportAnalyticPayload, meta: Meta
           : s.status === "Rugi"
           ? "Margin <= 0%"
           : "-";
-      // highlight baris berdasar status
-      if (s.fill) fillRow(ws, row, 1, lastCol, s.fill);
+      if (s.fill) fillRow(ws, row, 8, 8, s.fill);
       row++;
     }
     // baris total
     ws.getCell(row, 2).value = "TOTAL";
-    ws.getCell(row, 2).font = { bold: true };
     ws.getCell(row, 4).value = totOmset;
     ws.getCell(row, 4).numFmt = FMT_RUPIAH;
     ws.getCell(row, 5).value = totHpp;
     ws.getCell(row, 5).numFmt = FMT_RUPIAH;
     ws.getCell(row, 6).value = totLaba;
     ws.getCell(row, 6).numFmt = FMT_RUPIAH;
-    [2, 4, 5, 6].forEach((c) => (ws.getCell(row, c).font = { bold: true }));
+    const totPctCell = ws.getCell(row, 7);
+    const totPct = safePercent(totLaba, totOmset);
+    if (totPct !== null) {
+      totPctCell.value = totPct;
+      totPctCell.numFmt = FMT_PERCENT;
+    }
     fillRow(ws, row, 1, lastCol, COLOR.totalBg);
     row++;
   }
@@ -457,14 +468,13 @@ function addMarginSheet(wb: Workbook, payload: ExportAnalyticPayload, meta: Meta
 
   // ---- Ringkasan margin ----
   row += 1;
-  ws.getCell(row, 1).value = "Ringkasan Margin";
-  ws.getCell(row, 1).font = { bold: true, size: 12, color: { argb: COLOR.headerText } };
+  writeSectionTitle(ws, row, "Ringkasan Margin", 2);
   row += 1;
 
   const totalItem = rows.length;
   const avgPct = cntPct > 0 ? sumPct / cntPct : null;
   const summary: [string, number | string, boolean][] = [
-    ["Total Omset", totOmset, true],
+    ["Total Omzet", totOmset, true],
     ["Total HPP", totHpp, true],
     ["Total Laba Kotor", totLaba, true],
     ["Rata-rata Margin", avgPct === null ? PERCENT_NA : avgPct, false],
@@ -488,24 +498,25 @@ function addMarginSheet(wb: Workbook, payload: ExportAnalyticPayload, meta: Meta
 
   autoFitColumns(ws, lastCol);
   ws.getColumn(9).width = 22;
-  ws.views = [{ state: "frozen", ySplit: headerRow }];
+  setPrintHeaderRow(ws, headerRow);
   ws.autoFilter = { from: { row: headerRow, column: 1 }, to: { row: tableLastRow, column: lastCol } };
 }
 
 // ===================== SHEET 4: PIUTANG & AGING =====================
 
 function addPiutangAgingSheet(wb: Workbook, payload: ExportAnalyticPayload, meta: MetaInfo) {
-  const ws = wb.addWorksheet("Piutang & Aging");
+  const ws = wb.addWorksheet("Piutang & Umur Piutang");
   const lastCol = 11;
   const startRow = writeSheetHeader(ws, lastCol, meta);
 
   const now = new Date();
   const enriched = payload.piutangData.map((p) => {
     const inv = safeDate(p.tanggal);
-    const diffDays = inv ? Math.ceil(Math.abs(now.getTime() - inv.getTime()) / 86400000) : 0;
+    const diffDays = inv ? Math.max(0, Math.ceil((now.getTime() - inv.getTime()) / MS_PER_DAY)) : 0;
+    const due = inv ? new Date(inv.getTime() + DUE_DAYS * MS_PER_DAY) : null;
     const bucket = agingBucket(diffDays);
     const isLunas = p.status === "LUNAS";
-    return { ...p, inv, diffDays, bucket, isLunas, outstanding: isLunas ? 0 : safeNumber(p.sisa) };
+    return { ...p, inv, due, diffDays, bucket, isLunas, outstanding: isLunas ? 0 : safeNumber(p.sisa) };
   });
 
   const totalOutstanding = enriched.reduce((a, e) => a + e.outstanding, 0);
@@ -520,12 +531,11 @@ function addPiutangAgingSheet(wb: Workbook, payload: ExportAnalyticPayload, meta
 
   // ---- Ringkasan aging (atas) ----
   let row = startRow;
-  ws.getCell(row, 1).value = "Ringkasan Umur Piutang";
-  ws.getCell(row, 1).font = { bold: true, size: 12, color: { argb: COLOR.headerText } };
+  writeSectionTitle(ws, row, "Ringkasan Umur Piutang", 4);
   row += 1;
 
   const sumHeaderRow = row;
-  ["Kategori Aging", "Total Outstanding", "Persentase dari Total", "Status Risiko"].forEach(
+  ["Kelompok Umur Piutang", "Total Belum Dibayar", "Persentase dari Total", "Status Risiko"].forEach(
     (h, i) => (ws.getCell(sumHeaderRow, i + 1).value = h)
   );
   applyHeaderStyle(ws, sumHeaderRow, 4);
@@ -551,20 +561,20 @@ function addPiutangAgingSheet(wb: Workbook, payload: ExportAnalyticPayload, meta
     }
     ws.getCell(row, 4).value = risk;
     ws.getCell(row, 4).alignment = { horizontal: "center" };
-    fillRow(ws, row, 1, 1, fill);
+    fillRow(ws, row, 4, 4, fill);
     row++;
   }
   // total outstanding
-  ws.getCell(row, 1).value = "Total Outstanding Piutang";
-  ws.getCell(row, 1).font = { bold: true };
+  ws.getCell(row, 1).value = "Total Piutang Belum Dibayar";
   ws.getCell(row, 2).value = totalOutstanding;
   ws.getCell(row, 2).numFmt = FMT_RUPIAH;
-  ws.getCell(row, 2).font = { bold: true };
   fillRow(ws, row, 1, 4, COLOR.totalBg);
   applyBorder(ws, sumHeaderRow, row, 4);
   row += 2;
 
   // ---- Tabel detail aging ----
+  writeSectionTitle(ws, row, "Rincian Piutang per Invoice", lastCol);
+  row += 1;
   const headerRow = row;
   [
     "No. Invoice",
@@ -573,9 +583,9 @@ function addPiutangAgingSheet(wb: Workbook, payload: ExportAnalyticPayload, meta
     "Pelanggan",
     "Total Tagihan",
     "Sudah Dibayar",
-    "Outstanding",
+    "Belum Dibayar",
     "Umur (Hari)",
-    "Kategori Aging",
+    "Kelompok Umur Piutang",
     "% dari Total Piutang",
     "Status Risiko",
   ].forEach((h, i) => (ws.getCell(headerRow, i + 1).value = h));
@@ -593,7 +603,11 @@ function addPiutangAgingSheet(wb: Workbook, payload: ExportAnalyticPayload, meta
         dCell.value = e.inv;
         dCell.numFmt = FMT_DATE;
       } else dCell.value = "-";
-      ws.getCell(row, 3).value = TEXT_NA; // jatuh tempo tidak tersedia di data sumber
+      const dueCell = ws.getCell(row, 3);
+      if (e.due) {
+        dueCell.value = e.due;
+        dueCell.numFmt = FMT_DATE;
+      } else dueCell.value = "-";
       ws.getCell(row, 4).value = safeText(e.client);
       ws.getCell(row, 5).value = safeNumber(e.total);
       ws.getCell(row, 5).numFmt = FMT_RUPIAH;
@@ -616,8 +630,8 @@ function addPiutangAgingSheet(wb: Workbook, payload: ExportAnalyticPayload, meta
       }
       ws.getCell(row, 11).value = e.isLunas ? "Lunas" : e.bucket.risiko;
       ws.getCell(row, 11).alignment = { horizontal: "center" };
-      // highlight baris (kecuali lunas) per kategori
-      if (!e.isLunas) fillRow(ws, row, 9, 11, e.bucket.fill);
+      if (e.isLunas) fillRow(ws, row, 11, 11, COLOR.green);
+      else fillRow(ws, row, 11, 11, e.bucket.fill);
       row++;
     }
   }
@@ -625,34 +639,66 @@ function addPiutangAgingSheet(wb: Workbook, payload: ExportAnalyticPayload, meta
   applyBorder(ws, headerRow, tableLastRow, lastCol);
 
   autoFitColumns(ws, lastCol);
-  ws.views = [{ state: "frozen", ySplit: headerRow }];
+  setPrintHeaderRow(ws, headerRow);
   ws.autoFilter = { from: { row: headerRow, column: 1 }, to: { row: tableLastRow, column: lastCol } };
 }
 
 // ===================== SHEET 5: STOK & ASET =====================
 
+/** Warna lembut per kelompok kolom mutasi stok (kolom 4..7) agar mudah dibedakan. */
+const STOCK_TONE: Record<number, { bg: string; text: string }> = {
+  4: { bg: "FFF8FAFC", text: "FF475569" }, // Stok Awal  — slate
+  5: { bg: "FFF0FDF4", text: "FF15803D" }, // Stok Masuk — hijau
+  6: { bg: "FFFFF1F2", text: "FFBE123C" }, // Stok Keluar — rose
+  7: { bg: "FFEFF6FF", text: "FF1E3A8A" }, // Sisa Stok  — biru
+};
+const STOCK_ZERO_TEXT = "FFB6C2CF";
+
+/** Tone tambahan untuk sheet Stok Keluar (selaras dengan STOCK_TONE). */
+const TONE = {
+  keluar: STOCK_TONE[6],
+  netral: STOCK_TONE[4],
+  koreksi: { bg: "FFFFF7ED", text: "FFC2410C" }, // orange-50 / orange-700
+  penjualan: { bg: "FFEFF6FF", text: "FF1D4ED8" }, // blue-50 / blue-700
+};
+
+/** Beri latar lembut + warna teks kelompok; angka 0 diredupkan. */
+function toneCell(cell: Cell, tone: { bg: string; text: string }, bold = false) {
+  cell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: tone.bg } };
+  const isZero = cell.value === 0;
+  cell.font = { bold: bold && !isZero, color: { argb: isZero ? STOCK_ZERO_TEXT : tone.text } };
+}
+
 function addStokAsetSheet(wb: Workbook, payload: ExportAnalyticPayload, meta: MetaInfo) {
   const ws = wb.addWorksheet("Stok & Aset");
   const isGudang = payload.role === "ADMIN_GUDANG";
-  const lastCol = 11;
+  const lastCol = 14;
   const startRow = writeSheetHeader(ws, lastCol, meta);
 
   const rows = [...payload.stokData];
   const totalAset = rows.reduce((a, s) => a + safeNumber(s.nilaiAset), 0);
+  const totalStok = rows.reduce((a, s) => a + safeNumber(s.stokAkhir), 0);
+  const totalAwal = rows.reduce((a, s) => a + safeNumber(s.stokAwal), 0);
+  const totalMasuk = rows.reduce((a, s) => a + safeNumber(s.stokMasuk), 0);
+  const totalKeluar = rows.reduce((a, s) => a + safeNumber(s.stokKeluar), 0);
 
+  // Mutasi sepanjang waktu: Stok Awal + Masuk - Keluar = Sisa Stok.
   const headerRow = startRow;
   [
-    "Kode / SKU",
+    "Kode Barang",
     "Nama Barang",
     "Kategori",
+    "Stok Awal",
     "Stok Masuk",
     "Stok Keluar",
     "Sisa Stok",
+    "Min. Stok",
     "Harga Modal",
+    "Harga Jual",
     "Nilai Aset",
     "Kontribusi Aset",
     "Status Stok",
-    "Keterangan Analisis",
+    "Keterangan",
   ].forEach((h, i) => (ws.getCell(headerRow, i + 1).value = h));
   applyHeaderStyle(ws, headerRow, lastCol);
 
@@ -669,22 +715,22 @@ function addStokAsetSheet(wb: Workbook, payload: ExportAnalyticPayload, meta: Me
     for (const s of rows) {
       const sisa = safeNumber(s.stokAkhir);
       const minStok = safeNumber(s.minStok);
-      const hargaBeli = safeNumber(s.hargaBeli);
       const nilaiAset = safeNumber(s.nilaiAset);
       const pct = safePercent(nilaiAset, totalAset);
 
-      let stokStatus = "Stok Aman";
-      let fill: string | undefined;
-      let note = "Sisa stok di atas batas minimum";
+      // Sama dengan aplikasi & notifikasi: menipis bila sisa < minimum.
+      let stokStatus = "Aman";
+      let fill: string | undefined = COLOR.green;
+      let note = "Di atas batas minimum";
       if (sisa <= 0) {
-        stokStatus = "Stok Kosong";
+        stokStatus = "Kosong";
         fill = COLOR.red;
-        note = "Sisa stok 0 / minus — segera restock";
+        note = "Stok habis / minus — segera restock";
         cntKosong++;
-      } else if (sisa <= minStok) {
-        stokStatus = "Stok Rendah";
+      } else if (sisa < minStok) {
+        stokStatus = "Menipis";
         fill = COLOR.yellow;
-        note = "Sisa stok <= batas minimum";
+        note = `Kurang ${minStok - sisa} dari minimum`;
         cntRendah++;
       }
       if (nilaiAset > topAsetNilai) {
@@ -694,45 +740,73 @@ function addStokAsetSheet(wb: Workbook, payload: ExportAnalyticPayload, meta: Me
 
       ws.getCell(row, 1).value = safeText(s.kode);
       ws.getCell(row, 2).value = safeText(s.nama);
-      ws.getCell(row, 3).value = TEXT_NA; // kategori tidak tersedia di data sumber
-      ws.getCell(row, 4).value = TEXT_NA; // stok masuk tidak tersedia
-      ws.getCell(row, 5).value = TEXT_NA; // stok keluar tidak tersedia
-      ws.getCell(row, 6).value = sisa;
-      ws.getCell(row, 6).numFmt = FMT_INT;
-      ws.getCell(row, 6).alignment = { horizontal: "center" };
-      const hbCell = ws.getCell(row, 7);
-      const naCell = ws.getCell(row, 8);
-      if (isGudang) {
-        hbCell.value = hargaBeli;
-        hbCell.numFmt = FMT_RUPIAH;
-        naCell.value = nilaiAset;
-        naCell.numFmt = FMT_RUPIAH;
-      } else {
-        hbCell.value = TEXT_NA;
-        naCell.value = TEXT_NA;
+      ws.getCell(row, 3).value = safeText(s.kategori);
+      const qtyCols: [number, number][] = [
+        [4, safeNumber(s.stokAwal)],
+        [5, safeNumber(s.stokMasuk)],
+        [6, safeNumber(s.stokKeluar)],
+        [7, sisa],
+        [8, minStok],
+      ];
+      for (const [col, val] of qtyCols) {
+        const cell = ws.getCell(row, col);
+        cell.value = val;
+        cell.numFmt = FMT_INT;
+        cell.alignment = { horizontal: "center" };
+        const tone = STOCK_TONE[col];
+        if (tone) {
+          cell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: tone.bg } };
+          // Angka 0 diredupkan agar kolom tidak ramai; nilai berarti memakai warna kelompoknya.
+          cell.font = { color: { argb: val === 0 ? STOCK_ZERO_TEXT : tone.text } };
+        }
       }
-      const pctCell = ws.getCell(row, 9);
+      ws.getCell(row, 7).font = { bold: true, color: { argb: sisa <= 0 ? "FFDC2626" : STOCK_TONE[7].text } };
+      const moneyCols: [number, number][] = [
+        [9, safeNumber(s.hargaBeli)],
+        [10, safeNumber(s.hargaJual)],
+        [11, nilaiAset],
+      ];
+      for (const [col, val] of moneyCols) {
+        const cell = ws.getCell(row, col);
+        if (isGudang) {
+          cell.value = val;
+          cell.numFmt = FMT_RUPIAH;
+        } else cell.value = TEXT_NA;
+      }
+      const pctCell = ws.getCell(row, 12);
       if (!isGudang) pctCell.value = TEXT_NA;
       else if (pct === null) pctCell.value = PERCENT_NA;
       else {
         pctCell.value = pct;
         pctCell.numFmt = FMT_PERCENT;
       }
-      ws.getCell(row, 10).value = stokStatus;
-      ws.getCell(row, 10).alignment = { horizontal: "center" };
-      ws.getCell(row, 11).value = note;
-      if (fill) fillRow(ws, row, 10, 10, fill);
+      if (isGudang && nilaiAset === 0) {
+        ws.getCell(row, 11).font = { color: { argb: STOCK_ZERO_TEXT } };
+        pctCell.font = { color: { argb: STOCK_ZERO_TEXT } };
+      }
+      ws.getCell(row, 13).value = stokStatus;
+      ws.getCell(row, 13).alignment = { horizontal: "center" };
+      if (fill) fillRow(ws, row, 13, 13, fill);
+      ws.getCell(row, 14).value = note;
       row++;
     }
-    // total
-    ws.getCell(row, 2).value = "TOTAL NILAI ASET";
-    ws.getCell(row, 2).font = { bold: true };
+    ws.getCell(row, 2).value = "TOTAL";
+    const totalQty: [number, number][] = [
+      [4, totalAwal],
+      [5, totalMasuk],
+      [6, totalKeluar],
+      [7, totalStok],
+    ];
+    for (const [col, val] of totalQty) {
+      ws.getCell(row, col).value = val;
+      ws.getCell(row, col).numFmt = FMT_INT;
+      ws.getCell(row, col).alignment = { horizontal: "center" };
+    }
     if (isGudang) {
-      ws.getCell(row, 8).value = totalAset;
-      ws.getCell(row, 8).numFmt = FMT_RUPIAH;
-      ws.getCell(row, 8).font = { bold: true };
+      ws.getCell(row, 11).value = totalAset;
+      ws.getCell(row, 11).numFmt = FMT_RUPIAH;
     } else {
-      ws.getCell(row, 8).value = TEXT_NA;
+      ws.getCell(row, 11).value = TEXT_NA;
     }
     fillRow(ws, row, 1, lastCol, COLOR.totalBg);
     row++;
@@ -742,18 +816,20 @@ function addStokAsetSheet(wb: Workbook, payload: ExportAnalyticPayload, meta: Me
 
   // ---- Ringkasan stok ----
   row += 1;
-  ws.getCell(row, 1).value = "Ringkasan Stok & Aset";
-  ws.getCell(row, 1).font = { bold: true, size: 12, color: { argb: COLOR.headerText } };
+  writeSectionTitle(ws, row, "Ringkasan Stok & Aset", 2);
   row += 1;
 
   const totalSku = rows.length;
   const summary: [string, number | string, "rp" | "pct" | "int" | "text"][] = [
     ["Total Nilai Aset", isGudang ? totalAset : TEXT_NA, isGudang ? "rp" : "text"],
-    ["Total SKU", totalSku, "int"],
-    ["Jumlah Barang Stok Kosong", cntKosong, "int"],
+    ["Total Jenis Barang", totalSku, "int"],
+    ["Total Stok Masuk (semua waktu)", totalMasuk, "int"],
+    ["Total Stok Keluar (semua waktu)", totalKeluar, "int"],
+    ["Total Sisa Stok", totalStok, "int"],
+    ["Barang Stok Kosong", cntKosong, "int"],
     ["Persentase Stok Kosong", safePercent(cntKosong, totalSku) ?? PERCENT_NA, "pct"],
-    ["Jumlah Barang Stok Rendah", cntRendah, "int"],
-    ["Persentase Stok Rendah", safePercent(cntRendah, totalSku) ?? PERCENT_NA, "pct"],
+    ["Barang Stok Menipis", cntRendah, "int"],
+    ["Persentase Stok Menipis", safePercent(cntRendah, totalSku) ?? PERCENT_NA, "pct"],
     ["Barang Kontribusi Aset Terbesar", totalSku > 0 ? topAsetNama : "-", "text"],
   ];
   const sumStart = row;
@@ -772,16 +848,156 @@ function addStokAsetSheet(wb: Workbook, payload: ExportAnalyticPayload, meta: Me
   applyBorder(ws, sumStart, row - 1, 2);
 
   autoFitColumns(ws, lastCol);
-  ws.getColumn(11).width = 32;
-  ws.views = [{ state: "frozen", ySplit: headerRow }];
+  ws.getColumn(14).width = 34;
+  setPrintHeaderRow(ws, headerRow);
   ws.autoFilter = { from: { row: headerRow, column: 1 }, to: { row: tableLastRow, column: lastCol } };
+}
+
+// ===================== SHEET 6: STOK KELUAR =====================
+
+function addStokKeluarSheet(wb: Workbook, data: { rows: StokKeluarRow[]; truncated: boolean }, meta: MetaInfo) {
+  const ws = wb.addWorksheet("Stok Keluar");
+  const lastCol = 12;
+  let row = writeSheetHeader(ws, lastCol, meta);
+  const rows = data.rows;
+
+  // ---- Rekap per barang ----
+  type Rekap = { kode: string; nama: string; kategori: string | null; qty: number; nilai: number; transaksi: Set<string>; koreksi: number };
+  const rekapMap = new Map<string, Rekap>();
+  for (const r of rows) {
+    const cur = rekapMap.get(r.kode) ?? { kode: r.kode, nama: r.nama, kategori: r.kategori, qty: 0, nilai: 0, transaksi: new Set<string>(), koreksi: 0 };
+    cur.qty += safeNumber(r.qty);
+    cur.nilai += safeNumber(r.nilai);
+    if (r.noRef) cur.transaksi.add(r.noRef);
+    if (r.jenis === "Koreksi") cur.koreksi += safeNumber(r.qty);
+    rekapMap.set(r.kode, cur);
+  }
+  const rekap = [...rekapMap.values()].sort((a, b) => b.qty - a.qty);
+  const totalQty = rekap.reduce((a, r) => a + r.qty, 0);
+
+  writeSectionTitle(ws, row, "Rekap Stok Keluar per Barang (urut jumlah terbanyak)", 8);
+  row += 1;
+  const rekapHeader = row;
+  ["No", "Kode Barang", "Nama Barang", "Kategori", "Jumlah Keluar", "Dari Koreksi", "Jumlah Transaksi", "Nilai Penjualan"].forEach(
+    (h, i) => (ws.getCell(rekapHeader, i + 1).value = h)
+  );
+  applyHeaderStyle(ws, rekapHeader, 8);
+  row += 1;
+  if (rekap.length === 0) {
+    writeEmptyNotice(ws, row, 8);
+    row += 1;
+  } else {
+    rekap.forEach((r, idx) => {
+      ws.getCell(row, 1).value = idx + 1;
+      ws.getCell(row, 1).alignment = { horizontal: "center" };
+      ws.getCell(row, 2).value = safeText(r.kode);
+      ws.getCell(row, 3).value = safeText(r.nama);
+      ws.getCell(row, 4).value = safeText(r.kategori);
+      ws.getCell(row, 5).value = r.qty;
+      ws.getCell(row, 5).numFmt = FMT_INT;
+      ws.getCell(row, 5).alignment = { horizontal: "center" };
+      ws.getCell(row, 6).value = r.koreksi;
+      ws.getCell(row, 6).numFmt = FMT_INT;
+      ws.getCell(row, 6).alignment = { horizontal: "center" };
+      ws.getCell(row, 7).value = r.transaksi.size;
+      ws.getCell(row, 7).numFmt = FMT_INT;
+      ws.getCell(row, 7).alignment = { horizontal: "center" };
+      ws.getCell(row, 8).value = r.nilai;
+      ws.getCell(row, 8).numFmt = FMT_RUPIAH;
+      toneCell(ws.getCell(row, 5), TONE.keluar, true);
+      toneCell(ws.getCell(row, 6), TONE.koreksi);
+      toneCell(ws.getCell(row, 7), TONE.netral);
+      row++;
+    });
+    ws.getCell(row, 3).value = "TOTAL";
+    ws.getCell(row, 5).value = totalQty;
+    ws.getCell(row, 5).numFmt = FMT_INT;
+    ws.getCell(row, 5).alignment = { horizontal: "center" };
+    ws.getCell(row, 8).value = rekap.reduce((a, r) => a + r.nilai, 0);
+    ws.getCell(row, 8).numFmt = FMT_RUPIAH;
+    fillRow(ws, row, 1, 8, COLOR.totalBg);
+    row++;
+  }
+  applyBorder(ws, rekapHeader, row - 1, 8);
+  row += 1;
+
+  // ---- Riwayat detail ----
+  writeSectionTitle(ws, row, "Riwayat Stok Keluar (terbaru di atas)", lastCol);
+  row += 1;
+  if (data.truncated) {
+    ws.getCell(row, 1).value = `Catatan: hanya ${rows.length.toLocaleString("id-ID")} mutasi terbaru yang dimuat. Persempit periode untuk data lengkap.`;
+    ws.getCell(row, 1).font = { italic: true, color: { argb: "FFB45309" } };
+    row += 1;
+  }
+  const headerRow = row;
+  ["Tanggal", "Jenis", "No. Transaksi", "Pelanggan", "Kode Barang", "Nama Barang", "Kategori", "Jumlah", "Harga Satuan", "Nilai", "Petugas", "Keterangan"].forEach(
+    (h, i) => (ws.getCell(headerRow, i + 1).value = h)
+  );
+  applyHeaderStyle(ws, headerRow, lastCol);
+  row += 1;
+
+  if (rows.length === 0) {
+    writeEmptyNotice(ws, row, lastCol);
+    row += 1;
+  } else {
+    for (const r of rows) {
+      const d = safeDate(r.tanggal);
+      const dCell = ws.getCell(row, 1);
+      if (d) {
+        dCell.value = d;
+        dCell.numFmt = FMT_DATETIME;
+      } else dCell.value = "-";
+      ws.getCell(row, 2).value = r.jenis;
+      ws.getCell(row, 2).alignment = { horizontal: "center" };
+      toneCell(ws.getCell(row, 2), r.jenis === "Penjualan" ? TONE.penjualan : TONE.koreksi);
+      ws.getCell(row, 3).value = safeText(r.noRef);
+      ws.getCell(row, 4).value = safeText(r.pelanggan);
+      ws.getCell(row, 5).value = safeText(r.kode);
+      ws.getCell(row, 6).value = safeText(r.nama);
+      ws.getCell(row, 7).value = safeText(r.kategori);
+      ws.getCell(row, 8).value = safeNumber(r.qty);
+      ws.getCell(row, 8).numFmt = FMT_INT;
+      ws.getCell(row, 8).alignment = { horizontal: "center" };
+      toneCell(ws.getCell(row, 8), TONE.keluar, true);
+      const hCell = ws.getCell(row, 9);
+      const nCell = ws.getCell(row, 10);
+      if (r.hargaSatuan != null) {
+        hCell.value = r.hargaSatuan;
+        hCell.numFmt = FMT_RUPIAH;
+        nCell.value = safeNumber(r.nilai);
+        nCell.numFmt = FMT_RUPIAH;
+      } else {
+        hCell.value = "-";
+        nCell.value = "-";
+      }
+      ws.getCell(row, 11).value = safeText(r.petugas);
+      ws.getCell(row, 12).value = safeText(r.keterangan);
+      row++;
+    }
+    ws.getCell(row, 6).value = "TOTAL";
+    ws.getCell(row, 8).value = totalQty;
+    ws.getCell(row, 8).numFmt = FMT_INT;
+    ws.getCell(row, 8).alignment = { horizontal: "center" };
+    ws.getCell(row, 10).value = rows.reduce((a, r) => a + safeNumber(r.nilai), 0);
+    ws.getCell(row, 10).numFmt = FMT_RUPIAH;
+    fillRow(ws, row, 1, lastCol, COLOR.totalBg);
+    row++;
+  }
+  const tableLastRow = row - 1;
+  applyBorder(ws, headerRow, tableLastRow, lastCol);
+
+  autoFitColumns(ws, lastCol);
+  ws.getColumn(1).width = Math.max(ws.getColumn(1).width ?? 10, 17);
+  ws.getColumn(12).width = Math.min(ws.getColumn(12).width ?? 30, 36);
+  setPrintHeaderRow(ws, headerRow);
+  if (rows.length > 0) ws.autoFilter = { from: { row: headerRow, column: 1 }, to: { row: tableLastRow - 1, column: lastCol } };
 }
 
 // ===================== ENTRYPOINT =====================
 
 /** Nama file export sesuai tanggal hari ini. */
 export function buildFileName(date = new Date()): string {
-  return `Analitik-Laporan-ERP-${date.getFullYear()}-${pad2(date.getMonth() + 1)}-${pad2(date.getDate())}.xlsx`;
+  return buildExportFileName("Laporan-Analitik", date);
 }
 
 /**
@@ -792,11 +1008,11 @@ export async function buildAnalyticWorkbook(payload: ExportAnalyticPayload): Pro
   // Import dinamis: ExcelJS hanya dimuat saat fitur dipakai (bukan via CDN).
   const ExcelJS = (await import("exceljs")).default;
   const wb: Workbook = new ExcelJS.Workbook();
-  wb.creator = "Sistem Inventory ERP";
+  wb.creator = "Sistem Inventory";
   wb.created = new Date();
 
   const meta: MetaInfo = {
-    reportName: "Analitik & Laporan ERP",
+    reportName: "Analisis & Laporan",
     period: payload.period && payload.period.trim().length > 0 ? payload.period : "Keseluruhan (semua data tercatat)",
     exportDate: new Date(),
     userName: safeText(payload.userName),
@@ -807,6 +1023,7 @@ export async function buildAnalyticWorkbook(payload: ExportAnalyticPayload): Pro
   addMarginSheet(wb, payload, meta);
   addPiutangAgingSheet(wb, payload, meta);
   addStokAsetSheet(wb, payload, meta);
+  if (payload.stokKeluar) addStokKeluarSheet(wb, payload.stokKeluar, meta);
 
   return wb;
 }
@@ -818,19 +1035,6 @@ export async function buildAnalyticWorkbook(payload: ExportAnalyticPayload): Pro
 export async function exportAnalyticExcel(payload: ExportAnalyticPayload): Promise<string> {
   const wb = await buildAnalyticWorkbook(payload);
   const fileName = buildFileName();
-
-  const buffer = await wb.xlsx.writeBuffer();
-  const blob = new Blob([buffer], {
-    type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-  });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement("a");
-  a.href = url;
-  a.download = fileName;
-  document.body.appendChild(a);
-  a.click();
-  document.body.removeChild(a);
-  URL.revokeObjectURL(url);
-
+  await downloadWorkbook(wb, fileName);
   return fileName;
 }

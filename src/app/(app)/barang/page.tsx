@@ -35,6 +35,7 @@ export default async function BarangPage() {
     id: it.id,
     kode: it.kode,
     nama: it.nama,
+    kategori: it.kategori,
     hargaBeli: Number(it.hargaBeli),
     hargaJual: Number(it.hargaJual),
     stokAwal: it.stokAwal,

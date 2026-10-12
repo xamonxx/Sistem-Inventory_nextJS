@@ -62,7 +62,7 @@ export function Drawer({
   const drawer = (
     <div
       className={cn(
-        "fixed inset-0 flex items-end justify-center overflow-hidden transition-opacity duration-300 sm:items-stretch sm:justify-end",
+        "fixed inset-0 flex items-stretch justify-end overflow-hidden transition-opacity duration-300",
         isOpen ? "pointer-events-auto" : "pointer-events-none"
       )}
       // Sedikit di bawah nilai maksimum agar overlay yang dibuka DARI dalam
@@ -82,9 +82,9 @@ export function Drawer({
       <div
         ref={panelRef}
         className={cn(
-          "relative z-10 flex h-[92dvh] w-full flex-col rounded-t-2xl border-t border-border bg-card shadow-[var(--shadow-drawer)] transition-transform duration-300 ease-out sm:h-full sm:rounded-none sm:border-l sm:border-t-0 dark:bg-card",
+          "relative z-10 flex h-full w-full flex-col border-l border-border bg-card shadow-[var(--shadow-drawer)] transition-transform duration-300 ease-out dark:bg-card",
           widths[size],
-          isOpen ? "translate-y-0 sm:translate-x-0" : "translate-y-full sm:translate-x-full"
+          isOpen ? "translate-x-0" : "translate-x-full"
         )}
       >
         {/* Drawer Header */}

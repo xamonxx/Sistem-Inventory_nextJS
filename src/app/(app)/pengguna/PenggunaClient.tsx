@@ -62,8 +62,8 @@ export function PenggunaClient({
 
   async function handleResetPassword() {
     if (!selectedUser) return;
-    if (newPasswordVal.length < 4) {
-      return toast.error("Password minimal 4 karakter. Tambahkan karakter lalu simpan lagi.");
+    if (newPasswordVal.length < FIELD_LIMITS.passwordMin) {
+      return toast.error(`Kata sandi minimal ${FIELD_LIMITS.passwordMin} karakter. Tambahkan karakter lalu simpan lagi.`);
     }
 
     setResetting(true);
@@ -72,11 +72,11 @@ export function PenggunaClient({
       if (res && "error" in res && res.error) {
         toast.error(res.error);
       } else if (res && "ok" in res) {
-        toast.success(`Password untuk ${selectedUser.nama} berhasil direset!`);
+        toast.success(`Kata sandi ${selectedUser.nama} berhasil diatur ulang!`);
         setNewPasswordVal("");
       }
     } catch {
-      toast.error("Gagal mereset password. Periksa koneksi lalu coba lagi.");
+      toast.error("Gagal mengatur ulang kata sandi. Periksa koneksi lalu coba lagi.");
     } finally {
       setResetting(false);
     }
@@ -250,7 +250,7 @@ export function PenggunaClient({
 
             {/* Permission Checklist Summary */}
             <div className="space-y-2">
-              <Label className="text-slate-400 dark:text-slate-500 uppercase tracking-wider text-[10px]">Hak Akses (Permissions)</Label>
+              <Label className="text-slate-400 dark:text-slate-500 uppercase tracking-wider text-[10px]">Hak Akses</Label>
               <div className="rounded-[20px] border border-border bg-[#f8fafc]/50 dark:bg-slate-800/40 p-5 space-y-4">
                 <p className="text-xs text-slate-450 dark:text-slate-400 leading-relaxed">
                   Berikut hak akses otomatis yang diberikan berdasarkan peran <strong className="text-slate-700 dark:text-slate-200">{selectedUser.role === "ADMIN_GUDANG" ? "Admin Gudang" : "Admin Kasir"}</strong>:
@@ -270,7 +270,7 @@ export function PenggunaClient({
                       allowed: selectedUser.role === "ADMIN_GUDANG"
                     },
                     {
-                      desc: "Proses transaksi kasir & checkout POS",
+                      desc: "Proses transaksi kasir & pembayaran",
                       allowed: true
                     },
                     {
@@ -278,7 +278,7 @@ export function PenggunaClient({
                       allowed: true
                     },
                     {
-                      desc: "Manajemen Pengguna (Ganti Password/Edit User)",
+                      desc: "Kelola Pengguna (Ganti Kata Sandi / Ubah Data)",
                       allowed: selectedUser.role === "ADMIN_GUDANG"
                     }
                   ].map((perm, idx) => (
@@ -313,7 +313,7 @@ export function PenggunaClient({
             {canEdit && (
               <div className="space-y-3 pt-5 border-t border-border">
                 <div className="flex items-center justify-between gap-2">
-                  <Label className="text-slate-400 dark:text-slate-500 uppercase tracking-wider text-[10px] mb-0">Reset Password Keamanan</Label>
+                  <Label className="text-slate-400 dark:text-slate-500 uppercase tracking-wider text-[10px] mb-0">Atur Ulang Kata Sandi</Label>
                   <CharCounter value={newPasswordVal} max={FIELD_LIMITS.passwordMax} />
                 </div>
                 <div className="space-y-3.5">
@@ -324,7 +324,7 @@ export function PenggunaClient({
                       onChange={(e) => setNewPasswordVal(e.target.value)}
                       minLength={FIELD_LIMITS.passwordMin}
                       maxLength={FIELD_LIMITS.passwordMax}
-                      placeholder={`Password baru (min ${FIELD_LIMITS.passwordMin} karakter)`}
+                      placeholder={`Kata sandi baru (min ${FIELD_LIMITS.passwordMin} karakter)`}
                       className="pr-12 bg-card rounded-xl shadow-xs"
                     />
                     <button
@@ -338,10 +338,10 @@ export function PenggunaClient({
                   <div className="flex gap-2.5">
                     <Button 
                       onClick={handleResetPassword} 
-                      disabled={resetting || newPasswordVal.length < 4}
+                      disabled={resetting || newPasswordVal.length < FIELD_LIMITS.passwordMin}
                       className="flex-1 text-xs h-10 rounded-xl"
                     >
-                      {resetting ? "Mengubah..." : "Ubah Password"}
+                      {resetting ? "Mengubah..." : "Ubah Kata Sandi"}
                     </Button>
                     <Button 
                       variant="outline" 

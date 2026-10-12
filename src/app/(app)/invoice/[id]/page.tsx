@@ -6,7 +6,19 @@ import { Nota, type NotaItem } from "@/components/Nota";
 import { PrintBar } from "@/components/PrintBar";
 
 export default async function InvoiceDetailPage({ params }: { params: Promise<{ id: string }> }) {
-  await requireUser();
+  const user = await requireUser();
+
+  if (user.role !== "ADMIN_KASIR" && user.role !== "ADMIN_GUDANG") {
+    return (
+      <div className="rounded-xl border border-red-200 bg-red-50 p-6">
+        <h1 className="text-xl font-bold text-red-800">Akses Ditolak</h1>
+        <p className="mt-2 text-sm text-red-700">
+          Invoice gudang hanya diizinkan untuk <strong>Admin Kasir</strong> dan <strong>Admin Gudang / Owner</strong>.
+        </p>
+      </div>
+    );
+  }
+
   const { id } = await params;
   const inv = await prisma.invoice.findUnique({
     where: { id: Number(id) },

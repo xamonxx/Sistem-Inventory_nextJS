@@ -60,7 +60,7 @@ export function NgLaporanClient({
 
   const stats = [
     { icon: TrendingUp, tone: "blue" as const, label: "Total Omzet", value: formatRupiah(summary.totalOmzet), hint: `${summary.jumlahInvoice} invoice` },
-    { icon: BarChart3, tone: "emerald" as const, label: "Total Profit", value: formatRupiah(summary.totalProfit), hint: "Omzet - modal pembelian" },
+    { icon: BarChart3, tone: "emerald" as const, label: "Total Keuntungan", value: formatRupiah(summary.totalProfit), hint: "Omzet - modal pembelian" },
     { icon: Percent, tone: "violet" as const, label: "Total Margin", value: `${summary.margin.toFixed(2)}%`, hint: `Markup ${summary.markup.toFixed(2)}%` },
     { icon: Wallet, tone: "amber" as const, label: "Sisa Piutang", value: formatRupiah(summary.totalPiutang), hint: "Belum tertagih" },
     { icon: UserRound, tone: "slate" as const, label: "Konsumen", value: String(perKonsumen.length), hint: "Dengan transaksi" },
@@ -88,10 +88,10 @@ export function NgLaporanClient({
     setExporting(true);
     try {
       const name = await exportNgExcel({ userName, period: periodeLabel, analisa, perKonsumen });
-      toast.success(`Export berhasil: ${name}`);
+      toast.success(`Berhasil diunduh: ${name}`);
     } catch (error) {
       console.error("Export NG Laporan gagal:", error);
-      toast.error("Export Excel gagal, coba lagi.");
+      toast.error("Gagal mengunduh Excel, coba lagi.");
     } finally {
       setExporting(false);
     }
@@ -107,10 +107,10 @@ export function NgLaporanClient({
               Laporan Non-Gudang
             </p>
             <h1 className="mt-5 max-w-3xl text-3xl font-black tracking-[-0.04em] text-foreground md:text-5xl">
-              Laporan &amp; Export
+              Laporan &amp; Unduhan
             </h1>
             <p className="mt-3 max-w-2xl text-sm font-medium leading-6 text-slate-600 dark:text-slate-300 md:text-base">
-              Rekap penjualan, profit, dan piutang per konsumen. Export Excel berisi ringkasan, per toko, top produk, tren, dan per konsumen.
+              Rekap penjualan, profit, dan piutang per konsumen. Unduh Excel berisi ringkasan, per toko, top produk, tren, dan per konsumen.
             </p>
           </div>
 
@@ -156,7 +156,7 @@ export function NgLaporanClient({
                 </Button>
                 <Button variant="primary" onClick={handleExport} disabled={exporting} className="h-12 flex-1 font-black">
                   <Download size={15} />
-                  {exporting ? "Mengekspor..." : "Export Excel"}
+                  {exporting ? "Mengunduh..." : "Unduh Excel"}
                 </Button>
               </div>
             </div>
@@ -205,7 +205,7 @@ export function NgLaporanClient({
                     <Th className="text-right">Omzet</Th>
                     <Th className="text-right">Diterima</Th>
                     <Th className="text-right">Sisa Piutang</Th>
-                    <Th className="text-right">Profit</Th>
+                    <Th className="text-right">Keuntungan</Th>
                     <Th className="text-right">Margin</Th>
                   </tr>
                 </thead>

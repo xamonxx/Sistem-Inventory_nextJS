@@ -11,8 +11,8 @@
     {
       "name": "sistem-inventory-prod",
       "runtimeExecutable": "npx",
-      "runtimeArgs": ["next", "start", "-p", "3001"],
-      "port": 3001
+      "runtimeArgs": ["next", "start", "-p", "3000"],
+      "port": 3000
     }
   ]
 }

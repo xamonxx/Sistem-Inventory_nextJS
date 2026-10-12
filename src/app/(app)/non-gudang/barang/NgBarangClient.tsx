@@ -130,7 +130,7 @@ export function NgBarangClient({ initialItems }: { initialItems: NgProdukData[] 
   }
 
   const kpi = [
-    { icon: Boxes, label: "Total Barang", value: String(stats.total), detail: "SKU non-gudang" },
+    { icon: Boxes, label: "Total Barang", value: String(stats.total), detail: "Kode barang non-gudang" },
     { icon: Store, label: "Toko Sumber", value: String(stats.tokoCount), detail: "supplier aktif" },
     { icon: Boxes, label: "Barang Aktif", value: String(stats.active), detail: "siap dijual" },
     { icon: Percent, label: "Rata-rata Margin", value: `${stats.avgMargin.toFixed(1)}%`, detail: "gross margin" },
@@ -231,11 +231,11 @@ export function NgBarangClient({ initialItems }: { initialItems: NgProdukData[] 
         <div className="flex flex-col gap-2 border-b border-sky-200/70 bg-sky-50/55 px-5 py-4 dark:border-sky-300/15 dark:bg-slate-950/25 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <p className="text-sm font-black text-foreground">Daftar Barang</p>
-            <p className="mt-0.5 text-xs font-medium text-slate-500">Data barang dari toko sumber yang bisa dipakai untuk CO non-gudang.</p>
+            <p className="mt-0.5 text-xs font-medium text-slate-500">Data barang dari toko sumber yang bisa dipakai untuk invoice non-gudang.</p>
           </div>
           <Badge tone={selectedIds.size > 0 ? "amber" : "blue"}>{filtered.length} hasil</Badge>
         </div>
-        <div className="overflow-x-auto">
+        <div className="hidden overflow-x-auto md:block">
           <Table variant="plain" tableClassName="min-w-[980px]">
             <thead>
               <tr>
@@ -309,6 +309,64 @@ export function NgBarangClient({ initialItems }: { initialItems: NgProdukData[] 
               )}
             </tbody>
           </Table>
+        </div>
+        {/* Mobile (<768px): kartu per barang, semua aksi terjangkau tanpa scroll samping */}
+        <div className="md:hidden">
+          {filtered.length === 0 ? (
+            <div className="py-12 text-center text-slate-400 select-none">
+              <Boxes className="mx-auto mb-2 text-slate-200 dark:text-slate-700" size={32} />
+              <p className="text-sm font-semibold">Belum ada barang</p>
+              <p className="text-xs">Tambahkan barang dari toko sumber untuk mulai.</p>
+            </div>
+          ) : (
+            <ul className="divide-y divide-sky-200/70 dark:divide-sky-300/15">
+              {pg.pageData.map((item) => {
+                const m = marginPct(item.hargaBeli, item.hargaJual);
+                return (
+                  <li key={item.id} className="space-y-3 px-4 py-4">
+                    <div className="flex items-start gap-3">
+                      <input type="checkbox" checked={selectedIds.has(item.id)} onChange={() => toggleSelect(item.id)} className="mt-1 h-5 w-5 shrink-0 rounded border-border cursor-pointer" aria-label={`Pilih ${item.nama}`} />
+                      <div className="min-w-0 flex-1">
+                        <p className="break-words text-sm font-bold text-foreground">{item.nama}</p>
+                        <p className="mt-0.5 text-xs text-slate-500">
+                          {[item.kategori, item.namaToko].filter(Boolean).join(" • ") || "-"}
+                        </p>
+                      </div>
+                      <Badge tone={m >= 15 ? "green" : m > 0 ? "amber" : "red"} className="shrink-0 text-[10px]">{m.toFixed(1)}%</Badge>
+                    </div>
+                    <dl className="grid grid-cols-3 gap-2 rounded-lg border border-sky-200/60 bg-sky-50/40 p-3 text-xs dark:border-sky-300/15 dark:bg-slate-950/25">
+                      <div>
+                        <dt className="text-[10px] font-bold uppercase tracking-wide text-slate-400">Satuan</dt>
+                        <dd className="mt-0.5 font-semibold text-slate-600 dark:text-slate-300">{item.satuan ?? "-"}</dd>
+                      </div>
+                      <div>
+                        <dt className="text-[10px] font-bold uppercase tracking-wide text-slate-400">Beli</dt>
+                        <dd className="mt-0.5 font-mono font-semibold">{formatRupiah(item.hargaBeli)}</dd>
+                      </div>
+                      <div>
+                        <dt className="text-[10px] font-bold uppercase tracking-wide text-slate-400">Jual</dt>
+                        <dd className="mt-0.5 font-mono font-bold text-foreground">{formatRupiah(item.hargaJual)}</dd>
+                      </div>
+                    </dl>
+                    <div className="flex items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={() => handleToggleAktif(item)}
+                        disabled={pending}
+                        className="flex min-h-10 flex-1 cursor-pointer items-center justify-center rounded-lg border border-border disabled:opacity-50"
+                        aria-label={`Ubah status ${item.nama}`}
+                      >
+                        <Badge tone={item.aktif ? "green" : "slate"} className="text-[10px]">{item.aktif ? "Aktif" : "Nonaktif"}</Badge>
+                      </button>
+                      <Button size="sm" variant="outline" onClick={() => handleEdit(item)} className="min-h-10 flex-1" aria-label={`Ubah ${item.nama}`}>
+                        <Pencil size={15} /> Ubah
+                      </Button>
+                    </div>
+                  </li>
+                );
+              })}
+            </ul>
+          )}
         </div>
         {filtered.length > 0 && (
           <div className="border-t border-sky-200/70 bg-white/55 px-4 py-3 backdrop-blur-xl dark:border-sky-300/15 dark:bg-slate-950/25">

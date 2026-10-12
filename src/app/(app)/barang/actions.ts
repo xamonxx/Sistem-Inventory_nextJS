@@ -8,6 +8,7 @@ import { requireRole } from "@/lib/auth";
 import { logActivity } from "@/lib/activity";
 import { nextItemCode } from "@/lib/itemCode";
 import { FIELD_LIMITS } from "@/lib/fieldLimits";
+import { ITEM_CATEGORIES } from "@/lib/itemCategories";
 import { dbId, strictBool, requiredText, money, boundedInt, safeError, firstIssue, type ActionResult } from "@/lib/validation";
 
 const schema = z.object({
@@ -22,6 +23,7 @@ const schema = z.object({
     .optional()
     .default(""),
   nama: requiredText(FIELD_LIMITS.namaBarang, "Nama"),
+  kategori: z.enum(ITEM_CATEGORIES),
   hargaBeli: money,
   hargaJual: money,
   stokAwal: boundedInt,
@@ -37,6 +39,7 @@ export async function saveItem(_prev: unknown, formData: FormData): Promise<Acti
     id: formData.get("id") || undefined,
     kode: formData.get("kode"),
     nama: formData.get("nama"),
+    kategori: formData.get("kategori"),
     // Field number boleh dikosongkan di form (pakai placeholder) -> default aman.
     hargaBeli: formData.get("hargaBeli") || "0",
     hargaJual: formData.get("hargaJual") || "0",
@@ -73,6 +76,7 @@ export async function saveItem(_prev: unknown, formData: FormData): Promise<Acti
         data: {
           kode,
           nama: d.nama,
+          kategori: d.kategori,
           hargaBeli: new Prisma.Decimal(d.hargaBeli),
           hargaJual: new Prisma.Decimal(d.hargaJual),
           stokAwal: d.stokAwal,
@@ -89,6 +93,7 @@ export async function saveItem(_prev: unknown, formData: FormData): Promise<Acti
           hargaBeli: [Number(before?.hargaBeli), d.hargaBeli],
           hargaJual: [Number(before?.hargaJual), d.hargaJual],
           stokAwal: [before?.stokAwal, d.stokAwal],
+          kategori: [before?.kategori, d.kategori],
         },
       });
     } else {
@@ -96,6 +101,7 @@ export async function saveItem(_prev: unknown, formData: FormData): Promise<Acti
         data: {
           kode,
           nama: d.nama,
+          kategori: d.kategori,
           hargaBeli: new Prisma.Decimal(d.hargaBeli),
           hargaJual: new Prisma.Decimal(d.hargaJual),
           stokAwal: d.stokAwal,
@@ -108,7 +114,7 @@ export async function saveItem(_prev: unknown, formData: FormData): Promise<Acti
         aksi: "CREATE_BARANG",
         entitas: "Item",
         entitasId: created.id,
-        detail: { kode, nama: d.nama },
+        detail: { kode, nama: d.nama, kategori: d.kategori },
       });
     }
   } catch (e) {

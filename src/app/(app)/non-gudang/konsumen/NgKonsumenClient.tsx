@@ -121,7 +121,7 @@ export function NgKonsumenClient({ initialItems }: { initialItems: NgKonsumenDat
                 Master Konsumen
               </h1>
               <p className="mt-2 max-w-2xl text-sm font-semibold leading-6 text-slate-600 dark:text-slate-200/90">
-                Data pelanggan trading non-gudang: grup/proyek, alamat, dan workshop untuk dipakai saat membuat invoice.
+                Data pelanggan trading non-gudang: grup/proyek, alamat, dan bengkel untuk dipakai saat membuat invoice.
               </p>
             </div>
           </div>
@@ -184,7 +184,7 @@ export function NgKonsumenClient({ initialItems }: { initialItems: NgKonsumenDat
           </div>
           <Badge tone={selectedIds.size > 0 ? "amber" : "blue"}>{filtered.length} hasil</Badge>
         </div>
-        <div className="overflow-x-auto">
+        <div className="hidden overflow-x-auto md:block">
           <Table variant="plain" tableClassName="min-w-[820px]">
             <thead>
               <tr>
@@ -193,7 +193,7 @@ export function NgKonsumenClient({ initialItems }: { initialItems: NgKonsumenDat
                 </Th>
                 <Th>Konsumen</Th>
                 <Th>Alamat</Th>
-                <Th>Workshop</Th>
+                <Th>Bengkel</Th>
                 <Th className="text-center">Invoice</Th>
                 <Th className="text-center">Aksi</Th>
               </tr>
@@ -237,6 +237,44 @@ export function NgKonsumenClient({ initialItems }: { initialItems: NgKonsumenDat
               )}
             </tbody>
           </Table>
+        </div>
+        {/* Mobile (<768px): kartu per konsumen, aksi terjangkau tanpa scroll samping */}
+        <div className="md:hidden">
+          {filtered.length === 0 ? (
+            <div className="py-12 text-center text-slate-400 select-none">
+              <Users className="mx-auto mb-2 text-slate-200 dark:text-slate-700" size={32} />
+              <p className="text-sm font-semibold">Belum ada konsumen</p>
+              <p className="text-xs">Tambahkan konsumen untuk mempercepat pembuatan invoice.</p>
+            </div>
+          ) : (
+            <ul className="divide-y divide-sky-200/70 dark:divide-sky-300/15">
+              {pg.pageData.map((item) => (
+                <li key={item.id} className="space-y-3 px-4 py-4">
+                  <div className="flex items-start gap-3">
+                    <input type="checkbox" checked={selectedIds.has(item.id)} onChange={() => toggleSelect(item.id)} className="mt-1 h-5 w-5 shrink-0 rounded border-border cursor-pointer" aria-label={`Pilih ${item.nama}`} />
+                    <div className="min-w-0 flex-1">
+                      <p className="break-words text-sm font-bold text-foreground">{item.nama}</p>
+                      {item.namaGrup && <p className="mt-0.5 text-xs font-semibold text-[var(--primary-strong)]">{item.namaGrup}</p>}
+                    </div>
+                    <Badge tone={item.invoiceCount > 0 ? "green" : "slate"} className="shrink-0 text-[10px]">{item.invoiceCount} invoice</Badge>
+                  </div>
+                  <dl className="space-y-2 rounded-lg border border-sky-200/60 bg-sky-50/40 p-3 text-xs dark:border-sky-300/15 dark:bg-slate-950/25">
+                    <div>
+                      <dt className="text-[10px] font-bold uppercase tracking-wide text-slate-400">Alamat</dt>
+                      <dd className="mt-0.5 break-words text-slate-600 dark:text-slate-300">{item.alamat ?? "-"}</dd>
+                    </div>
+                    <div>
+                      <dt className="text-[10px] font-bold uppercase tracking-wide text-slate-400">Bengkel</dt>
+                      <dd className="mt-0.5 break-words text-slate-600 dark:text-slate-300">{item.namaWorkshop ?? "-"}</dd>
+                    </div>
+                  </dl>
+                  <Button size="sm" variant="outline" onClick={() => handleEdit(item)} className="min-h-10 w-full" aria-label={`Ubah ${item.nama}`}>
+                    <Pencil size={15} /> Ubah
+                  </Button>
+                </li>
+              ))}
+            </ul>
+          )}
         </div>
         {filtered.length > 0 && (
           <div className="border-t border-sky-200/70 bg-white/55 px-4 py-3 backdrop-blur-xl dark:border-sky-300/15 dark:bg-slate-950/25">

@@ -13,7 +13,7 @@ export default async function LogAktivitasPage() {
       <div className="rounded-xl border border-red-200 bg-red-50 p-6">
         <h1 className="text-xl font-bold text-red-800">Akses Ditolak</h1>
         <p className="mt-2 text-sm text-red-700">
-          Menu Log Aktivitas (Audit Trail) hanya diizinkan untuk <strong>Admin Gudang / Operator Utama</strong>.
+          Menu Log Aktivitas hanya diizinkan untuk <strong>Admin Gudang</strong>.
         </p>
       </div>
     );
@@ -43,9 +43,9 @@ export default async function LogAktivitasPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold tracking-tight">Audit Trail / Log Aktivitas</h1>
+        <h1 className="text-2xl font-bold tracking-tight">Log Aktivitas</h1>
         <p className="text-sm text-muted">
-          Pantau rekam jejak audit sistem termasuk perubahan harga master, penyesuaian stok manual, penjualan POS, dan aktivitas login.
+          Pantau rekam jejak audit sistem termasuk perubahan harga master, penyesuaian stok manual, penjualan kasir, dan aktivitas login.
         </p>
       </div>
 

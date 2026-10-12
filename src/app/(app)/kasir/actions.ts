@@ -10,6 +10,7 @@ import { logActivity } from "@/lib/activity";
 import { FIELD_LIMITS } from "@/lib/fieldLimits";
 import { dbId, money, qtyPositive, safeError } from "@/lib/validation";
 import { validateCheckoutTotals } from "@/lib/checkoutRules";
+import { validateStockDemand } from "@/lib/inventoryRules";
 import { createInvoiceVerifyUrl } from "@/lib/invoiceVerify";
 
 const itemSchema = z.object({
@@ -24,9 +25,9 @@ const paymentComponentSchema = z.object({
 
 const schema = z.object({
   tipe: z.enum(["RETAIL", "PROJECT"]),
-  namaClient: z.string().trim().max(FIELD_LIMITS.namaClient, `Nama klien maksimal ${FIELD_LIMITS.namaClient} karakter.`).optional().default(""),
+  namaClient: z.string().trim().max(FIELD_LIMITS.namaClient, `Nama pelanggan maksimal ${FIELD_LIMITS.namaClient} karakter.`).optional().default(""),
   alamat: z.string().trim().max(FIELD_LIMITS.alamat, `Alamat maksimal ${FIELD_LIMITS.alamat} karakter.`).optional().default(""),
-  namaWs: z.string().trim().max(FIELD_LIMITS.namaWs, `Nama workshop maksimal ${FIELD_LIMITS.namaWs} karakter.`).optional().default(""),
+  namaWs: z.string().trim().max(FIELD_LIMITS.namaWs, `Nama bengkel maksimal ${FIELD_LIMITS.namaWs} karakter.`).optional().default(""),
   projectNama: z.string().trim().max(FIELD_LIMITS.projectNama, `Nama proyek maksimal ${FIELD_LIMITS.projectNama} karakter.`).optional().default(""),
   projectGroupNama: z.string().trim().max(FIELD_LIMITS.projectGroupNama, `Grup proyek maksimal ${FIELD_LIMITS.projectGroupNama} karakter.`).optional().default(""),
   paymentMethod: z.enum(["CASH", "TRANSFER", "CREDIT"]),
@@ -56,38 +57,55 @@ export async function createTransaction(payload: KasirPayload) {
   }
   const d = parsed.data;
 
-  // Verify item master availability
-  const ids = d.items.map((i) => i.itemId);
-  const uniqueIds = Array.from(new Set(ids));
-  const items = await prisma.item.findMany({ where: { id: { in: uniqueIds } } });
-  const itemMap = new Map(items.map((i) => [i.id, i]));
-  if (items.length !== uniqueIds.length) {
-    return { error: "Ada barang yang tidak ditemukan di database." };
-  }
-
   // Determine effective payments: if split payments provided, use them; else single method
   const effectivePayments = d.payments.length > 0
     ? d.payments
     : [{ tipe: d.paymentMethod, jumlah: 0 }]; // jumlah 0 means we don't know the amount yet
 
-  const checkoutValidation = validateCheckoutTotals({
-    lines: d.items.map((line) => {
-      const item = itemMap.get(line.itemId)!;
-      return {
-        itemId: line.itemId,
-        hargaJual: Number(item.hargaJual),
-        qty: line.qty,
-      };
-    }),
-    payments: effectivePayments,
-    buatInvoice: d.buatInvoice,
-  });
-  if (!checkoutValidation.ok) {
-    return { error: checkoutValidation.error };
-  }
-
   try {
     const result = await prisma.$transaction(async (tx) => {
+      const uniqueIds = Array.from(new Set(d.items.map((item) => item.itemId)));
+      const items = await tx.item.findMany({ where: { id: { in: uniqueIds } } });
+      const itemMap = new Map(items.map((item) => [item.id, item]));
+      if (items.length !== uniqueIds.length) {
+        return { ok: false as const, error: "Ada barang yang tidak ditemukan di database." };
+      }
+
+      const checkoutValidation = validateCheckoutTotals({
+        lines: d.items.map((line) => ({
+          itemId: line.itemId,
+          hargaJual: Number(itemMap.get(line.itemId)!.hargaJual),
+          qty: line.qty,
+        })),
+        payments: effectivePayments,
+        buatInvoice: d.buatInvoice,
+      });
+      if (!checkoutValidation.ok) {
+        return { ok: false as const, error: checkoutValidation.error };
+      }
+
+      const ledgerRows = await tx.stockLedger.groupBy({
+        by: ["itemId"],
+        where: { itemId: { in: uniqueIds } },
+        _sum: { qty: true },
+      });
+      const ledgerMap = new Map(ledgerRows.map((row) => [row.itemId, row._sum.qty ?? 0]));
+      const stockValidation = validateStockDemand(
+        d.items.map((line) => {
+          const item = itemMap.get(line.itemId)!;
+          return {
+            nama: item.nama,
+            aktif: item.aktif,
+            stokAwal: item.stokAwal,
+            ledgerQty: ledgerMap.get(item.id) ?? 0,
+            requestedQty: line.qty,
+          };
+        })
+      );
+      if (!stockValidation.ok) {
+        return { ok: false as const, error: stockValidation.error };
+      }
+
       // 1. Dynamic Client creation or lookup if project/client name provided
       let clientId: number | null = null;
       if (d.namaClient) {
@@ -262,8 +280,10 @@ export async function createTransaction(payload: KasirPayload) {
         }
       }
 
-      return { id: trx.id, noTransaksi, invoiceNo, grandTotal: Number(grandTotal) };
+      return { ok: true as const, id: trx.id, noTransaksi, invoiceNo, grandTotal: Number(grandTotal) };
     }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable });
+
+    if (!result.ok) return { error: result.error };
 
     await logActivity({
       userId: user.id,
@@ -284,7 +304,14 @@ export async function createTransaction(payload: KasirPayload) {
       ? await createInvoiceVerifyUrl(result.invoiceNo)
       : null;
 
-    return { ok: true, ...result, verifyUrl };
+    return {
+      ok: true,
+      id: result.id,
+      noTransaksi: result.noTransaksi,
+      invoiceNo: result.invoiceNo,
+      grandTotal: result.grandTotal,
+      verifyUrl,
+    };
   } catch (error) {
     return safeError(error, "Terjadi kesalahan internal saat memproses checkout.");
   }

@@ -153,7 +153,7 @@ export function NgDashboardCharts({ tren, perToko, topProduk }: {
               items={[
                 { label: "Pembelian", color: SERIES.pembelian },
                 { label: "Omzet", color: SERIES.omzet },
-                { label: "Profit", color: SERIES.profit },
+                { label: "Keuntungan", color: SERIES.profit },
               ]}
             />
             <PlotSurface>
@@ -166,7 +166,7 @@ export function NgDashboardCharts({ tren, perToko, topProduk }: {
                   <Tooltip {...TOOLTIP_STYLE} formatter={(v: unknown, n: unknown) => [formatRupiah(v as number), n as string]} />
                   <Line type="monotone" dataKey="pembelian" name="Pembelian" stroke={SERIES.pembelian} strokeWidth={3} dot={{ r: 3, strokeWidth: 1.5 }} activeDot={{ r: 5 }} />
                   <Line type="monotone" dataKey="omzet" name="Omzet" stroke={SERIES.omzet} strokeWidth={3} dot={{ r: 3, strokeWidth: 1.5 }} activeDot={{ r: 5 }} />
-                  <Line type="monotone" dataKey="profit" name="Profit" stroke={SERIES.profit} strokeWidth={3} dot={{ r: 3, strokeWidth: 1.5 }} activeDot={{ r: 5 }} />
+                  <Line type="monotone" dataKey="profit" name="Keuntungan" stroke={SERIES.profit} strokeWidth={3} dot={{ r: 3, strokeWidth: 1.5 }} activeDot={{ r: 5 }} />
                 </LineChart>
               </ResponsiveContainer>
             </div>
@@ -234,7 +234,7 @@ export function NgDashboardCharts({ tren, perToko, topProduk }: {
                         <Cell key={index} fill={BAR_COLORS[index % BAR_COLORS.length]} />
                       ))}
                     </Bar>
-                    <Bar dataKey="profit" name="Profit" hide />
+                    <Bar dataKey="profit" name="Keuntungan" hide />
                   </BarChart>
                 </ResponsiveContainer>
               </div>
