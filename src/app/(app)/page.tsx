@@ -287,6 +287,7 @@ export default async function DashboardPage({
 
   // KPI unggulan + konteks tren 30 hari dari trendData (tanpa query tambahan).
   const [featured, ...restKpis] = kpiCards;
+  const stackedKpis = restKpis.length === 3;
   const FeaturedIcon = featured.icon;
   const omsetSeries = trendData.map((d) => d.omset);
   const omset30 = omsetSeries.reduce((a, b) => a + b, 0);
@@ -458,14 +459,16 @@ export default async function DashboardPage({
           </div>
         </div>
 
-        <div className="grid grid-cols-2 gap-4 sm:grid-cols-6 xl:col-span-7">
+        {/* 3 kartu (role Kasir): di xl ditumpuk sebagai baris agar tingginya sejajar kartu utama. */}
+        <div className={`grid grid-cols-2 gap-4 sm:grid-cols-6 xl:col-span-7 ${stackedKpis ? "xl:grid-cols-1 xl:gap-3" : ""}`}>
           {restKpis.map((kpi, i) => {
             const Icon = kpi.icon;
             const href = kpiHref[kpi.label];
             const span =
               restKpis.length === 5 ? (i < 3 ? "sm:col-span-2" : "sm:col-span-3") : restKpis.length === 4 ? "sm:col-span-3" : "sm:col-span-2";
             const lastOdd = restKpis.length % 2 === 1 && i === restKpis.length - 1 ? "col-span-2" : "";
-            const body = (
+            const valueSize = kpi.value.length > 14 ? "text-[17px]" : kpi.value.length > 11 ? "text-[19px]" : "text-[22px]";
+            const verticalBody = (
               <>
                 <div className="flex items-start justify-between gap-3">
                   <p className="text-[11px] font-bold uppercase leading-tight tracking-wider text-[var(--text-soft)]">{kpi.label}</p>
@@ -475,9 +478,7 @@ export default async function DashboardPage({
                 </div>
                 <div className="mt-4 min-w-0">
                   <p
-                    className={`tnum truncate pb-0.5 font-display font-extrabold leading-[1.15] tracking-tight text-foreground ${
-                      kpi.value.length > 14 ? "text-[17px]" : kpi.value.length > 11 ? "text-[19px]" : "text-[22px]"
-                    }`}
+                    className={`tnum truncate pb-0.5 font-display font-extrabold leading-[1.15] tracking-tight text-foreground ${valueSize}`}
                     title={kpi.value}
                   >
                     {kpi.value}
@@ -489,7 +490,31 @@ export default async function DashboardPage({
                 </div>
               </>
             );
-            const cls = `bento-card bento-tone anim-rise flex flex-col justify-between p-4 md:p-5 ${span} ${lastOdd} ${href ? "bento-interactive" : ""}`;
+            const body = stackedKpis ? (
+              <>
+                <div className="flex h-full flex-col justify-between xl:hidden">{verticalBody}</div>
+                <div className="hidden items-center gap-4 xl:flex">
+                  <span className="bento-icon">
+                    <Icon size={18} strokeWidth={2.4} />
+                  </span>
+                  <div className="min-w-0 flex-1">
+                    <p className="text-[11px] font-bold uppercase leading-tight tracking-wider text-[var(--text-soft)]">{kpi.label}</p>
+                    <p className="mt-1 flex items-center gap-1 text-[11px] font-medium text-[var(--text-muted-2)]">
+                      <span className="truncate">{kpi.desc}</span>
+                      {href && <ArrowUpRight size={12} className="shrink-0 opacity-70" />}
+                    </p>
+                  </div>
+                  <p className={`tnum shrink-0 font-display font-extrabold leading-none tracking-tight text-foreground ${valueSize}`} title={kpi.value}>
+                    {kpi.value}
+                  </p>
+                </div>
+              </>
+            ) : (
+              verticalBody
+            );
+            const cls = `bento-card bento-tone anim-rise flex flex-col justify-between p-4 md:p-5 ${span} ${lastOdd} ${
+              stackedKpis ? "xl:col-span-1 xl:justify-center xl:py-4" : ""
+            } ${href ? "bento-interactive" : ""}`;
             const style = { "--tone": toneColors[kpi.tone], animationDelay: `${(i + 1) * 40}ms` } as React.CSSProperties;
             return href ? (
               <Link key={kpi.label} href={href} className={cls} style={style}>

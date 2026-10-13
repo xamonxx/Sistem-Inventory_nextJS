@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "generatedAt": "2026-10-13T03:52:47.357Z",
+  "generatedAt": "2026-10-13T03:55:30.640Z",
   "algorithm": "sha256",
   "scope": [
     ".agents",
@@ -108,7 +108,7 @@
     ".ai/sessions/2026-10-13-non-gudang-ui-overhaul.md": "cb0813321213f0e853a260dc8cc0960f0dedc01bf0eb88d19ba2c8d8ba7550b5",
     ".ai/sessions/2026-10-13-ui-ux-modernization.md": "af67afd4315ea5c239a632a506d94e4eba6dea22e3953516238e209bed301e1f",
     ".ai/STATUS.md": "1f249ce94cd9159a82861b53905288650bd7664b807343fd842cfc57479ac7e4",
-    ".ai/TASKS.md": "271d94df1108c4691aad8832ceb9fc1896004a50212ae20fbef61b1ef28d5619",
+    ".ai/TASKS.md": "75113ecf44db7bd505a9875c57db60047be62616b822aa807a0b740439e9e8d7",
     ".claude/launch.json": "93ec4ff8a6289436b408e0b6d5a3b865dd4ed769e1a0e6f71aaac36d7c697ffc",
     ".claude/rules/context7.md": "9716d0bcec929882d6cdf9f7200a5aae7170d5c3e01a121498f20a3d78a3980f",
     ".claude/skills/find-docs/SKILL.md": "37c155ac06e5df9e9c5589af125d909a0f27c9c955284b9c8b1b3eb21cb47b4f",
@@ -186,7 +186,7 @@
     "src/app/(app)/non-gudang/page.tsx": "e874f7d29979372e08408c9088dd60bc45e2d0a6d39f87c56ae3d150197be966",
     "src/app/(app)/non-gudang/pembelian/NgPembelianClient.tsx": "159dad9af3d6e62a6fa29dd0ada393249bd36c791cb506bf93ad2c97597ddb2c",
     "src/app/(app)/non-gudang/pembelian/page.tsx": "e0ecdaacd9f0e683af25379bbb87b402d18a47bd9284eff5c2ea7fc29150abdc",
-    "src/app/(app)/page.tsx": "ed60acb24d5f94e2d48b6d3e36dac41fefb91be59d4e6c83ce2d3719c648cb95",
+    "src/app/(app)/page.tsx": "9a9b6b74309c9f7943543df9d4ed7355f9aabbe4677d8f5a7f78efd9f338ced0",
     "src/app/(app)/pengguna/actions.ts": "a25a7916263582c70d7ecdd6902a36e635dfb3367769cb16f0158472aeca88b6",
     "src/app/(app)/pengguna/page.tsx": "74548f8a606fd6d93ffd7412aab9834041ec53e044c391b9cfd954b4592668ec",
     "src/app/(app)/pengguna/PenggunaClient.tsx": "32b61e50b2f779bd600cb8f39c47e5c6784b6c04d042846cb3a5616f81d7297c",

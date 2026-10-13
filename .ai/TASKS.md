@@ -12,7 +12,7 @@
 
 ## Dashboard redesign
 - [x] Bento redesign of `/` for Gudang/Kasir.
-- [ ] Verify the Admin Kasir layout (4 KPIs, no margin chart or activity feed) in the browser.
+- [x] Verify the Admin Kasir layout (4 KPIs, no margin chart or activity feed) in the browser; KPI rows stacked at xl.
 
 ## Excel export styling
 - [x] Semantic header colors for all Excel exports.

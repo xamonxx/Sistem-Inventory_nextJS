@@ -13,6 +13,7 @@ Dashboard mengagregasi omset, margin, piutang, proyek, klien, tren 30 hari, bara
 
 ## Tata letak dashboard (bento, 2026-10-13)
 - Hero ringkas: badge mode, judul, sapaan, toggle Operasional/Owner, filter tanggal. Link mode/filter/Reset tidak berubah.
+- Role Kasir (3 kartu ringkas): di `xl` ditumpuk sebagai baris horizontal agar tingginya sejajar kartu unggulan.
 - KPI: kartu unggulan (Omzet Hari Ini / Omzet Bulan Ini) dengan sparkline SVG 30 hari yang dirender server, badge delta vs kemarin (mode operasional), dan ringkasan kemarin/30 hari atau 30 hari/rata-rata. KPI lain berupa kartu ringkas; Stok Menipis/Minus menautkan ke `/stok`, Piutang ke `/invoice`.
 - Baris analitik: Tren Omzet & Margin (8/12) + Pusat Peringatan (4/12, selalu satu kolom; state "Semua stok aman" bila kosong).
 - 10 Barang Terlaris berupa bar horizontal; Persentase Margin hanya memakai hari dengan omzet (hari tanpa penjualan = `null`) plus garis rata-rata; Omzet per Proyek berupa donut atau empty state ringkas; Riwayat Aktivitas memakai avatar inisial dan label aksi berbahasa Indonesia (`AKSI_LABEL`).
