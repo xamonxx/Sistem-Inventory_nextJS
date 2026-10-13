@@ -1,11 +1,11 @@
 "use server";
 
-import { revalidatePath, revalidateTag } from "next/cache";
 import { z } from "zod";
 import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { requireRole } from "@/lib/auth";
 import { logActivity } from "@/lib/activity";
+import { invalidateAfterCommit } from "@/lib/postCommit";
 import { FIELD_LIMITS } from "@/lib/fieldLimits";
 import { dbId, money, qtyPositive, optionalText, safeError, firstIssue } from "@/lib/validation";
 import { InventoryRuleError } from "@/lib/inventoryRules";
@@ -34,8 +34,9 @@ export async function submitStockIn(payload: StockInPayload) {
   }
   const d = parsed.data;
 
+  let result;
   try {
-    const result = await prisma.$transaction(async (tx) => {
+    result = await prisma.$transaction(async (tx) => {
       let totalAmount = new Prisma.Decimal(0);
       const itemIds = Array.from(new Set(d.items.map((line) => line.itemId)));
       const items = await tx.item.findMany({ where: { id: { in: itemIds }, aktif: true } });
@@ -81,6 +82,14 @@ export async function submitStockIn(payload: StockInPayload) {
         ledgerEntries.push({ itemId: item.id, qty: line.qty, unitCost: line.unitCost });
       }
 
+      // Audit row commits atomically with the ledger rows.
+      await logActivity({
+        userId: user.id,
+        aksi: "STOCK_IN_BATCH",
+        entitas: "StockLedger",
+        detail: { supplier: d.supplierName, ref: d.referenceNo, itemsCount: d.items.length, total: Number(totalAmount) },
+      }, tx);
+
       return {
         ok: true,
         totalItems: d.items.length,
@@ -88,24 +97,13 @@ export async function submitStockIn(payload: StockInPayload) {
         entries: ledgerEntries,
       };
     }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable });
-
-    await logActivity({
-      userId: user.id,
-      aksi: "STOCK_IN_BATCH",
-      entitas: "StockLedger",
-      detail: { supplier: d.supplierName, ref: d.referenceNo, itemsCount: result.totalItems, total: result.totalAmount },
-    });
-
-    // Invalidate caches after successful batch stock-in
-    revalidatePath("/");            // Dashboard shows inventory value
-    revalidatePath("/stok");        // Stock levels changed
-    revalidatePath("/stok/masuk");  // Stock-in page
-    revalidatePath("/barang");      // Item prices (hargaBeli) changed
-    revalidateTag("stock");         // Invalidate stock cache
-
-    return result;
   } catch (error) {
     if (error instanceof InventoryRuleError) return { error: error.message };
     return safeError(error, "Gagal menyimpan batch stock-in.");
   }
+
+  // Committed: dashboard value, stock levels, stock-in page, item prices (hargaBeli).
+  invalidateAfterCommit({ paths: ["/", "/stok", "/stok/masuk", "/barang"], tags: ["stock"] });
+
+  return result;
 }

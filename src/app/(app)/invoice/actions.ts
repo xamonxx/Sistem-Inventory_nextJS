@@ -6,6 +6,7 @@ import { Prisma, PaymentType } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { requireRole } from "@/lib/auth";
 import { logActivity } from "@/lib/activity";
+import { invalidateAfterCommit } from "@/lib/postCommit";
 import { dbId, money, safeError, firstIssue } from "@/lib/validation";
 import { FIELD_LIMITS } from "@/lib/fieldLimits";
 import { invoiceItemPayloadSchema } from "@/lib/invoiceRules";
@@ -37,8 +38,9 @@ export async function bayarInvoice(
   if (!parsed.success) return { error: firstIssue(parsed.error) };
   ({ invoiceId, jumlah, tipe } = parsed.data);
 
+  let result;
   try {
-    const result = await prisma.$transaction(async (tx) => {
+    result = await prisma.$transaction(async (tx) => {
       const inv = await tx.invoice.findUnique({ where: { id: invoiceId } });
       if (!inv) return { error: "Invoice tidak ditemukan." };
 
@@ -61,33 +63,36 @@ export async function bayarInvoice(
           keterangan: `Pembayaran cicilan untuk ${inv.noInvoice}`,
         },
       });
+
+      // Audit row commits atomically with the payment.
+      await logActivity({
+        userId: user.id,
+        aksi: "BAYAR_INVOICE",
+        entitas: "Invoice",
+        entitasId: invoiceId,
+        detail: { bayar, lunas, tipe },
+      }, tx);
+
       return { ok: true, payment, bayar, lunas };
     }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable });
-
-    if (!result.ok) return result;
-
-    await logActivity({
-      userId: user.id,
-      aksi: "BAYAR_INVOICE",
-      entitas: "Invoice",
-      entitasId: invoiceId,
-      detail: { bayar: result.bayar, lunas: result.lunas, tipe },
-    });
-
-    revalidatePath("/invoice");
-    return {
-      ok: true,
-      payment: {
-        id: result.payment.id,
-        tanggal: result.payment.tanggal.toISOString(),
-        tipe: result.payment.tipe,
-        jumlah: Number(result.payment.jumlah),
-        keterangan: result.payment.keterangan,
-      },
-    };
   } catch (e) {
     return safeError(e, "Gagal memproses pembayaran.");
   }
+
+  if (!result.ok) return result;
+
+  // Committed. Cache invalidation is best-effort and cannot report a failure.
+  invalidateAfterCommit({ paths: ["/invoice", "/"] });
+  return {
+    ok: true,
+    payment: {
+      id: result.payment.id,
+      tanggal: result.payment.tanggal.toISOString(),
+      tipe: result.payment.tipe,
+      jumlah: Number(result.payment.jumlah),
+      keterangan: result.payment.keterangan,
+    },
+  };
 }
 
 const updateInvoiceSchema = z.object({

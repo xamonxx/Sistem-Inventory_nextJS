@@ -1,11 +1,11 @@
 "use server";
 
-import { revalidatePath, revalidateTag } from "next/cache";
 import { z } from "zod";
 import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { requireRole } from "@/lib/auth";
 import { logActivity } from "@/lib/activity";
+import { invalidateAfterCommit } from "@/lib/postCommit";
 import { FIELD_LIMITS } from "@/lib/fieldLimits";
 import { dbId, qtyPositive, boundedInt, optionalText, safeError, firstIssue, type ActionResult } from "@/lib/validation";
 
@@ -30,22 +30,24 @@ export async function barangMasuk(_prev: unknown, formData: FormData): Promise<A
     const item = await prisma.item.findUnique({ where: { id: d.itemId }, select: { id: true } });
     if (!item) return { error: "Barang tidak ditemukan." };
 
-    await prisma.stockLedger.create({
-      data: {
-        itemId: d.itemId,
-        tipe: "MASUK",
-        qty: d.qty,
-        keterangan: d.keterangan || "Barang masuk / restock",
-        refType: "MANUAL",
-        userId: user.id,
-      },
+    // Ledger row and audit row commit together.
+    await prisma.$transaction(async (tx) => {
+      await tx.stockLedger.create({
+        data: {
+          itemId: d.itemId,
+          tipe: "MASUK",
+          qty: d.qty,
+          keterangan: d.keterangan || "Barang masuk / restock",
+          refType: "MANUAL",
+          userId: user.id,
+        },
+      });
+      await logActivity({ userId: user.id, aksi: "BARANG_MASUK", entitas: "Item", entitasId: d.itemId, detail: { qty: d.qty } }, tx);
     });
-    await logActivity({ userId: user.id, aksi: "BARANG_MASUK", entitas: "Item", entitasId: d.itemId, detail: { qty: d.qty } });
   } catch (e) {
     return safeError(e, "Gagal mencatat barang masuk.");
   }
-  revalidatePath("/stok");
-  revalidateTag("stock"); // Invalidate stock cache
+  invalidateAfterCommit({ paths: ["/stok"], tags: ["stock"] });
   return { ok: true };
 }
 
@@ -91,15 +93,14 @@ export async function koreksiStok(_prev: unknown, formData: FormData): Promise<A
           userId: user.id,
         },
       });
+      await logActivity({ userId: user.id, aksi: "KOREKSI_STOK", entitas: "Item", entitasId: d.itemId, detail: { dari: stokSekarang, ke: d.stokSeharusnya } }, tx);
       return { ok: true, stokSekarang };
     }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable });
 
     if (!result.ok) return result;
-    await logActivity({ userId: user.id, aksi: "KOREKSI_STOK", entitas: "Item", entitasId: d.itemId, detail: { dari: result.stokSekarang, ke: d.stokSeharusnya } });
   } catch (e) {
     return safeError(e, "Gagal melakukan koreksi stok.");
   }
-  revalidatePath("/stok");
-  revalidateTag("stock"); // Invalidate stock cache
+  invalidateAfterCommit({ paths: ["/stok"], tags: ["stock"] });
   return { ok: true };
 }

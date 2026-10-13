@@ -1,6 +1,5 @@
 "use server";
 
-import { revalidatePath, revalidateTag } from "next/cache";
 import { z } from "zod";
 import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
@@ -11,6 +10,7 @@ import { FIELD_LIMITS } from "@/lib/fieldLimits";
 import { dbId, money, qtyPositive, optionalText, safeError, firstIssue } from "@/lib/validation";
 import { buildReturnItemCreateData } from "@/lib/returnRules";
 import { createInvoiceVerifyUrl } from "@/lib/invoiceVerify";
+import { afterCommit, invalidateAfterCommit } from "@/lib/postCommit";
 import { validateStockDemand } from "@/lib/inventoryRules";
 
 const returnItemSchema = z.object({
@@ -51,8 +51,9 @@ export async function createReturn(payload: ReturPayload) {
   }
   const d = parsed.data;
 
+  let result;
   try {
-  const result = await prisma.$transaction(async (tx) => {
+  result = await prisma.$transaction(async (tx) => {
     const transaction = await tx.transaction.findUnique({
       where: { id: d.transactionId },
       include: {
@@ -242,32 +243,33 @@ export async function createReturn(payload: ReturPayload) {
       });
     }
 
+    // Audit row commits atomically with the return/exchange.
+    await logActivity({
+      userId: user.id,
+      aksi: d.tipe === "TUKAR" ? "TUKAR_BARANG" : "RETUR_BARANG",
+      entitas: "Return",
+      entitasId: ret.id,
+      detail: { noReturn, selisih, itemCount: d.returnItems.length },
+    }, tx);
+
     return { ok: true, id: ret.id, noReturn, invoiceNo, selisih, items: ret.items, replacementItems };
   }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable });
+  } catch (e) {
+    return safeError(e, "Gagal memproses retur.");
+  }
 
   if (result.ok !== true) return { error: result.error };
   const replacementItems = result.replacementItems ?? [];
 
-  await logActivity({
-    userId: user.id,
-    aksi: d.tipe === "TUKAR" ? "TUKAR_BARANG" : "RETUR_BARANG",
-    entitas: "Return",
-    entitasId: result.id,
-    detail: { noReturn: result.noReturn, selisih: result.selisih, itemCount: d.returnItems.length },
-  });
-
-  // Invalidate caches after successful return/exchange
-  revalidatePath("/");        // Dashboard shows stock alerts
-  revalidatePath("/stok");    // Stock levels changed
-  revalidatePath("/retur");   // Return page
-  revalidatePath("/invoice"); // Invoice list if created
-  revalidateTag("stock");     // Invalidate stock cache
+  // Committed. Nothing below may turn this return into a reported failure.
+  invalidateAfterCommit({ paths: ["/", "/stok", "/retur", "/invoice"], tags: ["stock"] });
 
   const returnItemNames = d.returnItems.map((ri) => ri.namaSnapshot).join(", ");
   const gantiItemNames = replacementItems.map((ri) => ri.nama).join(", ");
 
-  const verifyUrl = result.invoiceNo
-    ? await createInvoiceVerifyUrl(result.invoiceNo)
+  const invoiceNo = result.invoiceNo;
+  const verifyUrl = invoiceNo
+    ? await afterCommit("createInvoiceVerifyUrl", () => createInvoiceVerifyUrl(invoiceNo))
     : null;
 
   return {
@@ -282,9 +284,6 @@ export async function createReturn(payload: ReturPayload) {
     namaGanti: gantiItemNames || null,
     qtyGanti: replacementItems.reduce((s, ri) => s + ri.qtyReplacement, 0),
   };
-  } catch (e) {
-    return safeError(e, "Gagal memproses retur.");
-  }
 }
 
 export async function findTransactionByCode(code: string) {

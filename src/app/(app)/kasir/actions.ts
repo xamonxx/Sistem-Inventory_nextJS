@@ -1,6 +1,5 @@
 "use server";
 
-import { revalidatePath, revalidateTag } from "next/cache";
 import { z } from "zod";
 import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
@@ -12,6 +11,7 @@ import { dbId, money, qtyPositive, safeError } from "@/lib/validation";
 import { invoiceStatusFor, isReceivedPayment, validateCheckoutTotals } from "@/lib/checkoutRules";
 import { validateStockDemand } from "@/lib/inventoryRules";
 import { createInvoiceVerifyUrl } from "@/lib/invoiceVerify";
+import { afterCommit, invalidateAfterCommit } from "@/lib/postCommit";
 
 const itemSchema = z.object({
   itemId: dbId,
@@ -62,8 +62,9 @@ export async function createTransaction(payload: KasirPayload) {
     ? d.payments
     : [{ tipe: d.paymentMethod, jumlah: 0 }]; // jumlah 0 means we don't know the amount yet
 
+  let result;
   try {
-    const result = await prisma.$transaction(async (tx) => {
+    result = await prisma.$transaction(async (tx) => {
       const uniqueIds = Array.from(new Set(d.items.map((item) => item.itemId)));
       const items = await tx.item.findMany({ where: { id: { in: uniqueIds } } });
       const itemMap = new Map(items.map((item) => [item.id, item]));
@@ -276,6 +277,24 @@ export async function createTransaction(payload: KasirPayload) {
         }
       }
 
+      const sisaTagihan = Prisma.Decimal.max(grandTotal.sub(totalDibayar), 0);
+
+      // Audit row commits atomically with the sale.
+      await logActivity({
+        userId: user.id,
+        aksi: "CREATE_TRANSAKSI",
+        entitas: "Transaction",
+        entitasId: trx.id,
+        detail: {
+          noTransaksi,
+          total: Number(grandTotal),
+          tipe: d.tipe,
+          paymentCount: effectivePayments.length,
+          totalDibayar: Number(totalDibayar),
+          piutangTempo: Number(sisaTagihan),
+        },
+      }, tx);
+
       return {
         ok: true as const,
         id: trx.id,
@@ -283,49 +302,31 @@ export async function createTransaction(payload: KasirPayload) {
         invoiceNo,
         grandTotal: Number(grandTotal),
         totalDibayar: Number(totalDibayar),
-        sisaTagihan: Number(Prisma.Decimal.max(grandTotal.sub(totalDibayar), 0)),
+        sisaTagihan: Number(sisaTagihan),
       };
     }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable });
-
-    if (!result.ok) return { error: result.error };
-
-    await logActivity({
-      userId: user.id,
-      aksi: "CREATE_TRANSAKSI",
-      entitas: "Transaction",
-      entitasId: result.id,
-      detail: {
-        noTransaksi: result.noTransaksi,
-        total: result.grandTotal,
-        tipe: d.tipe,
-        paymentCount: effectivePayments.length,
-        totalDibayar: result.totalDibayar,
-        piutangTempo: result.sisaTagihan,
-      },
-    });
-
-    // Invalidate caches after successful transaction
-    revalidatePath("/");        // Dashboard shows today's revenue
-    revalidatePath("/stok");    // Stock levels changed
-    revalidatePath("/kasir");   // Cashier page
-    revalidatePath("/invoice"); // Invoice list if created
-    revalidateTag("stock");     // Invalidate stock cache
-
-    const verifyUrl = result.invoiceNo
-      ? await createInvoiceVerifyUrl(result.invoiceNo)
-      : null;
-
-    return {
-      ok: true,
-      id: result.id,
-      noTransaksi: result.noTransaksi,
-      invoiceNo: result.invoiceNo,
-      grandTotal: result.grandTotal,
-      totalDibayar: result.totalDibayar,
-      sisaTagihan: result.sisaTagihan,
-      verifyUrl,
-    };
   } catch (error) {
     return safeError(error, "Terjadi kesalahan internal saat memproses checkout.");
   }
+
+  if (!result.ok) return { error: result.error };
+
+  // Committed. Nothing below may turn this sale into a reported failure.
+  invalidateAfterCommit({ paths: ["/", "/stok", "/kasir", "/invoice"], tags: ["stock"] });
+
+  const invoiceNo = result.invoiceNo;
+  const verifyUrl = invoiceNo
+    ? await afterCommit("createInvoiceVerifyUrl", () => createInvoiceVerifyUrl(invoiceNo))
+    : null;
+
+  return {
+    ok: true,
+    id: result.id,
+    noTransaksi: result.noTransaksi,
+    invoiceNo: result.invoiceNo,
+    grandTotal: result.grandTotal,
+    totalDibayar: result.totalDibayar,
+    sisaTagihan: result.sisaTagihan,
+    verifyUrl,
+  };
 }

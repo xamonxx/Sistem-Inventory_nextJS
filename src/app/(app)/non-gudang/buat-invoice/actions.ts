@@ -7,6 +7,7 @@ import { requireRole } from "@/lib/auth";
 import { nextDocNumber } from "@/lib/counters";
 import { FIELD_LIMITS } from "@/lib/fieldLimits";
 import { logActivity } from "@/lib/activity";
+import { invalidateAfterCommit } from "@/lib/postCommit";
 import { computeNgCart } from "@/lib/ngMargin";
 import { prisma } from "@/lib/prisma";
 import { dbId, firstIssue, money, optionalText, qtyPositive, requiredText, safeError } from "@/lib/validation";
@@ -155,8 +156,9 @@ export async function createNgInvoice(input: CreateNgInvoiceInput) {
   const totalPenjualan = new Prisma.Decimal(computed.totalPenjualan);
   const totalDibayar = data.paymentStatus === "LUNAS" ? totalPenjualan : new Prisma.Decimal(0);
 
+  let created;
   try {
-    const created = await prisma.$transaction(async (tx) => {
+    created = await prisma.$transaction(async (tx) => {
       const noInvoice = await nextDocNumber(tx, "ng_invoice");
 
       // Link ke master konsumen: pakai id terpilih bila valid, cari yang sudah ada
@@ -243,57 +245,58 @@ export async function createNgInvoice(input: CreateNgInvoiceInput) {
         });
       }
 
+      // Audit row commits atomically with the invoice.
+      await logActivity({
+        userId: user.id,
+        aksi: "CREATE_NG_INVOICE",
+        entitas: "NgInvoice",
+        entitasId: invoice.id,
+        detail: {
+          noInvoice: invoice.noInvoice,
+          namaToko: invoice.namaToko,
+          namaKonsumen: invoice.namaKonsumen,
+          totalPenjualan: computed.totalPenjualan,
+          totalProfit: computed.totalProfit,
+          itemCount: computed.lines.length,
+        },
+      }, tx);
+
       return invoice;
     });
-
-    await logActivity({
-      userId: user.id,
-      aksi: "CREATE_NG_INVOICE",
-      entitas: "NgInvoice",
-      entitasId: created.id,
-      detail: {
-        noInvoice: created.noInvoice,
-        namaToko: created.namaToko,
-        namaKonsumen: created.namaKonsumen,
-        totalPenjualan: computed.totalPenjualan,
-        totalProfit: computed.totalProfit,
-        itemCount: computed.lines.length,
-      },
-    });
-
-    revalidatePath("/non-gudang");
-    revalidatePath("/non-gudang/buat-invoice");
-    revalidatePath("/non-gudang/invoice");
-    revalidatePath("/non-gudang/konsumen");
-
-    return {
-      ok: true,
-      invoice: {
-        id: created.id,
-        noInvoice: created.noInvoice,
-        tanggal: created.tanggal.toISOString(),
-        namaToko: created.namaToko,
-        namaKonsumen: created.namaKonsumen ?? "",
-        namaGrup: created.namaGrup ?? "",
-        alamat: created.alamat ?? "",
-        namaWorkshop: created.namaWorkshop ?? "",
-        status: created.status,
-        jatuhTempo: created.jatuhTempo?.toISOString() ?? null,
-        paymentMethod: data.paymentMethod,
-        totalModal: computed.totalModal,
-        totalPenjualan: computed.totalPenjualan,
-        totalProfit: computed.totalProfit,
-        margin: computed.margin,
-        markup: computed.markup,
-        items: computed.lines,
-        namaBank: created.namaBank ?? "",
-        noRekening: created.noRekening ?? "",
-        atasNama: created.atasNama ?? "",
-      },
-    };
   } catch (error) {
     return safeError(error, "Gagal membuat invoice non-gudang.");
   }
+
+  // Committed. Cache invalidation is best-effort and cannot report a failure.
+  invalidateAfterCommit({
+    paths: ["/non-gudang", "/non-gudang/buat-invoice", "/non-gudang/invoice", "/non-gudang/konsumen"],
+  });
+
+  return {
+    ok: true,
+    invoice: {
+      id: created.id,
+      noInvoice: created.noInvoice,
+      tanggal: created.tanggal.toISOString(),
+      namaToko: created.namaToko,
+      namaKonsumen: created.namaKonsumen ?? "",
+      namaGrup: created.namaGrup ?? "",
+      alamat: created.alamat ?? "",
+      namaWorkshop: created.namaWorkshop ?? "",
+      status: created.status,
+      jatuhTempo: created.jatuhTempo?.toISOString() ?? null,
+      paymentMethod: data.paymentMethod,
+      totalModal: computed.totalModal,
+      totalPenjualan: computed.totalPenjualan,
+      totalProfit: computed.totalProfit,
+      margin: computed.margin,
+      markup: computed.markup,
+      items: computed.lines,
+      namaBank: created.namaBank ?? "",
+      noRekening: created.noRekening ?? "",
+      atasNama: created.atasNama ?? "",
+    },
+  };
 }
 
 export async function resolveNgProductForCart(input: {

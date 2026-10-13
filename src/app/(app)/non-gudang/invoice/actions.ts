@@ -5,6 +5,7 @@ import { NgPaymentType, Prisma } from "@prisma/client";
 import { z } from "zod";
 import { requireRole } from "@/lib/auth";
 import { logActivity } from "@/lib/activity";
+import { invalidateAfterCommit } from "@/lib/postCommit";
 import { computeNgCart } from "@/lib/ngMargin";
 import { prisma } from "@/lib/prisma";
 import { dbId, firstIssue, money, optionalText, qtyPositive, requiredText, safeError } from "@/lib/validation";
@@ -44,8 +45,9 @@ export async function bayarNgInvoice(input: BayarNgInvoiceInput) {
   if (!parsed.success) return { error: firstIssue(parsed.error) };
   const data = parsed.data;
 
+  let result;
   try {
-    const result = await prisma.$transaction(async (tx) => {
+    result = await prisma.$transaction(async (tx) => {
       const inv = await tx.ngInvoice.findUnique({
         where: { id: data.invoiceId },
         select: { id: true, noInvoice: true, totalPenjualan: true, totalDibayar: true },
@@ -79,6 +81,16 @@ export async function bayarNgInvoice(input: BayarNgInvoiceInput) {
           userId: user.id,
         },
       });
+
+      // Audit row commits atomically with the payment.
+      await logActivity({
+        userId: user.id,
+        aksi: "BAYAR_NG_INVOICE",
+        entitas: "NgInvoice",
+        entitasId: data.invoiceId,
+        detail: { noInvoice: inv.noInvoice, bayar: Number(bayar), lunas, tipe: data.tipe },
+      }, tx);
+
       return {
         ok: true as const,
         payment,
@@ -90,36 +102,28 @@ export async function bayarNgInvoice(input: BayarNgInvoiceInput) {
         sisa: total.sub(totalDibayar),
       };
     }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable });
-
-    if (!result.ok) return { error: result.error };
-
-    await logActivity({
-      userId: user.id,
-      aksi: "BAYAR_NG_INVOICE",
-      entitas: "NgInvoice",
-      entitasId: data.invoiceId,
-      detail: { noInvoice: result.noInvoice, bayar: Number(result.bayar), lunas: result.lunas, tipe: data.tipe },
-    });
-
-    revalidatePath("/non-gudang/invoice");
-    revalidatePath("/non-gudang");
-
-    return {
-      ok: true,
-      status: result.status,
-      totalDibayar: Number(result.totalDibayar),
-      sisa: Number(result.sisa),
-      payment: {
-        id: result.payment.id,
-        tanggal: result.payment.tanggal.toISOString(),
-        tipe: result.payment.tipe,
-        jumlah: Number(result.payment.jumlah),
-        keterangan: result.payment.keterangan ?? "",
-      },
-    };
   } catch (error) {
     return safeError(error, "Gagal memproses pembayaran non-gudang.");
   }
+
+  if (!result.ok) return { error: result.error };
+
+  // Committed. Cache invalidation is best-effort and cannot report a failure.
+  invalidateAfterCommit({ paths: ["/non-gudang/invoice", "/non-gudang"] });
+
+  return {
+    ok: true,
+    status: result.status,
+    totalDibayar: Number(result.totalDibayar),
+    sisa: Number(result.sisa),
+    payment: {
+      id: result.payment.id,
+      tanggal: result.payment.tanggal.toISOString(),
+      tipe: result.payment.tipe,
+      jumlah: Number(result.payment.jumlah),
+      keterangan: result.payment.keterangan ?? "",
+    },
+  };
 }
 
 const DB_PERCENT_MAX = 9999.99;
