@@ -3,7 +3,7 @@ type: operations-audit
 status: release-blocked
 last_verified: 2026-10-13
 source_files: [package.json, package-lock.json, next.config.ts, prisma/schema.prisma, .github/workflows/deploy.yml, src/app, src/components, src/lib]
-related: ["[[Comprehensive-Role-Verification-Checkpoint]]", "[[Known-Bugs]]", "[[Risks]]", "[[Build-and-Test]]", "[[Recovery]]"]
+related: ["[[Comprehensive-Role-Verification-Checkpoint]]", "[[Known-Bugs]]", "[[Risks]]", "[[Build-and-Test]]", "[[Recovery]]", "[[ADR-004-Credit-Is-Unpaid-Receivable]]"]
 tags: [operations, audit, production, security, bugs, plan]
 ---
 # Pre-Production Bug Audit and Remediation Plan
@@ -15,6 +15,8 @@ tags: [operations, audit, production, security, bugs, plan]
 Audit menemukan blocker aktif pada integritas struk, hasil mutasi setelah commit, concurrency, recovery, dan deployment.
 
 Temuan dependency critical awal sudah ditangani oleh perubahan dependency terpisah setelah audit: runtime sekarang memakai `next@15.5.27`, dan recheck `npm audit --omit=dev` melaporkan **0 critical, 0 high, 2 moderate** (`exceljs`/`uuid`). Status release tetap **NO-GO** karena blocker aplikasi dan operasional lain belum diperbaiki.
+
+AUD-002 dan AUD-016 sudah diperbaiki di source pada 2026-10-13: owner memutuskan CREDIT adalah piutang tempo belum dibayar ([[ADR-004-Credit-Is-Unpaid-Receivable]]), dan semua jalur struk kini memakai nilai pembayaran tersimpan. Baris Payment CREDIT historis di production belum diperiksa.
 
 Tidak ditemukan pelanggaran pada sweep invariant database lokal saat audit. Build production, type-check, lint, Prisma validation, security regression 58/58, production-like browser smoke, dan production read-only smoke lulus. Hasil hijau tersebut tidak meniadakan blocker di atas karena test suite belum mencakup mekanisme yang ditemukan.
 
@@ -59,7 +61,7 @@ The first build attempt failed with Windows `EPERM` because a stale `next dev` c
 | ID | Severity | Confidence | Finding | Release gate |
 |---|---|---|---|---|
 | AUD-001 | Critical at discovery | Observed, remediated | Vulnerable Next.js runtime and dependency tree | Cleared for critical/high dependency gate |
-| AUD-002 | High | Observed | Receipt paid/remaining values are incorrect | Block |
+| AUD-002 | High at discovery | Observed, remediated | Receipt paid/remaining values are incorrect | Cleared in source; production data review pending |
 | AUD-003 | High | Code-proven | Post-commit failures can be reported as mutation failures | Block |
 | AUD-004 | High | Code-proven | Gudang invoice edit can race stock writes | Block |
 | AUD-005 | High | Code-proven | Non-Gudang edit can race a payment and violate totals | Block |
@@ -73,7 +75,7 @@ The first build attempt failed with Windows `EPERM` because a stale `next dev` c
 | AUD-013 | Medium | Code-proven | Public verification is not atomic and trusts spoofable proxy headers | Fix or rename semantics |
 | AUD-014 | Medium | Code-proven | User management cannot create/manage `ADMIN_NONGUDANG` | Product decision required |
 | AUD-015 | Medium | Observed/config-proven | CSP allows `'unsafe-inline'` and `'unsafe-eval'` | Harden after compatibility test |
-| AUD-016 | Medium | Contract ambiguity | `CREDIT` is labeled tempo but counted as paid | Product decision required |
+| AUD-016 | Medium | Decided, remediated | `CREDIT` is labeled tempo but counted as paid | Cleared by ADR-004 |
 | AUD-017 | Medium | Code-proven | Mutation audit logging is not atomic and logs are clearable | Fix governance before release |
 | AUD-018 | Low | Code-proven | Several primary pages perform unbounded reads | Capacity gate |
 | AUD-019 | Low | Observed | Unauthorized Server Action replay surfaces HTTP 500 | Fix response contract |
@@ -102,6 +104,7 @@ The first build attempt failed with Windows `EPERM` because a stale `next dev` c
 - **Fix:** Return authoritative persisted payment totals from checkout; pass `totalDibayar` and computed remaining amount through every `Nota` entry point. Add regression cases for cash, transfer, credit, split, partial, LUNAS, reprint, and image/PDF paths.
 - **Mitigation:** Block affected receipt issuance and use the A4 invoice only after confirming its persisted totals.
 - **False-positive notes:** None for the reproduced cases. Credit semantics still require the decision in AUD-016.
+- **Remediation (2026-10-13):** `createTransaction` returns persisted `totalDibayar`/`sisaTagihan`; Kasir receipt, invoice thermal preview, and `/invoice/[id]` pass both values to `Nota`; `Nota` status is derived from amounts instead of catatan text; the hidden A4 row that showed `-total` was removed. Image and PDF reuse the same rendered `Nota`. Local browser checkouts `PC00102` (split with tempo) and `PC00103` (transfer-only) matched the database on every path.
 
 ### AUD-003 — Committed mutation can be reported as failed
 
@@ -256,6 +259,7 @@ The first build attempt failed with Windows `EPERM` because a stale `next dev` c
 - **Fix:** Product owner must decide whether CREDIT means paid by a financing method or unpaid receivable. If tempo, exclude it from `totalDibayar`, store it as outstanding allocation, and keep invoice PARTIAL/PENDING.
 - **Mitigation:** Do not infer accounting meaning from the current enum name alone.
 - **False-positive notes:** Existing verification treated persisted CREDIT as a payment; this is a contract ambiguity, not yet a confirmed defect.
+- **Decision and remediation (2026-10-13):** Owner decided CREDIT is an unpaid receivable ([[ADR-004-Credit-Is-Unpaid-Receivable]]). `checkoutRules` counts only CASH/TRANSFER as paid, checkout no longer writes CREDIT Payment rows, and `bayarInvoice` accepts CASH/TRANSFER only. The local database had 0 historical CREDIT Payment rows; production must be checked read-only before release.
 
 ### AUD-017 — Audit trail lacks transactional and retention integrity
 
@@ -318,8 +322,8 @@ The first build attempt failed with Windows `EPERM` because a stale `next dev` c
 ### Phase 0 — Release blockers
 
 1. **Completed:** Next.js pinned to `15.5.27`; critical/high production dependency audit gate is clear. Triage the remaining moderate `exceljs`/`uuid` advisory.
-2. Define CREDIT accounting semantics with owner/accounting. Record the decision before changing receipt/payment logic.
-3. Fix receipt totals from authoritative persisted values across immediate POS, invoice thermal reprint, detail page, image, A4, and PDF paths.
+2. **Completed:** CREDIT is an unpaid receivable ([[ADR-004-Credit-Is-Unpaid-Receivable]]).
+3. **Completed in source:** receipt totals use persisted values across POS, invoice thermal reprint, detail page, image, A4, and PDF paths. Remaining: read-only production check for historical CREDIT Payment rows.
 4. Make checkout/payment outcomes atomic and idempotent. Include required audit rows in transactions; prevent post-commit helper failures from returning mutation failure.
 5. Move Gudang invoice edit and Non-Gudang edit guards into serializable transactions. Add edit-vs-checkout and edit-vs-payment race tests.
 6. Verify required Hostinger runtime variables without exposing values, especially `AUTH_SECRET`, `INVOICE_VERIFY_SECRET`, `DATABASE_URL`, `COOKIE_SECURE`, and canonical app URL.

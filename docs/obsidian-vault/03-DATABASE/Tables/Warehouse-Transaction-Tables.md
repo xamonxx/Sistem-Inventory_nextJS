@@ -18,7 +18,7 @@ Item, tanggal, `LedgerType`, signed qty, keterangan, polymorphic reference, user
 Return wajib ke transaction. Header menyimpan RETUR/TUKAR dan selisih. Detail tertaut ke transaction item asli, item retur, dan opsional item pengganti beserta snapshot/qty/subtotal.
 
 ## `invoices` / `payments`
-Invoice dapat tertaut ke client, project, transaction, atau return; menyimpan total dan total dibayar. Payment dapat tertaut ke transaction dan/atau invoice dan mendukung CASH/TRANSFER/CREDIT.
+Invoice dapat tertaut ke client, project, transaction, atau return; menyimpan total dan total dibayar. Payment dapat tertaut ke transaction dan/atau invoice. Sejak 2026-10-13 hanya CASH/TRANSFER yang ditulis; enum CREDIT dipertahankan untuk data lama karena CREDIT berarti piutang tempo belum dibayar, bukan pembayaran ([[ADR-004-Credit-Is-Unpaid-Receivable]]).
 
 ## Enum
 `TransactionType`, `LedgerType`, `ReturnType`, `InvoiceStatus`, `PaymentType`.

@@ -8,6 +8,7 @@
 - Exchange requires one-to-one indexed pairs; returned item enters stock, replacement leaves stock.
 - Positive exchange difference can create invoice; no refund write was found for negative difference.
 - Payment cannot exceed outstanding balance; invoice status derives from paid vs total.
+- CREDIT (tempo) is an unpaid receivable: only CASH/TRANSFER count toward `totalDibayar`; CREDIT is never persisted as a Payment and invoice settlement accepts CASH/TRANSFER only (ADR-004).
 - Invoice line edit cannot conflict with returned qty or paid total.
 
 ## Non-gudang

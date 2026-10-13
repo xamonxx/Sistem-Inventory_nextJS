@@ -1,5 +1,17 @@
 # Progress
 
+## 2026-10-13 — Pre-production Phase 0 (dependencies and receipts)
+- [x] Pin `next`/`eslint-config-next` to 15.5.27; override `postcss` ^8.5.30 and `deepmerge-ts` ^8.0.2; production audit has no critical/high.
+- [x] Record ADR-004: CREDIT is an unpaid receivable; checkout and invoice settlement write CASH/TRANSFER payments only.
+- [x] Print persisted paid/remaining values on Kasir receipt, invoice thermal preview, and `/invoice/[id]`; derive `Nota` status from amounts.
+- [x] Add 10 checkout-rule regressions (security suite 68/68) and browser-verify split/tempo and transfer-only checkouts locally.
+- [ ] Read-only production check for historical CREDIT Payment rows.
+
+## 2026-10-13 — User guides by role
+- [x] Create separate `.docx` guides for `ADMIN_GUDANG`, `ADMIN_KASIR`, and `ADMIN_NONGUDANG`.
+- [x] Cover authorized menus, step-by-step workflows, control checks, troubleshooting, and escalation boundaries.
+- [x] Add Markdown and Vault indexes without embedding credentials or customer data.
+
 ## 2026-10-13 — Non-Gudang UI/UX overhaul
 - [x] Shared page primitives in `src/components/page/index.tsx`.
 - [x] Dashboard + charts, Master Barang, Buat Invoice, Riwayat Invoice, Riwayat Pembelian, Master Konsumen, Laporan.

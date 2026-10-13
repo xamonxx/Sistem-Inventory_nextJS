@@ -1,9 +1,10 @@
 # Operational Tasks
 
 ## Pre-production release blockers
-- [ ] Upgrade `next` from 15.5.19 to at least the patched 15.5.27 line; clear critical/high production advisories or record explicit risk acceptance.
-- [ ] Decide whether `CREDIT` means paid financing or unpaid tempo before changing payment totals.
-- [ ] Fix POS and invoice thermal receipt paid/remaining values across split, transfer, partial, LUNAS, reprint, image, and PDF paths.
+- [x] Upgrade `next` from 15.5.19 to at least the patched 15.5.27 line; clear critical/high production advisories or record explicit risk acceptance.
+- [x] Decide whether `CREDIT` means paid financing or unpaid tempo before changing payment totals (unpaid receivable, ADR-004).
+- [x] Fix POS and invoice thermal receipt paid/remaining values across split, transfer, partial, LUNAS, reprint, image, and PDF paths.
+- [ ] Read-only check production for historical `Payment.tipe = CREDIT` rows; correct only with explicit approval and a verified backup.
 - [ ] Make checkout/payment outcomes atomic and idempotent; prevent post-commit audit/token failures from returning mutation failure.
 - [ ] Serialize Gudang invoice edit stock checks and Non-Gudang edit-vs-payment checks; add race regressions.
 - [ ] Invalidate stock cache/tag after invoice edit/delete ledger mutations.
@@ -13,6 +14,7 @@
 - [ ] Convert logout to exact-origin POST, revoke sessions after password reset, and resolve public verification trust semantics.
 - [ ] Pass authenticated release-artifact smoke for all three roles.
 - [x] Produce the comprehensive pre-production audit and remediation plan.
+- [x] Produce separate Microsoft Word usage guides for Admin Gudang, Admin Kasir, and Admin Non-Gudang.
 
 ## Non-Gudang UI follow-ups
 - [ ] Click Unduh Excel / Cetak PDF on Non-Gudang Dashboard and Laporan once.

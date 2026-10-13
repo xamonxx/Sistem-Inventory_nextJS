@@ -2,7 +2,7 @@
 type: issue-register
 status: verified
 last_verified: 2026-10-13
-related: ["[[Technical-Debt]]", "[[Resolved-Issues]]", "[[Pre-Production-Bug-Audit-and-Plan]]"]
+related: ["[[Technical-Debt]]", "[[Resolved-Issues]]", "[[Pre-Production-Bug-Audit-and-Plan]]", "[[ADR-004-Credit-Is-Unpaid-Receivable]]"]
 tags: [issues, bugs]
 ---
 # Known Bugs
@@ -23,12 +23,16 @@ tags: [issues, bugs]
 ## KB-003 — Struk split payment hanya menghitung cash
 - **Observed:** transaksi `PC00003` menyimpan `CASH 30.000 + TRANSFER 50.000 + CREDIT 20.000` dan invoice LUNAS, tetapi struk menampilkan `Pembayaran Masuk Rp30.000` dan `Sisa Tagihan Rp70.000`.
 - **Impact:** struk salah menyatakan pembayaran dan piutang walaupun persistence benar.
-- **Status:** open; release blocker untuk struk multi-metode.
+- **Resolution (2026-10-13):** CREDIT kini piutang tempo belum dibayar ([[ADR-004-Credit-Is-Unpaid-Receivable]]); checkout hanya menyimpan CASH/TRANSFER sebagai Payment dan struk memakai `totalDibayar`/sisa dari server.
+- **Verification:** checkout lokal `PC00102` (tunai 30.000 + transfer 50.000 + tempo 75.000) menyimpan dua Payment, invoice `INV-00063` PARTIAL dibayar 80.000; struk, `/invoice/[id]`, dan pratinjau thermal menampilkan dibayar 80.000 / sisa 75.000.
+- **Status:** resolved in source; production data dengan baris Payment CREDIT lama belum diperiksa.
 
 ## KB-004 — Struk transfer lunas masih menampilkan sisa penuh
 - **Observed:** transaksi proyek `PC00004` menyimpan transfer Rp100.000 dan invoice LUNAS, tetapi struk menampilkan `Sisa Tagihan Rp100.000`.
 - **Impact:** pelanggan menerima informasi piutang yang salah pada transaksi transfer.
-- **Status:** open; kemungkinan akar yang sama dengan KB-003.
+- **Resolution (2026-10-13):** struk Kasir memakai `totalDibayar` dari server, bukan uang tunai saja.
+- **Verification:** checkout lokal transfer penuh `PC00103` menyimpan invoice `INV-00064` LUNAS; struk dan cetak ulang menampilkan pembayaran 26.500 tanpa sisa tagihan.
+- **Status:** resolved.
 - **Evidence:** [[Comprehensive-Role-Verification-Checkpoint]].
 
 ## KB-005 — Losing concurrent checkout reports a generic internal error
@@ -40,7 +44,8 @@ tags: [issues, bugs]
 ## KB-006 — Cetak ulang invoice thermal mengabaikan pembayaran tersimpan
 - **Observed in source:** jalur `InvoiceClient` dan `/invoice/[id]` mengirim total ke `Nota` tanpa `bayar`/`sisaTagihan`; `Nota` lalu menganggap pembayaran masuk nol.
 - **Impact:** invoice PARTIAL/LUNAS dapat dicetak sebagai belum lunas pada format thermal.
-- **Status:** open; satu keluarga akar masalah dengan KB-003/KB-004 dan release blocker.
+- **Resolution (2026-10-13):** kedua jalur kini mengirim `bayar = totalDibayar` dan `sisaTagihan`; status `Nota` dihitung dari angka, bukan teks catatan.
+- **Status:** resolved; diverifikasi pada `/invoice/1800`, `/invoice/1801`, dan pratinjau thermal daftar invoice.
 - **Evidence:** [[Pre-Production-Bug-Audit-and-Plan]].
 
 ## KB-007 — Mutasi committed dapat dilaporkan gagal

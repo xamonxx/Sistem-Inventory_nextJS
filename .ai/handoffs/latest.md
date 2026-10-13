@@ -8,11 +8,16 @@
 2. Run `git status --short` and `node scripts/knowledge-sync.mjs check`.
 3. Preserve existing user changes and do not expose credentials.
 
+## Latest documentation change
+- Separate Word guides are available in `docs/user-guides/` for Admin Gudang, Admin Kasir, and Admin Non-Gudang.
+- Canonical index: `docs/obsidian-vault/13-OPERATIONS/User-Guides-by-Role.md`.
+- The guides document current role menus and operating workflows only; no application behavior or production data was changed.
+
 ## Required next task
 Execute Phase 0 from the pre-production audit in this order:
-1. Upgrade `next@15.5.19` to at least `15.5.27` and clear/assess all critical and high production advisories.
-2. Decide CREDIT accounting semantics, then fix persisted paid/remaining values in every receipt path.
-3. Make mutation outcomes atomic/idempotent so post-commit audit or verification helpers cannot produce a false failure.
+1. **Done (`0dfdd83`):** `next@15.5.27` pinned; production audit 0 critical / 0 high / 2 moderate (`exceljs` -> `uuid`, unreachable path).
+2. **Done (`249c400`):** CREDIT = unpaid receivable (ADR-004); all receipt paths print persisted paid/remaining values. Still needed: read-only production check for historical CREDIT Payment rows.
+3. **Next:** Make mutation outcomes atomic/idempotent so post-commit audit or verification helpers cannot produce a false failure.
 4. Serialize invoice-edit races and add missing stock-cache invalidation.
 5. Prove backup/restore and required production runtime env before deployment.
 
@@ -60,9 +65,10 @@ Do not push or deploy until the audit exit criteria pass.
 - No production credentials were used and no production mutation occurred.
 
 ## Release blockers
-- `PC00003`: database has cash 30k + transfer 50k + credit 20k and LUNAS, but receipt says paid 30k / remaining 70k.
-- `PC00004`: database has transfer 100k and LUNAS, but receipt says remaining 100k.
-- Do not push/deploy until both are fixed or explicitly accepted.
+- `PC00003`/`PC00004` receipt defects are fixed in source and verified locally with `PC00102` (split + tempo, PARTIAL 80k/75k) and `PC00103` (transfer, LUNAS).
+- Remaining Phase 0 blockers: atomic/idempotent mutation outcomes, invoice-edit races, stock-cache invalidation, deployment env/cutover, backup/restore.
+- Local test data added on 2026-10-13: `PC00102`/`INV-00063` and `PC00103`/`INV-00064` (customers `QA AUD-002 Split` / `QA AUD-002 Transfer`). Do not delete without approval.
+- Do not push/deploy until the audit exit criteria pass.
 
 ## Do not lose
 - Dev port is 3000 everywhere except user-owned `.env` drift (`NEXT_PUBLIC_APP_URL` still points to 3001).

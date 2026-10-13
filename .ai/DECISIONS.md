@@ -11,3 +11,4 @@ Only current operational decisions are duplicated here; rationale/details remain
 7. **No destructive DB operation without explicit approval and verified target/recovery.**
 8. **Caveman is the default persistent chat-response skill.** Every Agent reads `.agents/skills/caveman/SKILL.md` at startup. Only explicit `stop caveman` or `normal mode` disables it. Persisted repository prose remains professional.
 9. **Context7 is mandatory for external technology documentation.** Use `.agents/skills/find-docs/SKILL.md` for current library/API details. Keep queries free of secrets and proprietary code.
+10. **CREDIT is an unpaid receivable.** Only CASH/TRANSFER count as paid; CREDIT is never written as a Payment. See [`ADR-004`](../docs/obsidian-vault/09-DECISIONS/ADR/ADR-004-Credit-Is-Unpaid-Receivable.md).
