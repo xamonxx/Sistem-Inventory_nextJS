@@ -32,6 +32,9 @@ async function main() {
   // Counter bukan akun login; hapus agar database hanya menyisakan users.
   await prisma.counter.deleteMany();
 
+  // Hasil mutasi tersimpan untuk retry (AUD-003); tidak berarti tanpa transaksinya.
+  await prisma.idempotencyKey.deleteMany();
+
   const summary = {
     users: await prisma.user.count(),
     items: await prisma.item.count(),
@@ -49,6 +52,7 @@ async function main() {
     ngPayments: await prisma.ngPayment.count(),
     activityLogs: await prisma.activityLog.count(),
     counters: await prisma.counter.count(),
+    idempotencyKeys: await prisma.idempotencyKey.count(),
   };
 
   console.log("✅ Selesai. Sisa data:");

@@ -68,13 +68,13 @@ Do not push or deploy until the audit exit criteria pass.
 ## Release blockers
 - `PC00003`/`PC00004` receipt defects are fixed in source and verified locally with `PC00102` (split + tempo, PARTIAL 80k/75k) and `PC00103` (transfer, LUNAS).
 - Remaining Phase 0 blockers: production `idempotency_keys` table before deploy, deployment env/cutover, backup/restore.
-- Local test data added on 2026-10-13: `PC00102`/`INV-00063`, `PC00103`/`INV-00064`, and `PC00104`/`INV-00065` (customers `QA AUD-002 Split`, `QA AUD-002 Transfer`, `QA AUD-003 Retry`). Do not delete without approval.
+- Local QA transactions `PC00102`–`PC00104` were removed by the 2026-10-13 data clear.
 - Do not push/deploy until the audit exit criteria pass.
 
 ## Do not lose
 - Building in a git worktree with a `node_modules` junction: remove the junction with `cmd /c rmdir <junction>` BEFORE deleting the worktree. `git worktree remove --force` followed the junction on 2026-10-13 and deleted `node_modules/.bin`; it was restored with `npm rebuild --ignore-scripts`.
 - Dev port is 3000 everywhere except user-owned `.env` drift (`NEXT_PUBLIC_APP_URL` still points to 3001).
-- Dev DB contains pre-existing additive `DMY-`/`DMY ` dummy data; never clear it without approval.
+- Local dev DB `sistem_inventory` was cleared on 2026-10-13 at the user's request (no backup): only the three role accounts (`kasir`, `gudang`, `nongudang`) remain; counters restart at 00001. Never clear again without approval.
 - `CustomSelect` overlay uses a body portal and z-index 2147483005.
 - Caveman is mandatory for chat until the user explicitly says `stop caveman` or `normal mode`.
 - Context7 is mandatory for current external library/framework/API documentation.

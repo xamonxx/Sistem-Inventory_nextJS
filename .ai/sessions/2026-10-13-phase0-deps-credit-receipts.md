@@ -33,6 +33,9 @@ Execute Phase 0 steps 1–3 of the pre-production audit: patch Next.js, decide C
 ## Continuation — invoice toolbar tablet layout
 - `884974f`, `b06ad43`: `Select` routes responsive layout classes to its wrapper; invoice toolbar tablet/desktop layout; measured at 768/900/1280/1536 px.
 
+## Continuation — local data clear
+- User requested clearing all data except role accounts and chose no backup. Target confirmed as local `sistem_inventory` on the workstation. `npm run db:clear` left only `users` (3). `prisma/clear.ts` extended to clear `idempotency_keys`.
+
 ## Continuation — Phase 0 step 5 (AUD-004/005/008/010)
 - `5b8d15b`: `runSerializable` with bounded retry for every Serializable action; invoice and NG edits serialized; stock cache invalidated on invoice edit/delete; P2034 mapped to an actionable message.
 - Verification observed: type-check, ESLint, security 68/68, idempotency 6/6, `npm run test:concurrency` 24/24 (disposable databases created and dropped; none left behind), isolated build 22 routes.
