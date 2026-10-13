@@ -1,19 +1,22 @@
 # Latest Handoff
 
 **Updated:** 2026-10-13
-**State:** comprehensive three-role verification completed; application source was not changed.
+**State:** pre-production audit completed; release is NO-GO and application source was not changed.
 
 ## Startup
-1. Read `.ai/STATUS.md`, `.ai/CONTEXT.md`, `.ai/AGENTS.md`, `.ai/TASKS.md`, this handoff, and `docs/obsidian-vault/13-OPERATIONS/Comprehensive-Role-Verification-Checkpoint.md`.
+1. Read `.ai/STATUS.md`, `.ai/CONTEXT.md`, `.ai/AGENTS.md`, `.ai/TASKS.md`, this handoff, and `docs/obsidian-vault/13-OPERATIONS/Pre-Production-Bug-Audit-and-Plan.md`.
 2. Run `git status --short` and `node scripts/knowledge-sync.mjs check`.
 3. Preserve existing user changes and do not expose credentials.
 
 ## Required next task
-Fix and retest the two receipt-payment defects before push/deploy:
-1. Split payment must derive paid and remaining values from all persisted payment methods, not cash tendered only.
-2. Transfer-only LUNAS receipt must show the persisted transfer as paid and zero remaining.
+Execute Phase 0 from the pre-production audit in this order:
+1. Upgrade `next@15.5.19` to at least `15.5.27` and clear/assess all critical and high production advisories.
+2. Decide CREDIT accounting semantics, then fix persisted paid/remaining values in every receipt path.
+3. Make mutation outcomes atomic/idempotent so post-commit audit or verification helpers cannot produce a false failure.
+4. Serialize invoice-edit races and add missing stock-cache invalidation.
+5. Prove backup/restore and required production runtime env before deployment.
 
-After those fixes, improve the losing concurrent checkout response so it reports a stock conflict instead of `Terjadi kesalahan internal saat memproses checkout.`
+Do not push or deploy until the audit exit criteria pass.
 
 ## Latest source change (Non-Gudang overhaul, committed 2026-10-13)
 - All seven Non-Gudang pages rebuilt on `src/components/page` primitives (`PageHeader`, `StatCard`/`StatGrid`, `Panel`, `StatusDot`, `TonePill`, `IconAction`, `FilterBar`). Logic, actions, exports, and print untouched.
@@ -30,6 +33,15 @@ After those fixes, improve the losing concurrent checkout response so it reports
 
 ## Latest source change
 - Excel export headers now use semantic per-column-group colors via `HEADER_TONES` in `src/lib/export/excelStyles.ts`; header text must be written before `applyHeaderStyle`. Type-check and lint passed; a visual check in Excel is still pending.
+
+## Pre-production audit evidence
+- Canonical report: `docs/obsidian-vault/13-OPERATIONS/Pre-Production-Bug-Audit-and-Plan.md`.
+- `npm audit --omit=dev`: 1 critical, 8 high, 3 moderate; `next@15.5.19` is a direct critical finding and the dry-run selected `15.5.27`.
+- Prisma validation, type-check, ESLint, security 58/58, and production build with 22 routes passed.
+- Production-like `next start` passed HTTP and browser smoke; unauthenticated APIs returned 401.
+- Local database sweeps returned zero financial, payment, status, and stock violations.
+- Production read-only smoke and security headers passed; CSP still permits `'unsafe-inline'` and `'unsafe-eval'`.
+- No production mutation, source change, dependency update, schema change, or data cleanup occurred.
 
 ## Completed verification
 - Prisma validation, type-check, ESLint, security 58/58, production build with 22 routes, and knowledge gates passed.

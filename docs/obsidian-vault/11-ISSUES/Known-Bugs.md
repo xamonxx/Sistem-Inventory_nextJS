@@ -2,7 +2,7 @@
 type: issue-register
 status: verified
 last_verified: 2026-10-13
-related: ["[[Technical-Debt]]", "[[Resolved-Issues]]"]
+related: ["[[Technical-Debt]]", "[[Resolved-Issues]]", "[[Pre-Production-Bug-Audit-and-Plan]]"]
 tags: [issues, bugs]
 ---
 # Known Bugs
@@ -36,5 +36,17 @@ tags: [issues, bugs]
 - **Impact:** stock integrity is preserved, but the cashier receives no actionable stock-conflict message.
 - **Status:** open; not an integrity blocker, but should return the existing insufficient-stock/conflict language.
 - **Evidence:** [[Comprehensive-Role-Verification-Checkpoint]].
+
+## KB-006 — Cetak ulang invoice thermal mengabaikan pembayaran tersimpan
+- **Observed in source:** jalur `InvoiceClient` dan `/invoice/[id]` mengirim total ke `Nota` tanpa `bayar`/`sisaTagihan`; `Nota` lalu menganggap pembayaran masuk nol.
+- **Impact:** invoice PARTIAL/LUNAS dapat dicetak sebagai belum lunas pada format thermal.
+- **Status:** open; satu keluarga akar masalah dengan KB-003/KB-004 dan release blocker.
+- **Evidence:** [[Pre-Production-Bug-Audit-and-Plan]].
+
+## KB-007 — Mutasi committed dapat dilaporkan gagal
+- **Observed in source:** checkout/payment commit lebih dulu, lalu audit log, cache invalidation, atau URL verifikasi dijalankan dalam outer `try`; kegagalan helper dikembalikan sebagai error aksi.
+- **Impact:** operator dapat retry transaksi yang sebenarnya sudah tersimpan dan membuat duplikasi.
+- **Status:** open; release blocker sampai outcome atomik/idempotent.
+- **Evidence:** [[Pre-Production-Bug-Audit-and-Plan]].
 
 Drift konfigurasi dan coverage gap bukan bug runtime; lihat [[Technical-Debt]].

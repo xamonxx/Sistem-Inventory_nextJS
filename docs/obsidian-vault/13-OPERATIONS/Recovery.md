@@ -1,9 +1,9 @@
 ---
 type: operations
 status: verified
-last_verified: 2026-10-12
+last_verified: 2026-10-13
 source_files: [.github/workflows/deploy.yml, package.json, prisma/schema.prisma]
-related: ["[[Deployment]]", "[[Risks]]", "[[Data-Integrity]]"]
+related: ["[[Deployment]]", "[[Risks]]", "[[Data-Integrity]]", "[[Pre-Production-Bug-Audit-and-Plan]]"]
 tags: [operations, recovery]
 ---
 # Recovery
@@ -24,4 +24,6 @@ Tidak ditemukan script backup, restore, point-in-time recovery, migration rollba
 Workflow deploy menarik branch `master` lalu mengunggah `.next`. Rollback kode memerlukan checkout revision yang disetujui, install/generate/build ulang, dan restart. Karena migration history tidak tersedia, kode rollback dapat tidak kompatibel dengan schema; verifikasi sebelum deploy.
 
 ## Gap
+
+Audit 2026-10-13 keeps recovery as a production release blocker. No restore evidence, migration history, rollback rehearsal, or documented RPO/RTO was found.
 Tetapkan backup frequency, retention, encryption, restore owner, RPO/RTO, dan uji restore berkala.

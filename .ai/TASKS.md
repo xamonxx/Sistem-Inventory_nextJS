@@ -1,5 +1,19 @@
 # Operational Tasks
 
+## Pre-production release blockers
+- [ ] Upgrade `next` from 15.5.19 to at least the patched 15.5.27 line; clear critical/high production advisories or record explicit risk acceptance.
+- [ ] Decide whether `CREDIT` means paid financing or unpaid tempo before changing payment totals.
+- [ ] Fix POS and invoice thermal receipt paid/remaining values across split, transfer, partial, LUNAS, reprint, image, and PDF paths.
+- [ ] Make checkout/payment outcomes atomic and idempotent; prevent post-commit audit/token failures from returning mutation failure.
+- [ ] Serialize Gudang invoice edit stock checks and Non-Gudang edit-vs-payment checks; add race regressions.
+- [ ] Invalidate stock cache/tag after invoice edit/delete ledger mutations.
+- [ ] Enforce inactive-item stock rules in direct Server Actions.
+- [ ] Verify required Hostinger runtime env presence without exposing values; stage artifacts before restart.
+- [ ] Complete an isolated backup/restore rehearsal and introduce versioned Prisma migrations.
+- [ ] Convert logout to exact-origin POST, revoke sessions after password reset, and resolve public verification trust semantics.
+- [ ] Pass authenticated release-artifact smoke for all three roles.
+- [x] Produce the comprehensive pre-production audit and remediation plan.
+
 ## Non-Gudang UI follow-ups
 - [ ] Click Unduh Excel / Cetak PDF on Non-Gudang Dashboard and Laporan once.
 - [ ] Walk through create invoice → payment → print on a disposable database to confirm modals after the restyle.
