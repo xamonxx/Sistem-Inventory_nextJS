@@ -5,6 +5,8 @@ import { usePathname, useRouter } from "next/navigation";
 import { Plus, ShoppingCart, Boxes, FileText, RotateCcw, PackagePlus } from "lucide-react";
 import { cn } from "@/lib/utils";
 
+const HIDDEN_ON = new Set(["/kasir", "/non-gudang/buat-invoice"]);
+
 export function FloatingActionButton({ role }: { role?: string }) {
   const router = useRouter();
   const pathname = usePathname();
@@ -38,8 +40,9 @@ export function FloatingActionButton({ role }: { role?: string }) {
     router.push(link);
   }
 
-  // If there are no actions for the user's role, don't render the FAB at all
-  if (pathname === "/non-gudang/buat-invoice" || actions.length === 0) return null;
+  // Halaman dengan bar aksi bawah (Kasir, Buat Invoice NG) tidak menampilkan FAB
+  // agar tidak menutupi tombol Bayar/Lanjut. Juga sembunyikan bila role tak punya aksi.
+  if (HIDDEN_ON.has(pathname) || actions.length === 0) return null;
 
   return (
     <div ref={menuRef} className="no-print pointer-events-none fixed bottom-6 right-6 z-30 hidden flex-col items-end md:flex">

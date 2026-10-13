@@ -1899,13 +1899,6 @@ body.print-format-a4 .a4-print-layout {
 }
 
 /* ============================================================
-   Hide Floating Action Button (FAB) on Kasir Page
-   ============================================================ */
-body:has(#search-item) .no-print.fixed.bottom-6.right-6 {
-  display: none !important;
-}
-
-/* ============================================================
    Desktop Fixed Sidebar Offset for Main Viewport
    ============================================================ */
 @media (min-width: 1024px) {

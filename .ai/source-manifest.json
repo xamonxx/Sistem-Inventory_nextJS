@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "generatedAt": "2026-10-13T04:00:38.219Z",
+  "generatedAt": "2026-10-13T04:02:14.496Z",
   "algorithm": "sha256",
   "scope": [
     ".agents",
@@ -204,7 +204,7 @@
     "src/app/(app)/stok/StokForm.tsx": "e8e337f80457434d5d93d3c28a8d37a0e92ce2df6bb7b913509b5bd6491ab56e",
     "src/app/api/notifications/route.ts": "76c36536f35dfe934d8734eb1c91f1d5cc33786199c5747004403d955d7e23e0",
     "src/app/api/search/route.ts": "a826773fe70a6aa581fdb291552bca5c650edc5a3ee37aceb613420f1568e5f7",
-    "src/app/globals.css": "8f351c61a3c9c4c32f692cd4cff0e2ab6d2479fd72f1551bc3a3813372583755",
+    "src/app/globals.css": "07e9adef95975342d8ff15c7f8f25dbd5daed2f575ed117c60a864243c8b6164",
     "src/app/layout.tsx": "48d112a74eddff9f2685f42f58af336d7aa3be5e9d62ca6c577ce3826df3f047",
     "src/app/login/actions.ts": "f71ec041b85cb89b38aadc597f6b98b505fc33e81316db1db13a1217e3c5b6fa",
     "src/app/login/page.tsx": "1a1b8ea125d2d7e31b59eed0ae5806007ac4d75a343ccf783b7a4f0b1bd835d0",
@@ -219,7 +219,7 @@
     "src/components/DatePicker.tsx": "4bdcde281488698797c5b49e21164b48835a735b998227804b9adcbd9ff9380f",
     "src/components/Drawer.tsx": "52d3ea7033ccaedbac1a60f4086d0c55431f934c49db4bd3ca63e3e7cd171d5f",
     "src/components/EmptyState.tsx": "533d6a8d6af18c24e67518649d7fe966589dfbf93bb35ad09099190e1f24b33d",
-    "src/components/FloatingActionButton.tsx": "e64ded7ee8c2620e6b3c33803197fd8abc59317fb365f812b9d11dc646b951c6",
+    "src/components/FloatingActionButton.tsx": "0cfb2e2a7ee16965e16062b26eefaf49d79211359253cfc9a5bfbdc346b5e69b",
     "src/components/GlobalTooltip.tsx": "53a0a0b04fcae8a3413c52e1af3c6ad476693755cbeeb4c3673e0ffe5e3e5865",
     "src/components/InvoiceDocument.tsx": "531d2fb35161f7cd2dd906cab1a7a59b23ac8e4b97fcc50feb8964c25b10b788",
     "src/components/ModernDialog.tsx": "bd3e6bd303cc7ee0d86209121c5e1de504c7075d23d85409ba5241d25ab95b27",
