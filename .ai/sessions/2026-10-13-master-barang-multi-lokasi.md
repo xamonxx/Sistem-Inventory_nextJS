@@ -1,7 +1,7 @@
 # Session — Master Barang Gudang Multi-Lokasi
 
 **Date:** 2026-10-13
-**Status:** local implementation completed; production replacement and serverone deployment authorized
+**Status:** implemented, pushed, and deployed to serverone
 
 ## Goal
 Import the supplied main, Depok, and LK price lists into Gudang while keeping price-location identity internal and removing location suffixes from customer documents.
@@ -23,3 +23,9 @@ Import the supplied main, Depok, and LK price lists into Gudang while keeping pr
 - Database: unique names/codes, all active, valid prices, no negative effective stock, all LK stock zero, one import audit row.
 - Type-check, ESLint, and security 68/68 passed.
 - Production was inspected read-only. The owner authorized a staged deployment and full replacement with the verified local database, contingent on a downloaded production backup and checksum validation.
+
+## Production result
+- Release `7032e5f` is live at `https://gudangmki.com` from `/www/wwwroot/gudangmki`.
+- The pre-replacement production backup exists on server and locally with matching SHA-256 `82f59fcc977d62cf87a53a39802f9bc4e0bbb8db1fb58d2a7168eeae39ced14e`.
+- Production database verification matched the local source: 3 users, 475 active items, no business transactions, correct category totals, and no item invariant violations.
+- Authenticated browser smoke passed for all three roles. Gudang and Kasir expose the 475-item catalog and HPL category; zero-stock items show as unavailable stock and remain protected by server checkout validation.

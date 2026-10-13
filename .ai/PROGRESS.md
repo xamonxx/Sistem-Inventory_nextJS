@@ -109,4 +109,7 @@ None intended. Existing UI overlay and port changes were observed and documented
 - [x] Confirm the aaPanel application path and port: `/www/wwwroot/gudangmki`, `127.0.0.1:3010`.
 - [x] Confirm the owner-approved full database replacement from the verified local 475-item database.
 - [x] Change the obsolete Hostinger workflow from automatic `master` pushes to manual dispatch only.
-- [ ] Complete the verified backup, staged build, database replacement, cutover, and production smoke.
+- [x] Complete the verified backup, staged build, database replacement, cutover, and production smoke.
+- [x] Deploy release `7032e5f` to `/www/wwwroot/gudangmki`; retain the previous app at `/www/wwwroot/gudangmki-prev-20261013-063532`.
+- [x] Download the pre-replacement production backup and verify SHA-256 `82f59fcc977d62cf87a53a39802f9bc4e0bbb8db1fb58d2a7168eeae39ced14e`.
+- [x] Verify all three roles, 475-item Barang/Kasir catalogs, HPL, zero-stock labels, HTTP redirects, protected API 401, and Next.js 15.5.27 runtime.

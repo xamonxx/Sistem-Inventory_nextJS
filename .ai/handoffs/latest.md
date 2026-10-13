@@ -1,7 +1,7 @@
 # Latest Handoff
 
 **Updated:** 2026-10-13
-**State:** local multi-location Gudang catalog import completed; owner authorized a full production database replacement and staged serverone deployment.
+**State:** release `7032e5f` is live on serverone; production contains the verified 475-item database and rollback artifacts are retained.
 
 ## Latest change: Gudang catalog import
 - Local database now contains 475 active items: 73 main, 18 Depok, and 384 LK.
@@ -9,9 +9,18 @@
 - `npm run db:add-items` is the safe preview. `npm run db:add-items -- --apply` is transactional, preserves stock on existing items, and records an audit summary only when changes occur.
 - Idempotency proof: second dry-run returned 0 create / 0 update / 475 unchanged. DB invariants and formatter tests passed; type-check, ESLint, and security 68/68 passed.
 - Three LK rows are intentionally excluded pending corrected prices: Block Board Polos 15mm, TACO TH 050 AA, and TACO TH 887 JG.
-- Do not run the importer against production until a verified backup exists, its production dry-run is reviewed, and the user explicitly approves the mutation.
-- Owner approval now covers replacing the active production database with the verified local database. Preserve and download a complete production backup before reset.
+- Production importer requirements were satisfied: verified backup, reviewed dry-run, and explicit owner approval. Do not rerun apply while dry-run remains fully unchanged.
+- The owner-approved full database replacement is complete. Preserve both backup copies and the previous application directory until the rollback retention period is decided.
 - `.github/workflows/deploy.yml` is manual-only because its job still targets the obsolete Hostinger host. Deploy serverone manually through the staged aaPanel release procedure.
+
+## Production deployment — 2026-10-13
+- Active application: `/www/wwwroot/gudangmki`, Git release `7032e5f`, Next.js 15.5.27, systemd service `gudangmki-next.service`, port 3010.
+- Previous application: `/www/wwwroot/gudangmki-prev-20261013-063532`; its modified lockfile and untracked server files remain preserved.
+- Production backup: `/www/backup/database/gudangmki-20261013-7032e5f/production-before-replace.sql`; a matching local copy is under `C:\laragon\backups\gudangmki\20261013-release-7032e5f`.
+- Production-backup SHA-256: `82f59fcc977d62cf87a53a39802f9bc4e0bbb8db1fb58d2a7168eeae39ced14e`.
+- Database after replacement: 3 users, 475 active items, 0 ledgers/transactions/invoices/payments/returns, 1 import activity log, 0 duplicate names/codes, 0 invalid prices, and 0 negative stock.
+- Authenticated smoke passed for Gudang, Kasir, and Non-Gudang. Public root redirects to login, login returns 200, and unauthenticated search returns 401.
+- Initial login found `.env` unreadable by service user `www`; ownership was corrected to `www:www`, the systemd service restarted, and no later runtime error appeared.
 
 ## Startup
 1. Read `.ai/STATUS.md`, `.ai/CONTEXT.md`, `.ai/AGENTS.md`, `.ai/TASKS.md`, this handoff, and `docs/obsidian-vault/13-OPERATIONS/Pre-Production-Bug-Audit-and-Plan.md`.

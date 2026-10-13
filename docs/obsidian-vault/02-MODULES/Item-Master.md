@@ -29,6 +29,7 @@ CRUD terbatas untuk `Item`, kategori allowlist, harga beli/jual, stok awal, mini
 ## Import master multi-lokasi
 - `npm run db:add-items` menampilkan dry-run; `npm run db:add-items -- --apply` menerapkan perubahan dalam satu transaksi.
 - Dataset aktif memuat 475 barang: 73 utama, 18 Depok, dan 384 LK. Barang LK dimulai dengan stok nol.
+- Dataset yang sama aktif di production sejak release `7032e5f` pada 2026-10-13; browser smoke Gudang dan Kasir menampilkan total 475 item serta kategori HPL.
 - Import berdasarkan nama ternormalisasi, menjaga `stokAwal` dan `minStok` barang lama, menghasilkan kode unik untuk barang baru, dan mencatat satu audit ringkasan bila ada perubahan.
 - Tiga baris ditahan: Block Board Polos 15mm tanpa harga, TACO TH 050 AA dengan harga beli mencurigakan, dan TACO TH 887 JG dengan dua pasangan harga berbeda.
 

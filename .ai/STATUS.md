@@ -2,7 +2,7 @@
 
 **Updated:** 2026-10-13
 **Knowledge status:** pre-production audit completed; canonical release decision and remediation plan are documented in [`Pre-Production Bug Audit and Remediation Plan`](../docs/obsidian-vault/13-OPERATIONS/Pre-Production-Bug-Audit-and-Plan.md).
-**Application behavior:** Phase 0 remediation started. `next@15.5.27` is pinned (commit `0dfdd83`). CREDIT is now an unpaid receivable and every receipt path prints persisted paid/remaining values (commit `249c400`, [`ADR-004`](../docs/obsidian-vault/09-DECISIONS/ADR/ADR-004-Credit-Is-Unpaid-Receivable.md)). No schema or data change. AUD-003 is fixed in source (commits `2cb5d66` and the idempotency commit): audit rows commit with the data, post-commit helpers cannot report failure, and money/stock mutations accept an idempotency key backed by the new `idempotency_keys` table (local database updated; production table pending, see [`Idempotency Schema Rollout`](../docs/obsidian-vault/13-OPERATIONS/Idempotency-Schema-Rollout.md)).
+**Application behavior:** Release `7032e5f` is live on serverone with Next.js 15.5.27. Production was replaced from the verified local database and now contains three users, 475 active Gudang items, the `idempotency_keys` table, and no transaction history. CREDIT remains an unpaid receivable and every receipt path prints persisted paid/remaining values.
 
 ## Current source and runtime state
 - Development command: `next dev --turbo` on port 3000; production start defaults to 3010.
@@ -11,13 +11,13 @@
 - Compile gates are green: Prisma validation, type-check, ESLint, security 68/68 (10 checkout-rule cases added), production build with 22 routes, production-like browser smoke, and local database invariant sweeps.
 - Three-role authentication and workflow evidence from the comprehensive checkpoint remain current; this audit added source, dependency, deployment, recovery, and read-only production checks.
 - Three separate Word user guides now cover `ADMIN_GUDANG`, `ADMIN_KASIR`, and `ADMIN_NONGUDANG`; index: [`User Guides by Role`](../docs/obsidian-vault/13-OPERATIONS/User-Guides-by-Role.md).
-- Release is NO-GO: production `idempotency_keys` table, deployment env/cutover, and unproven recovery must be resolved; Phase 1 items (inactive-item stock, logout, session revocation, verification semantics, audit-log retention) remain. Invoice-edit races, stale stock cache, and conflict messages are fixed in source (`5b8d15b`). Dependency critical/high and receipt-total blockers are cleared in source.
+- Owner-approved release `7032e5f` is live after a checked backup and staged cutover. Phase 1 items (inactive-item stock, logout, session revocation, verification semantics, audit-log retention) and a production-backup restore rehearsal remain.
 - `CustomSelect`, POS category filtering, mobile work, and export changes remain as previously documented.
 - Dashboard `/` redesigned in a bento layout (`bento-*` CSS, split chart components); 30-day trend now keyed by local date.
 - UI/UX modernization pass (uncommitted until this checkpoint): 64px navbar, calmer tables, global tooltip engine, WhatsApp number dialog, modern checkboxes, unified `.field-surface` fields, redesigned Barang/Stok/Laporan layouts, sidebar drawer fixes, mobile notification bell, theme-aware 404. Details: daily changelog 2026-10-13.
 - Non-Gudang UI/UX overhaul: all seven Non-Gudang pages use the shared `src/components/page` primitives (compact headers, bento stat cards and panels, calm tables, single-gradient charts).
 - Excel export table headers are colored by column group (identity, date, party, quantity, money, receivable/risk, percent, status) in all three exporters.
-- Local Gudang master now has 475 active items (73 main, 18 Depok, 384 LK), including the new HPL category. Location suffixes remain internal and are hidden on customer receipts/invoices. Production was not changed.
+- Local and production Gudang masters now have 475 active items (73 main, 18 Depok, 384 LK), including HPL. Location suffixes remain internal and are hidden on customer receipts/invoices.
 - The legacy Hostinger GitHub Actions deploy is manual-only; production releases now require an explicit staged server cutover.
 - Project-scoped Caveman suite is installed from `JuliusBrussee/caveman`; `caveman` is the mandatory default chat-response skill.
 - Context7 `find-docs` is installed project-scoped for current external technology documentation.

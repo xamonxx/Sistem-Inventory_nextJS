@@ -5,25 +5,25 @@
 - [x] Tambahkan kategori HPL dan sembunyikan suffix lokasi pada dokumen pelanggan.
 - [x] Buktikan idempotensi dan invariant nama, kode, harga, status, serta stok lokal.
 - [ ] Konfirmasi harga tiga baris yang ditahan sebelum dimasukkan.
-- [ ] Sebelum produksi: backup, dry-run, review konflik/stok lama, lalu minta persetujuan eksplisit.
+- [x] Sebelum produksi: backup, dry-run, review konflik/stok lama, lalu minta persetujuan eksplisit.
 - [x] Nonaktifkan deploy otomatis ke target Hostinger lama; pertahankan workflow legacy sebagai manual-only.
 
 ## Pre-production release blockers
 - [x] Upgrade `next` from 15.5.19 to at least the patched 15.5.27 line; clear critical/high production advisories or record explicit risk acceptance.
 - [x] Decide whether `CREDIT` means paid financing or unpaid tempo before changing payment totals (unpaid receivable, ADR-004).
 - [x] Fix POS and invoice thermal receipt paid/remaining values across split, transfer, partial, LUNAS, reprint, image, and PDF paths.
-- [ ] Read-only check production for historical `Payment.tipe = CREDIT` rows; correct only with explicit approval and a verified backup.
+- [x] Read-only check production for historical `Payment.tipe = CREDIT` rows; result was zero before the owner-approved database replacement.
 - [x] Make checkout/payment outcomes atomic and idempotent; prevent post-commit audit/token failures from returning mutation failure.
-- [ ] Create `idempotency_keys` in production (reviewed DDL, after backup) BEFORE deploying the AUD-003 code; see `docs/obsidian-vault/13-OPERATIONS/Idempotency-Schema-Rollout.md`.
+- [x] Create `idempotency_keys` in production before the AUD-003 code became active; the full schema was recreated from the current Prisma schema after backup.
 - [ ] Decide a retention policy for `idempotency_keys`.
 - [x] Serialize Gudang invoice edit stock checks and Non-Gudang edit-vs-payment checks; add race regressions.
 - [x] Invalidate stock cache/tag after invoice edit/delete ledger mutations.
 - [ ] Runtime smoke: prime the stock cache, edit/delete an invoice, confirm the balance refreshes immediately.
 - [ ] Enforce inactive-item stock rules in direct Server Actions.
-- [ ] Verify required Hostinger runtime env presence without exposing values; stage artifacts before restart.
+- [x] Verify required serverone runtime env names without exposing values; build and stage the release before restart.
 - [ ] Complete an isolated backup/restore rehearsal and introduce versioned Prisma migrations.
 - [ ] Convert logout to exact-origin POST, revoke sessions after password reset, and resolve public verification trust semantics.
-- [ ] Pass authenticated release-artifact smoke for all three roles.
+- [x] Pass authenticated production smoke for Gudang, Kasir, and Non-Gudang on release `7032e5f`.
 - [x] Produce the comprehensive pre-production audit and remediation plan.
 - [x] Produce separate Microsoft Word usage guides for Admin Gudang, Admin Kasir, and Admin Non-Gudang.
 
