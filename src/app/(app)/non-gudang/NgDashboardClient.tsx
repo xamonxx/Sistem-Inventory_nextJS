@@ -209,7 +209,8 @@ export function NgDashboardClient({
         </Panel>
       </div>
 
-      <div className="grid grid-cols-1 gap-5 2xl:grid-cols-2">
+      {/* Tabel penuh lebar: berdampingan, kolom Margin terpotong dan tabel bergeser ke samping. */}
+      <div className="grid grid-cols-1 gap-5">
         <Panel title="Rincian Pembelian per Toko" description={`${perToko.length} toko sumber`} icon={Store} flush>
           {perToko.length === 0 ? (
             <div className="p-4"><EmptyBlock text="Belum ada data." h={120} /></div>

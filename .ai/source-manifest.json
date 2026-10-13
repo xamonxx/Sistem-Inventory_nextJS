@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "generatedAt": "2026-10-12T20:37:03.159Z",
+  "generatedAt": "2026-10-13T03:52:47.357Z",
   "algorithm": "sha256",
   "scope": [
     ".agents",
@@ -182,7 +182,7 @@
     "src/app/(app)/non-gudang/laporan/NgLaporanClient.tsx": "e3ede24607b474042ff7cc47aede525c7bf8f3f81d078a704d059413eed21f2c",
     "src/app/(app)/non-gudang/laporan/page.tsx": "4b84234bf68ed28727cb6a800ab351af096a0b8052fcf1787845f863eaed8d52",
     "src/app/(app)/non-gudang/NgDashboardCharts.tsx": "16d7afe4f47f5c0a06db18a06969ffb558ad554ca8738c06f43b8f72daa8e7c3",
-    "src/app/(app)/non-gudang/NgDashboardClient.tsx": "6a540e9a7c848e35ae7d895596d2dc32acebefdf112c866a7ae8cb6746bba23a",
+    "src/app/(app)/non-gudang/NgDashboardClient.tsx": "6068f1b9b3c44cffce19c08213ad370dfd60ebf3cef7ce51fd488f0c7ea970b5",
     "src/app/(app)/non-gudang/page.tsx": "e874f7d29979372e08408c9088dd60bc45e2d0a6d39f87c56ae3d150197be966",
     "src/app/(app)/non-gudang/pembelian/NgPembelianClient.tsx": "159dad9af3d6e62a6fa29dd0ada393249bd36c791cb506bf93ad2c97597ddb2c",
     "src/app/(app)/non-gudang/pembelian/page.tsx": "e0ecdaacd9f0e683af25379bbb87b402d18a47bd9284eff5c2ea7fc29150abdc",
