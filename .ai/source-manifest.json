@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "generatedAt": "2026-10-13T04:02:14.496Z",
+  "generatedAt": "2026-10-13T04:04:10.879Z",
   "algorithm": "sha256",
   "scope": [
     ".agents",
@@ -155,7 +155,7 @@
     "src/app/(app)/invoice/InvoiceClient.tsx": "164077d504587c6c98b77a659d001daa6743b7a392a46ed79f156ab85e5d02d3",
     "src/app/(app)/invoice/page.tsx": "c3325c8cc413e706191d8ee4caf89086e15d4c39651b1e8144c2fa02d0f8e824",
     "src/app/(app)/kasir/actions.ts": "c45722c4271058b122a89f5c0d8eb089a2aedae876993722955b3f7d2a3bd5f4",
-    "src/app/(app)/kasir/KasirClient.tsx": "3553ec99398463c43748b6499f7c477e66fb1ee8f88c50dc1a9436dfdaaffcc2",
+    "src/app/(app)/kasir/KasirClient.tsx": "efebaca28aac3a774baa64231050a5404f22ed12bfedbb19be7149c929a8787f",
     "src/app/(app)/kasir/page.tsx": "1e2bc378b8bfe32be4b5d6456dc9f52036223ad93ec76f69eefac5baac3fa906",
     "src/app/(app)/laporan/actions.ts": "f44f51403a611988840bf818a63f24e950d9ea481b1dc3ab7957826d67add678",
     "src/app/(app)/laporan/LaporanClient.tsx": "518d736accebc60733944f450627c26be86cce24b635ab718c10bc6de7322b01",

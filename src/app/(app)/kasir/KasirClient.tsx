@@ -341,21 +341,32 @@ export function KasirClient({ items }: { items: Item[] }) {
             ? [{ tipe: "TRANSFER" as const, jumlah: grandTotalCost }]
             : [];
 
-      const res = await createTransaction({
-        tipe,
-        namaClient,
-        alamat,
-        namaWs,
-        projectNama,
-        projectGroupNama,
-        paymentMethod: isSplitActive ? (splitCredit > 0 ? "CREDIT" : "TRANSFER") : paymentMethod,
-        namaBank,
-        noRekening,
-        atasNama,
-        payments,
-        buatInvoice: isSplitActive ? (splitCredit > 0 || buatInvoice) : buatInvoice,
-        items: cart.map((l) => ({ itemId: l.itemId, qty: l.qty })),
-      });
+      // Gagal jaringan (mis. koneksi putus / server tidak terjangkau) melempar error,
+      // bukan mengembalikan { error }. Tangkap agar halaman tidak jatuh ke layar error.
+      let res: Awaited<ReturnType<typeof createTransaction>>;
+      try {
+        res = await createTransaction({
+          tipe,
+          namaClient,
+          alamat,
+          namaWs,
+          projectNama,
+          projectGroupNama,
+          paymentMethod: isSplitActive ? (splitCredit > 0 ? "CREDIT" : "TRANSFER") : paymentMethod,
+          namaBank,
+          noRekening,
+          atasNama,
+          payments,
+          buatInvoice: isSplitActive ? (splitCredit > 0 || buatInvoice) : buatInvoice,
+          items: cart.map((l) => ({ itemId: l.itemId, qty: l.qty })),
+        });
+      } catch (err) {
+        console.error("createTransaction gagal:", err);
+        const msg =
+          "Gagal terhubung ke server. Periksa koneksi, lalu cek riwayat transaksi sebelum mencoba lagi agar tidak tercatat ganda.";
+        toast.error(msg);
+        return setError(msg);
+      }
 
       if (res && "error" in res && res.error) {
         toast.error(res.error);
