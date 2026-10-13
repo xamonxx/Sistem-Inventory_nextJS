@@ -1,5 +1,13 @@
 # Progress
 
+## 2026-10-13 — Master barang Gudang multi-lokasi
+- [x] Tambahkan 475 barang lokal: 73 utama, 18 Depok, dan 384 LK; kode dan nama unik.
+- [x] Tambahkan kategori HPL ke Gudang dan dukungan dummy seed.
+- [x] Pertahankan suffix `(DEPOK)`/`(LK)` pada katalog internal; hilangkan suffix pada seluruh Nota dan InvoiceDocument pelanggan.
+- [x] Terapkan import idempotent dalam satu transaksi; dry-run kedua 0 create / 0 update / 475 unchanged.
+- [x] Tahan tiga baris bermasalah untuk konfirmasi; produksi tidak disentuh.
+- [x] Lulus formatter 6/6, type-check, ESLint, keamanan 68/68, dan invariant DB lokal.
+
 ## 2026-10-13 — Pre-production Phase 0 (dependencies and receipts)
 - [x] Pin `next`/`eslint-config-next` to 15.5.27; override `postcss` ^8.5.30 and `deepmerge-ts` ^8.0.2; production audit has no critical/high.
 - [x] Record ADR-004: CREDIT is an unpaid receivable; checkout and invoice settlement write CASH/TRANSFER payments only.
@@ -96,3 +104,9 @@ None intended. Existing UI overlay and port changes were observed and documented
 - [x] Pass production read-only smoke at `https://gudangmki.com`.
 - [x] Stop port 3100, drop only the verified disposable database, restore port-3000 development server, and smoke the login page.
 - [ ] Fix or explicitly accept the two receipt-payment defects before push/deploy.
+
+## 2026-10-13 — serverone release preparation
+- [x] Confirm the aaPanel application path and port: `/www/wwwroot/gudangmki`, `127.0.0.1:3010`.
+- [x] Confirm the owner-approved full database replacement from the verified local 475-item database.
+- [x] Change the obsolete Hostinger workflow from automatic `master` pushes to manual dispatch only.
+- [ ] Complete the verified backup, staged build, database replacement, cutover, and production smoke.

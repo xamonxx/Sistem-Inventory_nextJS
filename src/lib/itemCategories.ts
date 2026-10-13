@@ -3,6 +3,7 @@ export const ITEM_CATEGORIES = [
   "MATERIAL",
   "AKSESORIS",
   "KELISTRIKAN",
+  "HPL",
 ] as const;
 
 export type ItemCategory = (typeof ITEM_CATEGORIES)[number];

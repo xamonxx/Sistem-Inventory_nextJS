@@ -27,7 +27,8 @@
     "db:regen-codes": "tsx scripts/regen-codes.ts",
     "test:security": "tsx scripts/security-test.ts",
     "test:idempotency": "tsx scripts/idempotency-test.ts",
-    "test:concurrency": "node scripts/run-concurrency-test.mjs"
+    "test:concurrency": "node scripts/run-concurrency-test.mjs",
+    "test:item-name": "tsx scripts/item-name-test.ts"
   },
   "prisma": {
     "seed": "tsx prisma/seed.ts"

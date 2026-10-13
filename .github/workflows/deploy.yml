@@ -1,8 +1,7 @@
-name: Build & Deploy to Hostinger
+name: Legacy Hostinger Deploy (Manual Only)
 
 on:
-  push:
-    branches: [master]
+  workflow_dispatch:
 
 jobs:
   deploy:

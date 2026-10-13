@@ -81,6 +81,11 @@ const GUDANG_NAMES: Record<(typeof ITEM_CATEGORIES)[number], { base: string[]; s
     spec: ["Warm White", "Cool White", "2x1.5", "Hitam", "Putih", "12V 5A"],
     price: [3_000, 160_000],
   },
+  HPL: {
+    base: ["TACO TH", "AICA MB", "CARTA CT", "CERARL HAK", "XKAF", "TACO TI"],
+    spec: ["003 AA", "014 D", "225 AC", "5027 NT", "14194 ZMN", "Gold Mirror"],
+    price: [130_000, 1_650_000],
+  },
 };
 
 const FIRST = ["Budi", "Andi", "Rudi", "Siti", "Dewi", "Agus", "Hendra", "Rina", "Joko", "Wati", "Eko", "Fajar", "Lina", "Yusuf", "Bayu", "Maya", "Taufik", "Nanda", "Irfan", "Sari"];

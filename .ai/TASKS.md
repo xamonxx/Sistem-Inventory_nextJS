@@ -1,5 +1,13 @@
 # Operational Tasks
 
+## Master barang Gudang multi-lokasi
+- [x] Impor 475 barang ke database lokal: utama, Depok, dan LK.
+- [x] Tambahkan kategori HPL dan sembunyikan suffix lokasi pada dokumen pelanggan.
+- [x] Buktikan idempotensi dan invariant nama, kode, harga, status, serta stok lokal.
+- [ ] Konfirmasi harga tiga baris yang ditahan sebelum dimasukkan.
+- [ ] Sebelum produksi: backup, dry-run, review konflik/stok lama, lalu minta persetujuan eksplisit.
+- [x] Nonaktifkan deploy otomatis ke target Hostinger lama; pertahankan workflow legacy sebagai manual-only.
+
 ## Pre-production release blockers
 - [x] Upgrade `next` from 15.5.19 to at least the patched 15.5.27 line; clear critical/high production advisories or record explicit risk acceptance.
 - [x] Decide whether `CREDIT` means paid financing or unpaid tempo before changing payment totals (unpaid receivable, ADR-004).

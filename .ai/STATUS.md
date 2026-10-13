@@ -17,6 +17,8 @@
 - UI/UX modernization pass (uncommitted until this checkpoint): 64px navbar, calmer tables, global tooltip engine, WhatsApp number dialog, modern checkboxes, unified `.field-surface` fields, redesigned Barang/Stok/Laporan layouts, sidebar drawer fixes, mobile notification bell, theme-aware 404. Details: daily changelog 2026-10-13.
 - Non-Gudang UI/UX overhaul: all seven Non-Gudang pages use the shared `src/components/page` primitives (compact headers, bento stat cards and panels, calm tables, single-gradient charts).
 - Excel export table headers are colored by column group (identity, date, party, quantity, money, receivable/risk, percent, status) in all three exporters.
+- Local Gudang master now has 475 active items (73 main, 18 Depok, 384 LK), including the new HPL category. Location suffixes remain internal and are hidden on customer receipts/invoices. Production was not changed.
+- The legacy Hostinger GitHub Actions deploy is manual-only; production releases now require an explicit staged server cutover.
 - Project-scoped Caveman suite is installed from `JuliusBrussee/caveman`; `caveman` is the mandatory default chat-response skill.
 - Context7 `find-docs` is installed project-scoped for current external technology documentation.
 

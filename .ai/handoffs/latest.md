@@ -1,7 +1,17 @@
 # Latest Handoff
 
 **Updated:** 2026-10-13
-**State:** pre-production audit completed; release is NO-GO and application source was not changed.
+**State:** local multi-location Gudang catalog import completed; owner authorized a full production database replacement and staged serverone deployment.
+
+## Latest change: Gudang catalog import
+- Local database now contains 475 active items: 73 main, 18 Depok, and 384 LK.
+- HPL is a supported Gudang/Kasir category. Depok/LK suffixes distinguish internal prices; `Nota` and `InvoiceDocument` hide those suffixes from customer output.
+- `npm run db:add-items` is the safe preview. `npm run db:add-items -- --apply` is transactional, preserves stock on existing items, and records an audit summary only when changes occur.
+- Idempotency proof: second dry-run returned 0 create / 0 update / 475 unchanged. DB invariants and formatter tests passed; type-check, ESLint, and security 68/68 passed.
+- Three LK rows are intentionally excluded pending corrected prices: Block Board Polos 15mm, TACO TH 050 AA, and TACO TH 887 JG.
+- Do not run the importer against production until a verified backup exists, its production dry-run is reviewed, and the user explicitly approves the mutation.
+- Owner approval now covers replacing the active production database with the verified local database. Preserve and download a complete production backup before reset.
+- `.github/workflows/deploy.yml` is manual-only because its job still targets the obsolete Hostinger host. Deploy serverone manually through the staged aaPanel release procedure.
 
 ## Startup
 1. Read `.ai/STATUS.md`, `.ai/CONTEXT.md`, `.ai/AGENTS.md`, `.ai/TASKS.md`, this handoff, and `docs/obsidian-vault/13-OPERATIONS/Pre-Production-Bug-Audit-and-Plan.md`.

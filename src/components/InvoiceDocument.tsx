@@ -1,5 +1,6 @@
 import { formatRupiah, formatTanggal } from "@/lib/utils";
 import { COMPANY_ADDRESS } from "@/lib/company";
+import { itemNameForCustomer } from "@/lib/itemDisplayName";
 import type { InvoiceRow } from "@/app/(app)/invoice/InvoiceActions";
 import { AppLogo } from "./AppLogo";
 
@@ -30,23 +31,24 @@ const STATUS: Record<string, { label: string; fg: string; bg: string }> = {
 };
 
 function renderItemName(name: string) {
-  if (name.startsWith("[RETUR]")) {
+  const customerName = itemNameForCustomer(name);
+  if (customerName.startsWith("[RETUR]")) {
     return (
       <span className="leading-tight">
         <strong className="font-extrabold text-indigo-700 font-sans mr-1">[RETUR]</strong>
-        <span>{name.slice(7).trim()}</span>
+        <span>{customerName.slice(7).trim()}</span>
       </span>
     );
   }
-  if (name.startsWith("[GANTI]")) {
+  if (customerName.startsWith("[GANTI]")) {
     return (
       <span className="leading-tight">
         <strong className="font-extrabold text-primary-700 font-sans mr-1">[GANTI]</strong>
-        <span>{name.slice(7).trim()}</span>
+        <span>{customerName.slice(7).trim()}</span>
       </span>
     );
   }
-  return <span className="leading-tight">{name}</span>;
+  return <span className="leading-tight">{customerName}</span>;
 }
 
 export function InvoiceDocument({

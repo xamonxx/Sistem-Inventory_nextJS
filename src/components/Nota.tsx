@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import QRCode from "qrcode";
 import { formatRupiah, formatTanggal } from "@/lib/utils";
 import { COMPANY_ADDRESS } from "@/lib/company";
+import { itemNameForCustomer } from "@/lib/itemDisplayName";
 import { AppLogo } from "./AppLogo";
 
 export type NotaItem = { kode?: string; nama: string; harga: number; qty: number; subtotal: number };
@@ -44,23 +45,24 @@ const SIGNATURE_DISETUJUI_NAMA =
   process.env.NEXT_PUBLIC_SIGNATURE_DISETUJUI_NAMA ?? "Putri Nur Fitriani";
 
 function renderItemName(name: string, isThermal: boolean = false) {
-  if (name.startsWith("[RETUR]")) {
+  const customerName = itemNameForCustomer(name);
+  if (customerName.startsWith("[RETUR]")) {
     return (
       <span className="leading-tight">
         <strong className={`font-extrabold font-sans mr-1 ${isThermal ? "text-[#3730A3]" : "text-indigo-700"}`}>[RETUR]</strong>
-        <span>{name.slice(7).trim()}</span>
+        <span>{customerName.slice(7).trim()}</span>
       </span>
     );
   }
-  if (name.startsWith("[GANTI]")) {
+  if (customerName.startsWith("[GANTI]")) {
     return (
       <span className="leading-tight">
         <strong className={`font-extrabold font-sans mr-1 ${isThermal ? "text-[#0369a1]" : "text-primary-700"}`}>[GANTI]</strong>
-        <span>{name.slice(7).trim()}</span>
+        <span>{customerName.slice(7).trim()}</span>
       </span>
     );
   }
-  return <span className="leading-tight">{name}</span>;
+  return <span className="leading-tight">{customerName}</span>;
 }
 
 export function Nota({ data, showKode = true }: { data: NotaData; showKode?: boolean }) {
