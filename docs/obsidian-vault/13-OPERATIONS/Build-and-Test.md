@@ -13,6 +13,7 @@ tags: [operations, build, testing]
 npm run type-check
 npm run lint
 npm test
+npm run test:idempotency   # DB-backed; local DATABASE_URL only
 npm audit --omit=dev
 npm run build
 ```

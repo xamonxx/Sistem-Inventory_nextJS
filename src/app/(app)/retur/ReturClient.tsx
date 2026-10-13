@@ -28,6 +28,7 @@ import {
   AlertTriangle,
 } from "lucide-react";
 import { Nota, type NotaData } from "@/components/Nota";
+import { NETWORK_RETRY_MESSAGE, REPLAYED_MESSAGE, useRequestKey } from "@/lib/requestKey";
 import { printArea } from "@/lib/print";
 import { toast } from "sonner";
 import { WhatsAppDialog } from "@/components/WhatsAppDialog";
@@ -100,6 +101,7 @@ export function ReturClient({
   // Step 4: Settlement
   const [error, setError] = useState("");
   const [nota, setNota] = useState<NotaData | null>(null);
+  const returnKey = useRequestKey();
   const [waOpen, setWaOpen] = useState(false);
   const [pending, start] = useTransition();
 
@@ -245,25 +247,36 @@ export function ReturClient({
     if (tipe === "TUKAR" && repItems.length === 0) return toast.error("Pilih barang pengganti terlebih dahulu.");
 
     start(async () => {
-      const res = await createReturn({
-        tipe,
-        transactionId: origTrx!.id,
-        returnItems: retItems.map((ri) => ({
-          transactionItemId: ri.transactionItemId,
-          itemId: ri.itemId,
-          qtyReturned: ri.qty,
-          hargaSnapshot: ri.harga,
-          namaSnapshot: ri.nama,
-        })),
-        replacementItems: repItems.map((ri) => ({
-          itemId: ri.itemId,
-          qtyReplacement: ri.qty,
-        })),
-        alasan,
-        namaClient: origTrx?.namaClient ?? "",
-        alamat: origTrx?.alamat ?? "",
-        namaWs: origTrx?.namaWs ?? "",
-      });
+      // Same key on retry: a return that already committed is not recorded twice.
+      const idempotencyKey = returnKey.get(`trx-${origTrx!.id}`);
+      let res: Awaited<ReturnType<typeof createReturn>>;
+      try {
+        res = await createReturn({
+          tipe,
+          transactionId: origTrx!.id,
+          returnItems: retItems.map((ri) => ({
+            transactionItemId: ri.transactionItemId,
+            itemId: ri.itemId,
+            qtyReturned: ri.qty,
+            hargaSnapshot: ri.harga,
+            namaSnapshot: ri.nama,
+          })),
+          replacementItems: repItems.map((ri) => ({
+            itemId: ri.itemId,
+            qtyReplacement: ri.qty,
+          })),
+          alasan,
+          namaClient: origTrx?.namaClient ?? "",
+          alamat: origTrx?.alamat ?? "",
+          namaWs: origTrx?.namaWs ?? "",
+          idempotencyKey,
+        });
+      } catch (err) {
+        console.error("createReturn gagal:", err);
+        toast.error(NETWORK_RETRY_MESSAGE);
+        return setError(NETWORK_RETRY_MESSAGE);
+      }
+      returnKey.reset();
 
       if (res && "error" in res && res.error) {
         toast.error(res.error);
@@ -271,7 +284,8 @@ export function ReturClient({
       }
 
       if (res && "ok" in res) {
-        toast.success("Transaksi retur/tukar berhasil disimpan!");
+        if (res.replayed) toast.info(REPLAYED_MESSAGE);
+        else toast.success("Transaksi retur/tukar berhasil disimpan!");
         const lines: { kode?: string; nama: string; harga: number; qty: number; subtotal: number }[] = [];
         for (const ri of retItems) {
           lines.push({

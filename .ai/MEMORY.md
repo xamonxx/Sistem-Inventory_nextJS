@@ -2,7 +2,7 @@
 
 ## Stable facts
 - App Router under `src/app`; no Pages Router or middleware file found.
-- 20 Prisma models and 8 enums in `prisma/schema.prisma`.
+- 21 Prisma models and 8 enums in `prisma/schema.prisma`.
 - Auth cookie `si_session`; JWT HS256; DB recheck of active user/role; seven-day lifetime.
 - Stok is derived from initial stock plus signed ledger rows; cache tag `stock`, 60 seconds.
 - Checkout/return/stock-sensitive paths use Serializable transactions where races matter.

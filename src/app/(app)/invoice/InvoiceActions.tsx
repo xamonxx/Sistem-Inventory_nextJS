@@ -3,6 +3,7 @@
 import { useState, useTransition, useRef, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { bayarInvoice } from "./actions";
+import { newRequestKey } from "@/lib/requestKey";
 import { Button, Card, CurrencyInput, Input, Label, Select } from "@/components/ui";
 import { FIELD_LIMITS } from "@/lib/fieldLimits";
 import { formatRupiah, formatTanggal } from "@/lib/utils";
@@ -135,7 +136,7 @@ export function InvoiceActions({ inv, canBayar }: { inv: InvoiceRow; canBayar: b
     }
 
     start(async () => {
-      const res = await bayarInvoice(inv.id, jumlah, metode);
+      const res = await bayarInvoice(inv.id, jumlah, metode, newRequestKey());
       if (res && "error" in res && res.error) {
         toast.error(res.error);
         return;

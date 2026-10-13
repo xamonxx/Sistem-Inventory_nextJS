@@ -11,6 +11,13 @@ import { dbId, money, qtyPositive, optionalText, safeError, firstIssue } from "@
 import { buildReturnItemCreateData } from "@/lib/returnRules";
 import { createInvoiceVerifyUrl } from "@/lib/invoiceVerify";
 import { afterCommit, invalidateAfterCommit } from "@/lib/postCommit";
+import {
+  findStoredResult,
+  idempotencyKeySchema,
+  IdempotencyMismatchError,
+  recoverStoredResult,
+  storeResult,
+} from "@/lib/idempotency";
 import { validateStockDemand } from "@/lib/inventoryRules";
 
 const returnItemSchema = z.object({
@@ -35,12 +42,22 @@ const schema = z.object({
   namaClient: optionalText(FIELD_LIMITS.namaClient, "Nama pelanggan"),
   alamat: optionalText(FIELD_LIMITS.alamat, "Alamat"),
   namaWs: optionalText(FIELD_LIMITS.namaWs, "Nama workshop"),
+  idempotencyKey: idempotencyKeySchema,
 }).refine((d) => {
   if (d.tipe === "TUKAR" && d.replacementItems.length === 0) return false;
   return true;
 }, { message: "Tukar barang wajib memiliki barang pengganti." });
 
 export type ReturPayload = z.infer<typeof schema>;
+
+type ReturnCommitted = {
+  ok: true;
+  id: number;
+  noReturn: string;
+  invoiceNo: string | null;
+  selisih: number;
+  replacementItems: { itemId: number; nama: string; hargaJual: number; qtyReplacement: number }[];
+};
 
 export async function createReturn(payload: ReturPayload) {
   const user = await requireRole("ADMIN_KASIR", "ADMIN_GUDANG");
@@ -54,6 +71,10 @@ export async function createReturn(payload: ReturPayload) {
   let result;
   try {
   result = await prisma.$transaction(async (tx) => {
+    // Retry of an already committed return: return it instead of moving stock twice.
+    const stored = await findStoredResult<ReturnCommitted>(tx, d.idempotencyKey, "retur", user.id);
+    if (stored) return { ...stored, replayed: true };
+
     const transaction = await tx.transaction.findUnique({
       where: { id: d.transactionId },
       include: {
@@ -252,13 +273,19 @@ export async function createReturn(payload: ReturPayload) {
       detail: { noReturn, selisih, itemCount: d.returnItems.length },
     }, tx);
 
-    return { ok: true, id: ret.id, noReturn, invoiceNo, selisih, items: ret.items, replacementItems };
+    const committed: ReturnCommitted = { ok: true, id: ret.id, noReturn, invoiceNo, selisih, replacementItems };
+    await storeResult(tx, d.idempotencyKey, "retur", user.id, committed);
+    return { ...committed, replayed: false };
   }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable });
   } catch (e) {
-    return safeError(e, "Gagal memproses retur.");
+    if (e instanceof IdempotencyMismatchError) return { error: e.message };
+    // A concurrent request with the same key may have committed first.
+    const recovered = await recoverStoredResult<ReturnCommitted>(d.idempotencyKey, "retur", user.id);
+    if (!recovered) return safeError(e, "Gagal memproses retur.");
+    result = { ...recovered, replayed: true };
   }
 
-  if (result.ok !== true) return { error: result.error };
+  if ("error" in result) return { error: result.error };
   const replacementItems = result.replacementItems ?? [];
 
   // Committed. Nothing below may turn this return into a reported failure.
@@ -283,6 +310,7 @@ export async function createReturn(payload: ReturPayload) {
     qtyRetur: d.returnItems.reduce((s, ri) => s + ri.qtyReturned, 0),
     namaGanti: gantiItemNames || null,
     qtyGanti: replacementItems.reduce((s, ri) => s + ri.qtyReplacement, 0),
+    replayed: result.replayed,
   };
 }
 

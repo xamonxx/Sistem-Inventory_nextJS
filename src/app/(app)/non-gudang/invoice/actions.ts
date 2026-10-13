@@ -6,6 +6,13 @@ import { z } from "zod";
 import { requireRole } from "@/lib/auth";
 import { logActivity } from "@/lib/activity";
 import { invalidateAfterCommit } from "@/lib/postCommit";
+import {
+  findStoredResult,
+  idempotencyKeySchema,
+  IdempotencyMismatchError,
+  recoverStoredResult,
+  storeResult,
+} from "@/lib/idempotency";
 import { computeNgCart } from "@/lib/ngMargin";
 import { prisma } from "@/lib/prisma";
 import { dbId, firstIssue, money, optionalText, qtyPositive, requiredText, safeError } from "@/lib/validation";
@@ -17,6 +24,7 @@ const bayarNgSchema = z.object({
   tipe: z.nativeEnum(NgPaymentType),
   tanggal: z.coerce.date().optional(),
   keterangan: optionalText(FIELD_LIMITS.keterangan, "Keterangan"),
+  idempotencyKey: idempotencyKeySchema,
 });
 
 export type BayarNgInvoiceInput = {
@@ -25,6 +33,15 @@ export type BayarNgInvoiceInput = {
   tipe?: "CASH" | "TRANSFER";
   tanggal?: string;
   keterangan?: string;
+  idempotencyKey?: string;
+};
+
+type BayarNgCommitted = {
+  ok: true;
+  status: "PARTIAL" | "LUNAS";
+  totalDibayar: number;
+  sisa: number;
+  payment: { id: number; tanggal: string; tipe: NgPaymentType; jumlah: number; keterangan: string };
 };
 
 /**
@@ -41,6 +58,7 @@ export async function bayarNgInvoice(input: BayarNgInvoiceInput) {
     tipe: input.tipe ?? "CASH",
     tanggal: input.tanggal,
     keterangan: input.keterangan,
+    idempotencyKey: input.idempotencyKey,
   });
   if (!parsed.success) return { error: firstIssue(parsed.error) };
   const data = parsed.data;
@@ -48,6 +66,10 @@ export async function bayarNgInvoice(input: BayarNgInvoiceInput) {
   let result;
   try {
     result = await prisma.$transaction(async (tx) => {
+      // Retry of an already committed payment: return it instead of paying twice.
+      const stored = await findStoredResult<BayarNgCommitted>(tx, data.idempotencyKey, "ng_bayar", user.id);
+      if (stored) return { ...stored, replayed: true };
+
       const inv = await tx.ngInvoice.findUnique({
         where: { id: data.invoiceId },
         select: { id: true, noInvoice: true, totalPenjualan: true, totalDibayar: true },
@@ -91,19 +113,28 @@ export async function bayarNgInvoice(input: BayarNgInvoiceInput) {
         detail: { noInvoice: inv.noInvoice, bayar: Number(bayar), lunas, tipe: data.tipe },
       }, tx);
 
-      return {
-        ok: true as const,
-        payment,
-        noInvoice: inv.noInvoice,
-        bayar,
-        lunas,
+      const committed: BayarNgCommitted = {
+        ok: true,
         status,
-        totalDibayar,
-        sisa: total.sub(totalDibayar),
+        totalDibayar: Number(totalDibayar),
+        sisa: Number(total.sub(totalDibayar)),
+        payment: {
+          id: payment.id,
+          tanggal: payment.tanggal.toISOString(),
+          tipe: payment.tipe,
+          jumlah: Number(payment.jumlah),
+          keterangan: payment.keterangan ?? "",
+        },
       };
+      await storeResult(tx, data.idempotencyKey, "ng_bayar", user.id, committed);
+      return { ...committed, replayed: false };
     }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable });
   } catch (error) {
-    return safeError(error, "Gagal memproses pembayaran non-gudang.");
+    if (error instanceof IdempotencyMismatchError) return { error: error.message };
+    // A concurrent request with the same key may have committed first.
+    const recovered = await recoverStoredResult<BayarNgCommitted>(data.idempotencyKey, "ng_bayar", user.id);
+    if (!recovered) return safeError(error, "Gagal memproses pembayaran non-gudang.");
+    result = { ...recovered, replayed: true };
   }
 
   if (!result.ok) return { error: result.error };
@@ -111,19 +142,7 @@ export async function bayarNgInvoice(input: BayarNgInvoiceInput) {
   // Committed. Cache invalidation is best-effort and cannot report a failure.
   invalidateAfterCommit({ paths: ["/non-gudang/invoice", "/non-gudang"] });
 
-  return {
-    ok: true,
-    status: result.status,
-    totalDibayar: Number(result.totalDibayar),
-    sisa: Number(result.sisa),
-    payment: {
-      id: result.payment.id,
-      tanggal: result.payment.tanggal.toISOString(),
-      tipe: result.payment.tipe,
-      jumlah: Number(result.payment.jumlah),
-      keterangan: result.payment.keterangan ?? "",
-    },
-  };
+  return result;
 }
 
 const DB_PERCENT_MAX = 9999.99;

@@ -8,10 +8,10 @@ tags: [database, mysql, prisma]
 ---
 # Database Overview
 
-MySQL diakses dengan Prisma Client singleton. Schema mendefinisikan 20 model dan 8 enum.
+MySQL diakses dengan Prisma Client singleton. Schema mendefinisikan 21 model dan 8 enum (`IdempotencyKey` ditambahkan 2026-10-13; lihat [[Idempotency-Schema-Rollout]]).
 
 ## Kelompok tabel
-- Identity/audit: [[Identity-and-Audit-Tables]]
+- Identity/audit dan idempotency: [[Identity-and-Audit-Tables]]
 - Master gudang: [[Warehouse-Master-Tables]]
 - Transaksi gudang: [[Warehouse-Transaction-Tables]]
 - Domain non-gudang: [[Non-Warehouse-Tables]]

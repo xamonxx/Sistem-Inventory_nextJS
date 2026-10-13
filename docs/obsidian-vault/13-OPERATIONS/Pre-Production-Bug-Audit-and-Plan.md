@@ -3,7 +3,7 @@ type: operations-audit
 status: release-blocked
 last_verified: 2026-10-13
 source_files: [package.json, package-lock.json, next.config.ts, prisma/schema.prisma, .github/workflows/deploy.yml, src/app, src/components, src/lib]
-related: ["[[Comprehensive-Role-Verification-Checkpoint]]", "[[Known-Bugs]]", "[[Risks]]", "[[Build-and-Test]]", "[[Recovery]]", "[[ADR-004-Credit-Is-Unpaid-Receivable]]"]
+related: ["[[Comprehensive-Role-Verification-Checkpoint]]", "[[Known-Bugs]]", "[[Risks]]", "[[Build-and-Test]]", "[[Recovery]]", "[[ADR-004-Credit-Is-Unpaid-Receivable]]", "[[Idempotency-Schema-Rollout]]"]
 tags: [operations, audit, production, security, bugs, plan]
 ---
 # Pre-Production Bug Audit and Remediation Plan
@@ -62,7 +62,7 @@ The first build attempt failed with Windows `EPERM` because a stale `next dev` c
 |---|---|---|---|---|
 | AUD-001 | Critical at discovery | Observed, remediated | Vulnerable Next.js runtime and dependency tree | Cleared for critical/high dependency gate |
 | AUD-002 | High at discovery | Observed, remediated | Receipt paid/remaining values are incorrect | Cleared in source; production data review pending |
-| AUD-003 | High | Code-proven | Post-commit failures can be reported as mutation failures | Block |
+| AUD-003 | High at discovery | Code-proven, remediated | Post-commit failures can be reported as mutation failures | Cleared in source; production table must exist before deploy |
 | AUD-004 | High | Code-proven | Gudang invoice edit can race stock writes | Block |
 | AUD-005 | High | Code-proven | Non-Gudang edit can race a payment and violate totals | Block |
 | AUD-006 | High | Observed | No tested backup/restore or migration history before destructive operations | Block |
@@ -116,6 +116,7 @@ The first build attempt failed with Windows `EPERM` because a stale `next dev` c
 - **Fix:** Put required audit rows inside the same database transaction. Treat cache invalidation as best-effort after a successful result. Generate token prerequisites before commit or return the committed result even if optional URL generation fails. Add an idempotency key for checkout/payment retries.
 - **Mitigation:** Cashiers must check transaction history before retrying any ambiguous response; this warning already exists only for network exceptions.
 - **False-positive notes:** The mechanism is code-proven; triggering requires a post-commit dependency failure.
+- **Remediation (2026-10-13):** (A) `logActivity` accepts the transaction client and required audit rows commit with checkout, invoice payment, return/exchange, Non-Gudang invoice/payment, stock-in, stock correction, and batch stock-in; `invalidateAfterCommit` and `afterCommit` make cache invalidation and verification-URL creation best-effort after commit; the outer `try` wraps only the transaction. (B) New `idempotency_keys` table: clients send a per-attempt key reused only after a network failure; the server returns the stored committed result (`replayed: true`) and a concurrent duplicate recovers the winner's result. Evidence: `npm run test:idempotency` 6/6 (store/replay, concurrent duplicate, scope mismatch) and a browser checkout whose first response was dropped after commit (`PC00104`): the retry with the same key showed the stored receipt and the database kept one transaction, one payment, one audit row, and one key. Production must create the table first: [[Idempotency-Schema-Rollout]].
 
 ### AUD-004 — Invoice item edits can oversell under concurrency
 
@@ -324,7 +325,7 @@ The first build attempt failed with Windows `EPERM` because a stale `next dev` c
 1. **Completed:** Next.js pinned to `15.5.27`; critical/high production dependency audit gate is clear. Triage the remaining moderate `exceljs`/`uuid` advisory.
 2. **Completed:** CREDIT is an unpaid receivable ([[ADR-004-Credit-Is-Unpaid-Receivable]]).
 3. **Completed in source:** receipt totals use persisted values across POS, invoice thermal reprint, detail page, image, A4, and PDF paths. Remaining: read-only production check for historical CREDIT Payment rows.
-4. Make checkout/payment outcomes atomic and idempotent. Include required audit rows in transactions; prevent post-commit helper failures from returning mutation failure.
+4. **Completed in source:** checkout/payment outcomes are atomic and idempotent; audit rows commit with the data; post-commit helpers cannot report failure. Remaining: create `idempotency_keys` in production before deploying ([[Idempotency-Schema-Rollout]]).
 5. Move Gudang invoice edit and Non-Gudang edit guards into serializable transactions. Add edit-vs-checkout and edit-vs-payment race tests.
 6. Verify required Hostinger runtime variables without exposing values, especially `AUTH_SECRET`, `INVOICE_VERIFY_SECRET`, `DATABASE_URL`, `COOKIE_SECURE`, and canonical app URL.
 7. Complete and pass a backup/restore rehearsal before enabling destructive release operations.

@@ -22,6 +22,7 @@ import {
 import { toast } from "sonner";
 import { bayarNgInvoice, updateNgInvoice } from "./actions";
 import { Nota, type NotaData } from "@/components/Nota";
+import { NETWORK_RETRY_MESSAGE, REPLAYED_MESSAGE, useRequestKey } from "@/lib/requestKey";
 import { DatePicker } from "@/components/DatePicker";
 import { PeriodFilter, type ResolvedPeriodRange } from "@/components/PeriodFilter";
 import { Badge, Button, Card, CurrencyInput, Input, QtyInput, Label, Select, Table, Td, Th } from "@/components/ui";
@@ -848,6 +849,7 @@ function PaymentModal({
 
   const jumlahNum = Number(jumlah) || 0;
   const invalid = jumlahNum <= 0 || jumlahNum > row.sisa;
+  const paymentKey = useRequestKey();
 
   function submit() {
     if (invalid) {
@@ -855,19 +857,31 @@ function PaymentModal({
       return;
     }
     startTransition(async () => {
-      const res = await bayarNgInvoice({
-        invoiceId: row.id,
-        jumlah: jumlahNum,
-        tipe,
-        tanggal,
-        keterangan: keterangan || undefined,
-      });
+      // Same key on retry: a payment that already committed is not recorded twice.
+      const idempotencyKey = paymentKey.get(`ng-${row.id}`);
+      let res: Awaited<ReturnType<typeof bayarNgInvoice>>;
+      try {
+        res = await bayarNgInvoice({
+          invoiceId: row.id,
+          jumlah: jumlahNum,
+          tipe,
+          tanggal,
+          keterangan: keterangan || undefined,
+          idempotencyKey,
+        });
+      } catch (err) {
+        console.error("bayarNgInvoice gagal:", err);
+        toast.error(NETWORK_RETRY_MESSAGE);
+        return;
+      }
+      paymentKey.reset();
       if ("error" in res && res.error) {
         toast.error(res.error);
         return;
       }
       if ("ok" in res && res.ok) {
-        toast.success(res.status === "LUNAS" ? "Invoice lunas." : "Pembayaran tercatat.");
+        if (res.replayed) toast.info(REPLAYED_MESSAGE);
+        else toast.success(res.status === "LUNAS" ? "Invoice lunas." : "Pembayaran tercatat.");
         onDone({ status: res.status, totalDibayar: res.totalDibayar, sisa: res.sisa, payment: res.payment });
       }
     });

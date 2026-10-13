@@ -7,6 +7,13 @@ import { prisma } from "@/lib/prisma";
 import { requireRole } from "@/lib/auth";
 import { logActivity } from "@/lib/activity";
 import { invalidateAfterCommit } from "@/lib/postCommit";
+import {
+  findStoredResult,
+  idempotencyKeySchema,
+  IdempotencyMismatchError,
+  recoverStoredResult,
+  storeResult,
+} from "@/lib/idempotency";
 import { dbId, money, safeError, firstIssue } from "@/lib/validation";
 import { FIELD_LIMITS } from "@/lib/fieldLimits";
 import { invoiceItemPayloadSchema } from "@/lib/invoiceRules";
@@ -24,23 +31,34 @@ const bayarSchema = z.object({
   invoiceId: dbId,
   jumlah: money.refine((n) => n > 0, "Jumlah bayar harus lebih dari 0."),
   tipe: z.enum(["CASH", "TRANSFER"], { message: "Metode pembayaran harus Tunai atau Transfer." }),
+  idempotencyKey: idempotencyKeySchema,
 });
+
+type BayarInvoiceCommitted = {
+  ok: true;
+  payment: { id: number; tanggal: string; tipe: PaymentType; jumlah: number; keterangan: string | null };
+};
 
 export async function bayarInvoice(
   invoiceId: number,
   jumlah: number,
-  tipe: Extract<PaymentType, "CASH" | "TRANSFER"> = "CASH"
+  tipe: Extract<PaymentType, "CASH" | "TRANSFER"> = "CASH",
+  idempotencyKey?: string
 ) {
   // Pembayaran/penagihan = domain kasir
   const user = await requireRole("ADMIN_KASIR");
 
-  const parsed = bayarSchema.safeParse({ invoiceId, jumlah, tipe });
+  const parsed = bayarSchema.safeParse({ invoiceId, jumlah, tipe, idempotencyKey });
   if (!parsed.success) return { error: firstIssue(parsed.error) };
-  ({ invoiceId, jumlah, tipe } = parsed.data);
+  ({ invoiceId, jumlah, tipe, idempotencyKey } = parsed.data);
 
   let result;
   try {
     result = await prisma.$transaction(async (tx) => {
+      // Retry of an already committed payment: return it instead of paying twice.
+      const stored = await findStoredResult<BayarInvoiceCommitted>(tx, idempotencyKey, "bayar_invoice", user.id);
+      if (stored) return { ...stored, replayed: true };
+
       const inv = await tx.invoice.findUnique({ where: { id: invoiceId } });
       if (!inv) return { error: "Invoice tidak ditemukan." };
 
@@ -73,26 +91,32 @@ export async function bayarInvoice(
         detail: { bayar, lunas, tipe },
       }, tx);
 
-      return { ok: true, payment, bayar, lunas };
+      const committed: BayarInvoiceCommitted = {
+        ok: true,
+        payment: {
+          id: payment.id,
+          tanggal: payment.tanggal.toISOString(),
+          tipe: payment.tipe,
+          jumlah: Number(payment.jumlah),
+          keterangan: payment.keterangan,
+        },
+      };
+      await storeResult(tx, idempotencyKey, "bayar_invoice", user.id, committed);
+      return { ...committed, replayed: false };
     }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable });
   } catch (e) {
-    return safeError(e, "Gagal memproses pembayaran.");
+    if (e instanceof IdempotencyMismatchError) return { error: e.message };
+    // A concurrent request with the same key may have committed first.
+    const recovered = await recoverStoredResult<BayarInvoiceCommitted>(idempotencyKey, "bayar_invoice", user.id);
+    if (!recovered) return safeError(e, "Gagal memproses pembayaran.");
+    result = { ...recovered, replayed: true };
   }
 
-  if (!result.ok) return result;
+  if (!("ok" in result)) return result;
 
   // Committed. Cache invalidation is best-effort and cannot report a failure.
   invalidateAfterCommit({ paths: ["/invoice", "/"] });
-  return {
-    ok: true,
-    payment: {
-      id: result.payment.id,
-      tanggal: result.payment.tanggal.toISOString(),
-      tipe: result.payment.tipe,
-      jumlah: Number(result.payment.jumlah),
-      keterangan: result.payment.keterangan,
-    },
-  };
+  return { ok: true, payment: result.payment, replayed: result.replayed };
 }
 
 const updateInvoiceSchema = z.object({

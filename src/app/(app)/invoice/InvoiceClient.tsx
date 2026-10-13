@@ -10,6 +10,7 @@ import { Drawer } from "@/components/Drawer";
 import { Pagination, usePagination } from "@/components/Pagination";
 import { InvoiceDocument } from "@/components/InvoiceDocument";
 import { Nota } from "@/components/Nota";
+import { NETWORK_RETRY_MESSAGE, REPLAYED_MESSAGE, useRequestKey } from "@/lib/requestKey";
 import { ModernDialog } from "@/components/ModernDialog";
 import { WhatsAppDialog } from "@/components/WhatsAppDialog";
 import { printArea } from "@/lib/print";
@@ -100,6 +101,7 @@ export function InvoiceClient({ initialInvoices, canBayar, userName }: InvoiceCl
   // Payment states inside detail drawer
   const [paymentAmount, setPaymentAmount] = useState(0);
   const [paymentMethod, setPaymentMethod] = useState<"CASH" | "TRANSFER">("CASH");
+  const paymentKey = useRequestKey();
   const [isPending, startTransition] = useTransition();
   const [printFormat, setPrintFormat] = useState<"a4" | "thermal" | null>(null);
   const a4PreviewRef = useRef<HTMLDivElement>(null);
@@ -250,9 +252,26 @@ export function InvoiceClient({ initialInvoices, canBayar, userName }: InvoiceCl
     }
 
     startTransition(async () => {
-      const res = await bayarInvoice(invoice.id, paymentAmount, paymentMethod);
+      // Same key on retry: a payment that already committed is not recorded twice.
+      const idempotencyKey = paymentKey.get(`inv-${invoice.id}`);
+      let res: Awaited<ReturnType<typeof bayarInvoice>>;
+      try {
+        res = await bayarInvoice(invoice.id, paymentAmount, paymentMethod, idempotencyKey);
+      } catch (err) {
+        console.error("bayarInvoice gagal:", err);
+        toast.error(NETWORK_RETRY_MESSAGE);
+        return;
+      }
+      paymentKey.reset();
       if (res && "error" in res && res.error) {
         toast.error(res.error);
+        return;
+      }
+      if ("replayed" in res && res.replayed) {
+        // Local drawer state may already include this payment; reload from the server.
+        toast.info(REPLAYED_MESSAGE);
+        setPaymentAmount(0);
+        router.refresh();
         return;
       }
       toast.success(`Pembayaran sebesar ${formatRupiah(paymentAmount)} berhasil disimpan!`);

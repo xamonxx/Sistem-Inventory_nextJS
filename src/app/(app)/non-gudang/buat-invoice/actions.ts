@@ -1,13 +1,20 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { NgPaymentType, Prisma } from "@prisma/client";
+import { NgInvoiceStatus, NgPaymentType, Prisma } from "@prisma/client";
 import { z } from "zod";
 import { requireRole } from "@/lib/auth";
 import { nextDocNumber } from "@/lib/counters";
 import { FIELD_LIMITS } from "@/lib/fieldLimits";
 import { logActivity } from "@/lib/activity";
 import { invalidateAfterCommit } from "@/lib/postCommit";
+import {
+  findStoredResult,
+  idempotencyKeySchema,
+  IdempotencyMismatchError,
+  recoverStoredResult,
+  storeResult,
+} from "@/lib/idempotency";
 import { computeNgCart } from "@/lib/ngMargin";
 import { prisma } from "@/lib/prisma";
 import { dbId, firstIssue, money, optionalText, qtyPositive, requiredText, safeError } from "@/lib/validation";
@@ -27,6 +34,7 @@ const createNgInvoiceSchema = z
     noRekening: optionalText(FIELD_LIMITS.noRekening, "Nomor rekening"),
     atasNama: optionalText(FIELD_LIMITS.atasNama, "Atas nama"),
     items: z.array(z.object({ produkId: dbId, qty: qtyPositive })).min(1, "Keranjang Invoice masih kosong."),
+    idempotencyKey: idempotencyKeySchema,
   })
   .superRefine((data, ctx) => {
     if (data.paymentMethod === "TRANSFER") {
@@ -72,6 +80,33 @@ type CreateNgInvoiceInput = {
   noRekening: string;
   atasNama: string;
   items: { produkId: number; qty: number }[];
+  idempotencyKey?: string;
+};
+
+type NgInvoiceCommitted = {
+  ok: true;
+  invoice: {
+    id: number;
+    noInvoice: string;
+    tanggal: string;
+    namaToko: string;
+    namaKonsumen: string;
+    namaGrup: string;
+    alamat: string;
+    namaWorkshop: string;
+    status: NgInvoiceStatus;
+    jatuhTempo: string | null;
+    paymentMethod: NgPaymentType;
+    totalModal: number;
+    totalPenjualan: number;
+    totalProfit: number;
+    margin: number;
+    markup: number;
+    items: ReturnType<typeof computeNgCart>["lines"];
+    namaBank: string;
+    noRekening: string;
+    atasNama: string;
+  };
 };
 
 const DB_PERCENT_MAX = 9999.99;
@@ -156,9 +191,17 @@ export async function createNgInvoice(input: CreateNgInvoiceInput) {
   const totalPenjualan = new Prisma.Decimal(computed.totalPenjualan);
   const totalDibayar = data.paymentStatus === "LUNAS" ? totalPenjualan : new Prisma.Decimal(0);
 
-  let created;
+  let created: NgInvoiceCommitted;
+  let replayed = false;
   try {
     created = await prisma.$transaction(async (tx) => {
+      // Retry of an already committed invoice: return it instead of creating a duplicate.
+      const stored = await findStoredResult<NgInvoiceCommitted>(tx, data.idempotencyKey, "ng_invoice", user.id);
+      if (stored) {
+        replayed = true;
+        return stored;
+      }
+
       const noInvoice = await nextDocNumber(tx, "ng_invoice");
 
       // Link ke master konsumen: pakai id terpilih bila valid, cari yang sudah ada
@@ -261,10 +304,41 @@ export async function createNgInvoice(input: CreateNgInvoiceInput) {
         },
       }, tx);
 
-      return invoice;
+      const committed: NgInvoiceCommitted = {
+        ok: true,
+        invoice: {
+          id: invoice.id,
+          noInvoice: invoice.noInvoice,
+          tanggal: invoice.tanggal.toISOString(),
+          namaToko: invoice.namaToko,
+          namaKonsumen: invoice.namaKonsumen ?? "",
+          namaGrup: invoice.namaGrup ?? "",
+          alamat: invoice.alamat ?? "",
+          namaWorkshop: invoice.namaWorkshop ?? "",
+          status: invoice.status,
+          jatuhTempo: invoice.jatuhTempo?.toISOString() ?? null,
+          paymentMethod: data.paymentMethod,
+          totalModal: computed.totalModal,
+          totalPenjualan: computed.totalPenjualan,
+          totalProfit: computed.totalProfit,
+          margin: computed.margin,
+          markup: computed.markup,
+          items: computed.lines,
+          namaBank: invoice.namaBank ?? "",
+          noRekening: invoice.noRekening ?? "",
+          atasNama: invoice.atasNama ?? "",
+        },
+      };
+      await storeResult(tx, data.idempotencyKey, "ng_invoice", user.id, committed);
+      return committed;
     });
   } catch (error) {
-    return safeError(error, "Gagal membuat invoice non-gudang.");
+    if (error instanceof IdempotencyMismatchError) return { error: error.message };
+    // A concurrent request with the same key may have committed first.
+    const recovered = await recoverStoredResult<NgInvoiceCommitted>(data.idempotencyKey, "ng_invoice", user.id);
+    if (!recovered) return safeError(error, "Gagal membuat invoice non-gudang.");
+    created = recovered;
+    replayed = true;
   }
 
   // Committed. Cache invalidation is best-effort and cannot report a failure.
@@ -272,31 +346,7 @@ export async function createNgInvoice(input: CreateNgInvoiceInput) {
     paths: ["/non-gudang", "/non-gudang/buat-invoice", "/non-gudang/invoice", "/non-gudang/konsumen"],
   });
 
-  return {
-    ok: true,
-    invoice: {
-      id: created.id,
-      noInvoice: created.noInvoice,
-      tanggal: created.tanggal.toISOString(),
-      namaToko: created.namaToko,
-      namaKonsumen: created.namaKonsumen ?? "",
-      namaGrup: created.namaGrup ?? "",
-      alamat: created.alamat ?? "",
-      namaWorkshop: created.namaWorkshop ?? "",
-      status: created.status,
-      jatuhTempo: created.jatuhTempo?.toISOString() ?? null,
-      paymentMethod: data.paymentMethod,
-      totalModal: computed.totalModal,
-      totalPenjualan: computed.totalPenjualan,
-      totalProfit: computed.totalProfit,
-      margin: computed.margin,
-      markup: computed.markup,
-      items: computed.lines,
-      namaBank: created.namaBank ?? "",
-      noRekening: created.noRekening ?? "",
-      atasNama: created.atasNama ?? "",
-    },
-  };
+  return { ...created, replayed };
 }
 
 export async function resolveNgProductForCart(input: {

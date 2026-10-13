@@ -24,6 +24,7 @@ import {
 import { toast } from "sonner";
 import { createNgInvoice, resolveNgProductForCart } from "./actions";
 import { Nota, type NotaData } from "@/components/Nota";
+import { NETWORK_RETRY_MESSAGE, REPLAYED_MESSAGE, useRequestKey } from "@/lib/requestKey";
 import { DatePicker } from "@/components/DatePicker";
 import { Badge, Button, Card, CurrencyInput, Input, Label, Select, Table, Td, Textarea, Th } from "@/components/ui";
 import { FIELD_LIMITS } from "@/lib/fieldLimits";
@@ -139,6 +140,7 @@ export function NgBuatInvoiceClient({
   const [knownStores, setKnownStores] = useState<string[]>(tokoOptions);
   const [pending, startTransition] = useTransition();
   const [generated, setGenerated] = useState<GeneratedInvoice | null>(null);
+  const createKey = useRequestKey();
   const [priceConflict, setPriceConflict] = useState<PriceConflictDialog | null>(null);
   const [pendingStoreChange, setPendingStoreChange] = useState<string | null>(null);
   const [printFormat, setPrintFormat] = useState<"a4" | "thermal">("a4");
@@ -449,21 +451,32 @@ export function NgBuatInvoiceClient({
     }
 
     startTransition(async () => {
-      const result = await createNgInvoice({
-        tanggal,
-        namaToko: tokoSumber,
-        konsumenId,
-        namaKonsumen,
-        namaGrup,
-        alamat,
-        namaWorkshop,
-        paymentStatus,
-        paymentMethod,
-        namaBank,
-        noRekening,
-        atasNama,
-        items: cart.map((line) => ({ produkId: line.produkId, qty: line.qty })),
-      });
+      // Same key on retry: an invoice that already committed is not created twice.
+      const idempotencyKey = createKey.get();
+      let result: Awaited<ReturnType<typeof createNgInvoice>>;
+      try {
+        result = await createNgInvoice({
+          tanggal,
+          namaToko: tokoSumber,
+          konsumenId,
+          namaKonsumen,
+          namaGrup,
+          alamat,
+          namaWorkshop,
+          paymentStatus,
+          paymentMethod,
+          namaBank,
+          noRekening,
+          atasNama,
+          items: cart.map((line) => ({ produkId: line.produkId, qty: line.qty })),
+          idempotencyKey,
+        });
+      } catch (err) {
+        console.error("createNgInvoice gagal:", err);
+        toast.error(NETWORK_RETRY_MESSAGE);
+        return;
+      }
+      createKey.reset();
 
       if (result && "error" in result && result.error) {
         toast.error(result.error);
@@ -479,7 +492,8 @@ export function NgBuatInvoiceClient({
         setItemDraft(EMPTY_ITEM_DRAFT);
         setKonsumenId(null);
         setActiveStep(1);
-        toast.success(`Invoice ${result.invoice.noInvoice} berhasil dibuat.`);
+        if (result.replayed) toast.info(REPLAYED_MESSAGE);
+        else toast.success(`Invoice ${result.invoice.noInvoice} berhasil dibuat.`);
       }
     });
   }

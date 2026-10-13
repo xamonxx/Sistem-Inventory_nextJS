@@ -5,7 +5,9 @@
 - [x] Decide whether `CREDIT` means paid financing or unpaid tempo before changing payment totals (unpaid receivable, ADR-004).
 - [x] Fix POS and invoice thermal receipt paid/remaining values across split, transfer, partial, LUNAS, reprint, image, and PDF paths.
 - [ ] Read-only check production for historical `Payment.tipe = CREDIT` rows; correct only with explicit approval and a verified backup.
-- [ ] Make checkout/payment outcomes atomic and idempotent; prevent post-commit audit/token failures from returning mutation failure.
+- [x] Make checkout/payment outcomes atomic and idempotent; prevent post-commit audit/token failures from returning mutation failure.
+- [ ] Create `idempotency_keys` in production (reviewed DDL, after backup) BEFORE deploying the AUD-003 code; see `docs/obsidian-vault/13-OPERATIONS/Idempotency-Schema-Rollout.md`.
+- [ ] Decide a retention policy for `idempotency_keys`.
 - [ ] Serialize Gudang invoice edit stock checks and Non-Gudang edit-vs-payment checks; add race regressions.
 - [ ] Invalidate stock cache/tag after invoice edit/delete ledger mutations.
 - [ ] Enforce inactive-item stock rules in direct Server Actions.

@@ -23,7 +23,7 @@ tags: [verification, status]
 | Area | Coverage | Definition |
 |---|---:|---|
 | Module documentation | 14/14 (100%) | Every module identified during discovery has a source-backed module note |
-| Prisma model inventory | 20/20 (100%) | Every schema model appears in grouped database table notes/ER documentation |
+| Prisma model inventory | 21/21 (100%) | Every schema model appears in grouped database table notes/ER documentation |
 | Route Handler groups | 3/3 (100%) | Search, notifications, and logout documented |
 | Business workflows | 10 verified flows | Login, item, stock, POS, return, warehouse invoice/reporting, non-gudang order/invoice, public verification |
 

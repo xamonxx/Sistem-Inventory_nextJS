@@ -12,6 +12,13 @@ import { invoiceStatusFor, isReceivedPayment, validateCheckoutTotals } from "@/l
 import { validateStockDemand } from "@/lib/inventoryRules";
 import { createInvoiceVerifyUrl } from "@/lib/invoiceVerify";
 import { afterCommit, invalidateAfterCommit } from "@/lib/postCommit";
+import {
+  findStoredResult,
+  idempotencyKeySchema,
+  IdempotencyMismatchError,
+  recoverStoredResult,
+  storeResult,
+} from "@/lib/idempotency";
 
 const itemSchema = z.object({
   itemId: dbId,
@@ -38,6 +45,7 @@ const schema = z.object({
   payments: z.array(paymentComponentSchema).optional().default([]),
   buatInvoice: z.boolean().optional().default(true),
   items: z.array(itemSchema).min(1, "Minimal 1 barang di keranjang."),
+  idempotencyKey: idempotencyKeySchema,
 }).refine((d) => {
   if (d.payments.length > 0) {
     const totalPayments = d.payments.reduce((sum, p) => sum + p.jumlah, 0);
@@ -47,6 +55,16 @@ const schema = z.object({
 }, { message: "Total pembayaran harus lebih dari 0." });
 
 export type KasirPayload = z.infer<typeof schema>;
+
+type CheckoutCommitted = {
+  ok: true;
+  id: number;
+  noTransaksi: string;
+  invoiceNo: string | null;
+  grandTotal: number;
+  totalDibayar: number;
+  sisaTagihan: number;
+};
 
 export async function createTransaction(payload: KasirPayload) {
   const user = await requireRole("ADMIN_KASIR");
@@ -65,6 +83,10 @@ export async function createTransaction(payload: KasirPayload) {
   let result;
   try {
     result = await prisma.$transaction(async (tx) => {
+      // Retry of an already committed checkout: return it instead of selling twice.
+      const stored = await findStoredResult<CheckoutCommitted>(tx, d.idempotencyKey, "checkout", user.id);
+      if (stored) return { ...stored, replayed: true };
+
       const uniqueIds = Array.from(new Set(d.items.map((item) => item.itemId)));
       const items = await tx.item.findMany({ where: { id: { in: uniqueIds } } });
       const itemMap = new Map(items.map((item) => [item.id, item]));
@@ -295,8 +317,8 @@ export async function createTransaction(payload: KasirPayload) {
         },
       }, tx);
 
-      return {
-        ok: true as const,
+      const committed: CheckoutCommitted = {
+        ok: true,
         id: trx.id,
         noTransaksi,
         invoiceNo,
@@ -304,9 +326,15 @@ export async function createTransaction(payload: KasirPayload) {
         totalDibayar: Number(totalDibayar),
         sisaTagihan: Number(sisaTagihan),
       };
+      await storeResult(tx, d.idempotencyKey, "checkout", user.id, committed);
+      return { ...committed, replayed: false };
     }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable });
   } catch (error) {
-    return safeError(error, "Terjadi kesalahan internal saat memproses checkout.");
+    if (error instanceof IdempotencyMismatchError) return { error: error.message };
+    // A concurrent request with the same key may have committed first.
+    const recovered = await recoverStoredResult<CheckoutCommitted>(d.idempotencyKey, "checkout", user.id);
+    if (!recovered) return safeError(error, "Terjadi kesalahan internal saat memproses checkout.");
+    result = { ...recovered, replayed: true };
   }
 
   if (!result.ok) return { error: result.error };
@@ -328,5 +356,6 @@ export async function createTransaction(payload: KasirPayload) {
     totalDibayar: result.totalDibayar,
     sisaTagihan: result.sisaTagihan,
     verifyUrl,
+    replayed: result.replayed,
   };
 }

@@ -458,3 +458,17 @@ model Counter {
   value  Int    @default(0)
   @@map("counters")
 }
+
+// ============ IDEMPOTENCY (retry aman untuk mutasi uang/stok - AUD-003) ============
+// Ditulis di transaksi yang sama dengan mutasinya. Retry dengan key yang sama
+// mengembalikan hasil tersimpan, bukan membuat transaksi/pembayaran baru.
+model IdempotencyKey {
+  key       String   @id @db.VarChar(64)
+  scope     String   @db.VarChar(40) // "checkout" | "bayar_invoice" | "retur" | "ng_invoice" | "ng_bayar"
+  userId    Int
+  response  String   @db.Text // JSON hasil mutasi yang sudah commit
+  createdAt DateTime @default(now())
+
+  @@index([createdAt])
+  @@map("idempotency_keys")
+}

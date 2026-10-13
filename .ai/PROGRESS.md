@@ -6,6 +6,9 @@
 - [x] Print persisted paid/remaining values on Kasir receipt, invoice thermal preview, and `/invoice/[id]`; derive `Nota` status from amounts.
 - [x] Add 10 checkout-rule regressions (security suite 68/68) and browser-verify split/tempo and transfer-only checkouts locally.
 - [ ] Read-only production check for historical CREDIT Payment rows.
+- [x] AUD-003: audit rows inside transactions, best-effort post-commit helpers, idempotency keys for checkout, invoice payment, return, NG invoice, and NG payment.
+- [x] `npm run test:idempotency` 6/6 and browser retry-after-dropped-response verified (`PC00104`, no duplicate).
+- [ ] Create `idempotency_keys` in production before deploying.
 
 ## 2026-10-13 — User guides by role
 - [x] Create separate `.docx` guides for `ADMIN_GUDANG`, `ADMIN_KASIR`, and `ADMIN_NONGUDANG`.

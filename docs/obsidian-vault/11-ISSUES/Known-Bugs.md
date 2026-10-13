@@ -51,7 +51,9 @@ tags: [issues, bugs]
 ## KB-007 — Mutasi committed dapat dilaporkan gagal
 - **Observed in source:** checkout/payment commit lebih dulu, lalu audit log, cache invalidation, atau URL verifikasi dijalankan dalam outer `try`; kegagalan helper dikembalikan sebagai error aksi.
 - **Impact:** operator dapat retry transaksi yang sebenarnya sudah tersimpan dan membuat duplikasi.
-- **Status:** open; release blocker sampai outcome atomik/idempotent.
+- **Resolution (2026-10-13):** audit log ditulis di dalam transaksi; invalidasi cache dan URL verifikasi bersifat best-effort setelah commit; checkout, bayar invoice, retur, invoice NG, dan bayar NG memakai idempotency key sehingga retry mengembalikan hasil tersimpan.
+- **Verification:** `npm run test:idempotency` 6/6; checkout browser `PC00104` dengan respons pertama sengaja dibuang lalu di-retry tetap menghasilkan satu transaksi, satu pembayaran, satu log.
+- **Status:** resolved in source; production wajib membuat tabel `idempotency_keys` sebelum deploy ([[Idempotency-Schema-Rollout]]).
 - **Evidence:** [[Pre-Production-Bug-Audit-and-Plan]].
 
 Drift konfigurasi dan coverage gap bukan bug runtime; lihat [[Technical-Debt]].

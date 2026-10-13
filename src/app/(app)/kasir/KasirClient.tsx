@@ -28,6 +28,7 @@ import {
   ArrowLeft,
 } from "lucide-react";
 import { Nota, type NotaData } from "@/components/Nota";
+import { NETWORK_RETRY_MESSAGE, REPLAYED_MESSAGE, useRequestKey } from "@/lib/requestKey";
 import { ModernDialog } from "@/components/ModernDialog";
 import { printArea } from "@/lib/print";
 import { toast } from "sonner";
@@ -78,6 +79,7 @@ export function KasirClient({ items }: { items: Item[] }) {
   const [cashReceived, setCashReceived] = useState(0);
   const [error, setError] = useState("");
   const [nota, setNota] = useState<NotaData | null>(null);
+  const checkoutKey = useRequestKey();
   const [pending, start] = useTransition();
 
   // Hold Transaction State
@@ -348,6 +350,8 @@ export function KasirClient({ items }: { items: Item[] }) {
 
       // Gagal jaringan (mis. koneksi putus / server tidak terjangkau) melempar error,
       // bukan mengembalikan { error }. Tangkap agar halaman tidak jatuh ke layar error.
+      // Key yang sama dipakai ulang saat retry sehingga server tidak mencatat ganda.
+      const idempotencyKey = checkoutKey.get();
       let res: Awaited<ReturnType<typeof createTransaction>>;
       try {
         res = await createTransaction({
@@ -364,14 +368,14 @@ export function KasirClient({ items }: { items: Item[] }) {
           payments,
           buatInvoice: isSplitActive ? (splitCredit > 0 || buatInvoice) : buatInvoice,
           items: cart.map((l) => ({ itemId: l.itemId, qty: l.qty })),
+          idempotencyKey,
         });
       } catch (err) {
         console.error("createTransaction gagal:", err);
-        const msg =
-          "Gagal terhubung ke server. Periksa koneksi, lalu cek riwayat transaksi sebelum mencoba lagi agar tidak tercatat ganda.";
-        toast.error(msg);
-        return setError(msg);
+        toast.error(NETWORK_RETRY_MESSAGE);
+        return setError(NETWORK_RETRY_MESSAGE);
       }
+      checkoutKey.reset();
 
       if (res && "error" in res && res.error) {
         toast.error(res.error);
@@ -379,7 +383,8 @@ export function KasirClient({ items }: { items: Item[] }) {
       }
 
       if (res && "ok" in res) {
-        toast.success("Transaksi berhasil disimpan!");
+        if (res.replayed) toast.info(REPLAYED_MESSAGE);
+        else toast.success("Transaksi berhasil disimpan!");
         setNota({
           noTransaksi: res.noTransaksi,
           noInvoice: res.invoiceNo ?? null,

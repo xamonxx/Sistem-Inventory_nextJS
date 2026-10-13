@@ -17,8 +17,9 @@
 Execute Phase 0 from the pre-production audit in this order:
 1. **Done (`0dfdd83`):** `next@15.5.27` pinned; production audit 0 critical / 0 high / 2 moderate (`exceljs` -> `uuid`, unreachable path).
 2. **Done (`249c400`):** CREDIT = unpaid receivable (ADR-004); all receipt paths print persisted paid/remaining values. Still needed: read-only production check for historical CREDIT Payment rows.
-3. **Next:** Make mutation outcomes atomic/idempotent so post-commit audit or verification helpers cannot produce a false failure.
-4. Serialize invoice-edit races and add missing stock-cache invalidation.
+3. **Done:** Make mutation outcomes atomic/idempotent so post-commit audit or verification helpers cannot produce a false failure.
+   - Production prerequisite: create `idempotency_keys` before deploying (`docs/obsidian-vault/13-OPERATIONS/Idempotency-Schema-Rollout.md`). Local DB already has it; `next build` was not run in this step because another session's dev server held `.next`.
+4. **Next:** Serialize invoice-edit races and add missing stock-cache invalidation.
 5. Prove backup/restore and required production runtime env before deployment.
 
 Do not push or deploy until the audit exit criteria pass.
@@ -66,8 +67,8 @@ Do not push or deploy until the audit exit criteria pass.
 
 ## Release blockers
 - `PC00003`/`PC00004` receipt defects are fixed in source and verified locally with `PC00102` (split + tempo, PARTIAL 80k/75k) and `PC00103` (transfer, LUNAS).
-- Remaining Phase 0 blockers: atomic/idempotent mutation outcomes, invoice-edit races, stock-cache invalidation, deployment env/cutover, backup/restore.
-- Local test data added on 2026-10-13: `PC00102`/`INV-00063` and `PC00103`/`INV-00064` (customers `QA AUD-002 Split` / `QA AUD-002 Transfer`). Do not delete without approval.
+- Remaining Phase 0 blockers: production `idempotency_keys` table before deploy, invoice-edit races, stock-cache invalidation, deployment env/cutover, backup/restore.
+- Local test data added on 2026-10-13: `PC00102`/`INV-00063`, `PC00103`/`INV-00064`, and `PC00104`/`INV-00065` (customers `QA AUD-002 Split`, `QA AUD-002 Transfer`, `QA AUD-003 Retry`). Do not delete without approval.
 - Do not push/deploy until the audit exit criteria pass.
 
 ## Do not lose
