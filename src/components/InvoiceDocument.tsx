@@ -119,7 +119,7 @@ export function InvoiceDocument({
             <Label>Ditagihkan Kepada</Label>
             <p className="mt-1.5 text-[13px] font-bold text-[#111827]">{inv.namaClient}</p>
             {inv.namaWs && (
-              <p className="mt-0.5 text-[10px] text-[#475569]">Bengkel: <span className="font-semibold">{inv.namaWs}</span></p>
+              <p className="mt-0.5 text-[10px] text-[#475569]">Workshop: <span className="font-semibold">{inv.namaWs}</span></p>
             )}
             {inv.alamat && <p className="mt-0.5 text-[10px] leading-snug text-[#475569]">{inv.alamat}</p>}
           </div>

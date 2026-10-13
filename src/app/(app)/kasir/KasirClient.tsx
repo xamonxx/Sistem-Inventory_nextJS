@@ -913,7 +913,7 @@ export function KasirClient({ items }: { items: Item[] }) {
 
                     <div>
                       <div className="flex items-center justify-between gap-2">
-                        <Label className="text-xs font-bold text-slate-655 mb-0">Referensi Bengkel</Label>
+                        <Label className="text-xs font-bold text-slate-655 mb-0">Nama Workshop</Label>
                         <CharCounter value={namaWs} max={FIELD_LIMITS.namaWs} />
                       </div>
                       <Input
@@ -921,7 +921,7 @@ export function KasirClient({ items }: { items: Item[] }) {
                         value={namaWs}
                         onChange={(e) => setNamaWs(e.target.value)}
                         maxLength={FIELD_LIMITS.namaWs}
-                        placeholder="Nama bengkel (opsional)"
+                        placeholder="Nama workshop (opsional)"
                         className="mt-1.5 h-10 rounded-xl"
                         onKeyDown={(e) => {
                           if (e.key === "Enter") {

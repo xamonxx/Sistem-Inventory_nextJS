@@ -91,7 +91,7 @@ const updateInvoiceSchema = z.object({
   tanggal: z.coerce.date(),
   namaClient: z.string().min(1, "Nama pelanggan wajib diisi.").max(FIELD_LIMITS.namaClient, "Nama pelanggan terlalu panjang."),
   alamat: z.string().max(FIELD_LIMITS.alamat, "Alamat terlalu panjang.").nullable().optional(),
-  namaWs: z.string().max(FIELD_LIMITS.namaWs, "Nama bengkel terlalu panjang.").nullable().optional(),
+  namaWs: z.string().max(FIELD_LIMITS.namaWs, "Nama workshop terlalu panjang.").nullable().optional(),
   // Info pembayaran (opsional) — tampil di bagian PEMBAYARAN pada invoice/nota.
   namaBank: z.string().max(FIELD_LIMITS.namaBank, "Nama bank terlalu panjang.").nullable().optional(),
   noRekening: z.string().max(FIELD_LIMITS.noRekening, "No. rekening terlalu panjang.").nullable().optional(),

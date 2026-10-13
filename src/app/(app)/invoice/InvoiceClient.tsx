@@ -1048,7 +1048,7 @@ export function InvoiceClient({ initialInvoices, canBayar, userName }: InvoiceCl
               <div className="rounded-2xl border border-border p-5 bg-card shadow-sm space-y-2">
                 <div className="flex items-center gap-1.5 text-[var(--text-muted-2)]">
                   <Building2 size={13} className="stroke-[2.5]" />
-                  <p className="text-[10px] font-extrabold uppercase tracking-wider">Informasi Proyek &amp; Bengkel</p>
+                  <p className="text-[10px] font-extrabold uppercase tracking-wider">Informasi Proyek &amp; Workshop</p>
                 </div>
                 <div className="space-y-1">
                   <p className="text-sm font-extrabold text-foreground">{selectedInvoice.projectName ?? "Eceran / Umum"}</p>

@@ -20,7 +20,7 @@ const schema = z.object({
   nama: requiredText(FIELD_LIMITS.namaClient, "Nama konsumen"),
   namaGrup: optionalText(FIELD_LIMITS.projectGroupNama, "Nama grup"),
   alamat: optionalText(FIELD_LIMITS.alamat, "Alamat"),
-  namaWorkshop: optionalText(FIELD_LIMITS.namaWs, "Nama bengkel"),
+  namaWorkshop: optionalText(FIELD_LIMITS.namaWs, "Nama workshop"),
 });
 
 export async function saveNgKonsumen(_prev: unknown, formData: FormData): Promise<ActionResult> {

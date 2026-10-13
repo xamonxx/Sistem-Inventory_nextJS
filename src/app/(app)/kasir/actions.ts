@@ -27,7 +27,7 @@ const schema = z.object({
   tipe: z.enum(["RETAIL", "PROJECT"]),
   namaClient: z.string().trim().max(FIELD_LIMITS.namaClient, `Nama pelanggan maksimal ${FIELD_LIMITS.namaClient} karakter.`).optional().default(""),
   alamat: z.string().trim().max(FIELD_LIMITS.alamat, `Alamat maksimal ${FIELD_LIMITS.alamat} karakter.`).optional().default(""),
-  namaWs: z.string().trim().max(FIELD_LIMITS.namaWs, `Nama bengkel maksimal ${FIELD_LIMITS.namaWs} karakter.`).optional().default(""),
+  namaWs: z.string().trim().max(FIELD_LIMITS.namaWs, `Nama workshop maksimal ${FIELD_LIMITS.namaWs} karakter.`).optional().default(""),
   projectNama: z.string().trim().max(FIELD_LIMITS.projectNama, `Nama proyek maksimal ${FIELD_LIMITS.projectNama} karakter.`).optional().default(""),
   projectGroupNama: z.string().trim().max(FIELD_LIMITS.projectGroupNama, `Grup proyek maksimal ${FIELD_LIMITS.projectGroupNama} karakter.`).optional().default(""),
   paymentMethod: z.enum(["CASH", "TRANSFER", "CREDIT"]),

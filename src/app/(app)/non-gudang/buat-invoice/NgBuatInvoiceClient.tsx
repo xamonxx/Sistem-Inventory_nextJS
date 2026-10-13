@@ -1022,7 +1022,7 @@ export function NgBuatInvoiceClient({
                     <Input value={namaGrup} onChange={(e) => setNamaGrup(e.target.value)} maxLength={FIELD_LIMITS.projectGroupNama} placeholder="Opsional" disabled={cart.length === 0} />
                   </div>
                   <div>
-                    <Label>Nama bengkel</Label>
+                    <Label>Nama workshop</Label>
                     <Input value={namaWorkshop} onChange={(e) => setNamaWorkshop(e.target.value)} maxLength={FIELD_LIMITS.namaWs} placeholder="Opsional" disabled={cart.length === 0} />
                   </div>
                   <div>

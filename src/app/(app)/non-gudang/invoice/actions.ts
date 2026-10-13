@@ -134,7 +134,7 @@ const updateNgInvoiceSchema = z.object({
   namaKonsumen: optionalText(FIELD_LIMITS.namaClient, "Nama konsumen"),
   namaGrup: optionalText(FIELD_LIMITS.projectGroupNama, "Nama grup"),
   alamat: optionalText(FIELD_LIMITS.alamat, "Alamat"),
-  namaWorkshop: optionalText(FIELD_LIMITS.namaWs, "Nama bengkel"),
+  namaWorkshop: optionalText(FIELD_LIMITS.namaWs, "Nama workshop"),
   paymentMethod: z.nativeEnum(NgPaymentType),
   namaBank: optionalText(FIELD_LIMITS.namaBank, "Nama bank"),
   noRekening: optionalText(FIELD_LIMITS.noRekening, "Nomor rekening"),

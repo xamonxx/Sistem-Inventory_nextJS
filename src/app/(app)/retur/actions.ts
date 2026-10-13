@@ -34,7 +34,7 @@ const schema = z.object({
   alasan: optionalText(FIELD_LIMITS.alasan, "Alasan"),
   namaClient: optionalText(FIELD_LIMITS.namaClient, "Nama pelanggan"),
   alamat: optionalText(FIELD_LIMITS.alamat, "Alamat"),
-  namaWs: optionalText(FIELD_LIMITS.namaWs, "Nama bengkel"),
+  namaWs: optionalText(FIELD_LIMITS.namaWs, "Nama workshop"),
 }).refine((d) => {
   if (d.tipe === "TUKAR" && d.replacementItems.length === 0) return false;
   return true;

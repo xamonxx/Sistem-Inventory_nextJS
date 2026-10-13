@@ -723,7 +723,7 @@ function DetailDrawer({
             <Info label="Tanggal" value={formatTanggal(row.tanggal)} />
             <Info label="Toko Sumber" value={row.namaToko} />
             <Info label="Jatuh Tempo" value={row.jatuhTempo ? formatTanggal(row.jatuhTempo) : "-"} />
-            <Info label="Bengkel" value={row.namaWorkshop || "-"} />
+            <Info label="Workshop" value={row.namaWorkshop || "-"} />
             {row.namaGrup && <Info label="Grup" value={row.namaGrup} />}
             {row.alamat && <Info label="Alamat" value={row.alamat} />}
           </div>
@@ -1158,7 +1158,7 @@ function EditModal({
               <Input value={namaGrup} onChange={(e) => setNamaGrup(e.target.value)} maxLength={FIELD_LIMITS.projectGroupNama} />
             </div>
             <div>
-              <Label>Bengkel</Label>
+              <Label>Nama Workshop</Label>
               <Input value={namaWorkshop} onChange={(e) => setNamaWorkshop(e.target.value)} maxLength={FIELD_LIMITS.namaWs} />
             </div>
             <div className="sm:col-span-2">

@@ -134,7 +134,7 @@ export function Nota({ data, showKode = true }: { data: NotaData; showKode?: boo
           {data.jatuhTempo && sisaTagihan > 0 && <Row k="Jatuh Tempo" v={formatTanggal(data.jatuhTempo)} />}
           {data.namaClient && <Row k="Pelanggan" v={data.namaClient} />}
           {data.alamat && <Row k="Alamat" v={data.alamat} />}
-          {data.namaWs && <Row k="Bengkel" v={data.namaWs} />}
+          {data.namaWs && <Row k="Workshop" v={data.namaWs} />}
         </div>
 
         <table className="w-full py-2 text-[11px] table-fixed">
@@ -253,7 +253,7 @@ export function Nota({ data, showKode = true }: { data: NotaData; showKode?: boo
               <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-[#475569]">Ditagihkan Kepada</p>
               <p className="mt-1.5 text-[13px] font-bold text-[#111827]">{data.namaClient || "Umum / Eceran"}</p>
               {data.namaWs && (
-                <p className="mt-0.5 text-[10px] text-[#475569]">Bengkel: <span className="font-semibold">{data.namaWs}</span></p>
+                <p className="mt-0.5 text-[10px] text-[#475569]">Workshop: <span className="font-semibold">{data.namaWs}</span></p>
               )}
               {data.alamat && <p className="mt-0.5 text-[10px] leading-snug text-[#475569]">{data.alamat}</p>}
             </div>

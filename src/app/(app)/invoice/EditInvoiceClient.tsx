@@ -234,7 +234,7 @@ export function EditInvoiceClient({ invoice, catalogItems }: EditInvoiceClientPr
             </div>
             <div>
               <LabelWithCounter value={metadata.namaWs} max={FIELD_LIMITS.namaWs} className="text-xs font-bold text-slate-650">
-                Bengkel
+                Nama Workshop
               </LabelWithCounter>
               <div className="relative mt-1">
                 <Building2 size={14} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
@@ -243,7 +243,7 @@ export function EditInvoiceClient({ invoice, catalogItems }: EditInvoiceClientPr
                   maxLength={FIELD_LIMITS.namaWs}
                   value={metadata.namaWs}
                   onChange={(e) => setMetadata({ ...metadata, namaWs: e.target.value })}
-                  placeholder="Nama bengkel"
+                  placeholder="Nama workshop"
                   className="pl-10 font-bold text-xs"
                 />
               </div>

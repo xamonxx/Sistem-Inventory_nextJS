@@ -115,7 +115,7 @@ export function NgKonsumenClient({ initialItems }: { initialItems: NgKonsumenDat
       <PageHeader
         eyebrow="Master data"
         title="Master Konsumen"
-        description="Pelanggan trading non-gudang: grup/proyek, alamat, dan bengkel untuk invoice."
+        description="Pelanggan trading non-gudang: grup/proyek, alamat, dan workshop untuk invoice."
         actions={<NgKonsumenForm triggerClassName="h-10 justify-center px-4" />}
       />
 
@@ -133,7 +133,7 @@ export function NgKonsumenClient({ initialItems }: { initialItems: NgKonsumenDat
             value={q}
             onChange={(e) => setQ(e.target.value)}
             maxLength={FIELD_LIMITS.search}
-            placeholder="Cari nama, grup, alamat, atau bengkel…"
+            placeholder="Cari nama, grup, alamat, atau workshop…"
             aria-label="Cari konsumen"
             className="h-10 rounded-xl pl-9 text-[13px] font-medium"
           />
@@ -184,7 +184,7 @@ export function NgKonsumenClient({ initialItems }: { initialItems: NgKonsumenDat
                     </Th>
                     <Th>Konsumen</Th>
                     <Th>Alamat</Th>
-                    <Th>Bengkel</Th>
+                    <Th>Workshop</Th>
                     <Th className="w-24 text-center">Invoice</Th>
                     <Th className="w-14 text-center">Aksi</Th>
                   </tr>
@@ -252,7 +252,7 @@ export function NgKonsumenClient({ initialItems }: { initialItems: NgKonsumenDat
                       </div>
                       {item.namaGrup && <p className="truncate text-[11px] text-[var(--text-muted-2)]">{item.namaGrup}</p>}
                       <p className="mt-1 truncate text-xs text-[var(--text-soft)]">
-                        {[item.alamat, item.namaWorkshop].filter(Boolean).join(" · ") || "Alamat & bengkel belum diisi"}
+                        {[item.alamat, item.namaWorkshop].filter(Boolean).join(" · ") || "Alamat & workshop belum diisi"}
                       </p>
                     </div>
                     <IconAction title="Ubah konsumen" onClick={() => handleEdit(item)}>
