@@ -63,13 +63,13 @@ The first build attempt failed with Windows `EPERM` because a stale `next dev` c
 | AUD-001 | Critical at discovery | Observed, remediated | Vulnerable Next.js runtime and dependency tree | Cleared for critical/high dependency gate |
 | AUD-002 | High at discovery | Observed, remediated | Receipt paid/remaining values are incorrect | Cleared in source; production data review pending |
 | AUD-003 | High at discovery | Code-proven, remediated | Post-commit failures can be reported as mutation failures | Cleared in source; production table must exist before deploy |
-| AUD-004 | High | Code-proven | Gudang invoice edit can race stock writes | Block |
-| AUD-005 | High | Code-proven | Non-Gudang edit can race a payment and violate totals | Block |
+| AUD-004 | High at discovery | Code-proven, remediated | Gudang invoice edit can race stock writes | Cleared in source |
+| AUD-005 | High at discovery | Code-proven, remediated | Non-Gudang edit can race a payment and violate totals | Cleared in source |
 | AUD-006 | High | Observed | No tested backup/restore or migration history before destructive operations | Block |
 | AUD-007 | High | Code/config-proven | Deployment does not enforce runtime env completeness or safe restart order | Block until verified/fixed |
-| AUD-008 | Medium | Code-proven | Invoice mutations leave stock caches stale | Fix before release |
+| AUD-008 | Medium | Code-proven, remediated | Invoice mutations leave stock caches stale | Cleared in source |
 | AUD-009 | Medium | Code-proven | Inactive items can receive stock through a replayed action | Fix before release |
-| AUD-010 | Medium | Observed | Losing concurrent checkout shows a generic internal error | Fix before release |
+| AUD-010 | Medium | Observed, remediated | Losing concurrent checkout shows a generic internal error | Cleared in source |
 | AUD-011 | Medium | Code-proven | Password reset does not revoke existing sessions | Fix or accept explicitly |
 | AUD-012 | Medium | Code-proven | Logout mutates state through GET and uses a weak POST origin comparison | Fix before release |
 | AUD-013 | Medium | Code-proven | Public verification is not atomic and trusts spoofable proxy headers | Fix or rename semantics |
@@ -128,6 +128,7 @@ The first build attempt failed with Windows `EPERM` because a stale `next dev` c
 - **Fix:** Run the complete invoice read/check/write operation in a `Serializable` transaction with bounded retry for serialization conflicts. Keep the existing returned-quantity and payment guards inside that transaction.
 - **Mitigation:** Temporarily restrict invoice item edits during active checkout and monitor negative-stock alerts.
 - **False-positive notes:** No concurrent invoice-edit reproduction was run; mechanism follows the same read-check-write race already guarded elsewhere.
+- **Remediation (2026-10-13, `5b8d15b`):** the invoice read, returned-qty and stock checks, item/ledger writes, paid-total guard, and audit row run in one `runSerializable` transaction (bounded retry on P2034). Evidence: `npm run test:concurrency` (real Server Actions, disposable local database created and dropped by the runner) passed 24/24; edit-vs-checkout on the last unit had exactly one winner and stock 0 in every round.
 
 ### AUD-005 — Non-Gudang edit/payment race
 
@@ -139,6 +140,7 @@ The first build attempt failed with Windows `EPERM` because a stale `next dev` c
 - **Fix:** Move invoice read, total guard, item replacement, and status calculation into one `Serializable` transaction. Add an edit-vs-payment concurrency regression.
 - **Mitigation:** Operationally prevent simultaneous edit and payment for the same invoice until fixed.
 - **False-positive notes:** Payment-vs-payment concurrency passed; edit-vs-payment was not previously tested.
+- **Remediation (2026-10-13, `5b8d15b`):** the NG invoice read, paid-total guard, status/due-date calculation, item replacement, and audit row run in one `runSerializable` transaction. Evidence: `npm run test:concurrency` (real Server Actions, disposable local database created and dropped by the runner) passed 24/24; in every round paid ≤ total, payments equal `totalDibayar`, and status matches (the retried payment was capped to the new remaining balance).
 
 ### AUD-006 — Recovery is not production-ready
 
@@ -172,6 +174,7 @@ The first build attempt failed with Windows `EPERM` because a stale `next dev` c
 - **Fix:** Invalidate the `stock` tag and affected paths after every successful ledger mutation. Add a runtime smoke that primes cache, mutates, and verifies immediate balance.
 - **Mitigation:** Manual refresh does not guarantee tag eviction; wait for cache expiry.
 - **False-positive notes:** Integrity remains in the database; this is stale presentation/availability data.
+- **Remediation (2026-10-13, `5b8d15b`):** invoice item edit, single delete, and bulk delete call `invalidateAfterCommit` with tag `stock` and `/`, `/stok`, `/kasir`, `/retur`, `/invoice`. Deletes also read inside the transaction and log atomically. A runtime cache-priming smoke was not run.
 
 ### AUD-009 — Inactive item accepts direct stock increase
 
@@ -194,6 +197,7 @@ The first build attempt failed with Windows `EPERM` because a stale `next dev` c
 - **Fix:** Map serialization/write conflicts to the existing actionable stock-conflict message and refresh availability.
 - **Mitigation:** Check stock and transaction history before retry.
 - **False-positive notes:** Integrity passed; only outcome classification is defective.
+- **Remediation (2026-10-13, `5b8d15b`):** every Serializable action runs through `runSerializable`, which retries a lost write conflict up to three attempts; the retry re-validates stock/balances, so the loser now receives the normal stock or balance message. If retries are exhausted, `safeError` maps P2034 to an actionable conflict message. The concurrency test asserts the loser message is not the generic internal error.
 
 ### AUD-011 — Password reset leaves old sessions active
 
@@ -326,15 +330,15 @@ The first build attempt failed with Windows `EPERM` because a stale `next dev` c
 2. **Completed:** CREDIT is an unpaid receivable ([[ADR-004-Credit-Is-Unpaid-Receivable]]).
 3. **Completed in source:** receipt totals use persisted values across POS, invoice thermal reprint, detail page, image, A4, and PDF paths. Remaining: read-only production check for historical CREDIT Payment rows.
 4. **Completed in source:** checkout/payment outcomes are atomic and idempotent; audit rows commit with the data; post-commit helpers cannot report failure. Remaining: create `idempotency_keys` in production before deploying ([[Idempotency-Schema-Rollout]]).
-5. Move Gudang invoice edit and Non-Gudang edit guards into serializable transactions. Add edit-vs-checkout and edit-vs-payment race tests.
+5. **Completed in source:** Gudang invoice edit and Non-Gudang edit guards run in serializable transactions with retry; edit-vs-checkout and edit-vs-payment race tests pass (`npm run test:concurrency`).
 6. Verify required Hostinger runtime variables without exposing values, especially `AUTH_SECRET`, `INVOICE_VERIFY_SECRET`, `DATABASE_URL`, `COOKIE_SECURE`, and canonical app URL.
 7. Complete and pass a backup/restore rehearsal before enabling destructive release operations.
 
 ### Phase 1 — Production safety
 
-1. Add missing stock cache invalidation for invoice edit/delete paths.
+1. **Completed in source:** stock cache invalidation for invoice edit/delete paths.
 2. Enforce inactive-item stock rules in direct actions.
-3. Return actionable serialization/stock conflict errors.
+3. **Completed in source:** conflicts retry automatically; exhausted retries return an actionable message.
 4. Convert logout to exact-origin POST only.
 5. Revoke sessions after password reset.
 6. Decide and implement Non-Gudang account provisioning.

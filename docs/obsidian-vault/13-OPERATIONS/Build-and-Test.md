@@ -14,6 +14,7 @@ npm run type-check
 npm run lint
 npm test
 npm run test:idempotency   # DB-backed; local DATABASE_URL only
+npm run test:concurrency   # creates/drops a disposable local DB; refuses non-local hosts
 npm audit --omit=dev
 npm run build
 ```

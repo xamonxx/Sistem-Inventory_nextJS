@@ -38,7 +38,9 @@ tags: [issues, bugs]
 ## KB-005 — Losing concurrent checkout reports a generic internal error
 - **Observed:** two simultaneous checkouts targeted the final unit of `E2E-ITEM-B`. One persisted and reduced effective stock to zero; the losing request displayed `Terjadi kesalahan internal saat memproses checkout.`
 - **Impact:** stock integrity is preserved, but the cashier receives no actionable stock-conflict message.
-- **Status:** open; not an integrity blocker, but should return the existing insufficient-stock/conflict language.
+- **Resolution (2026-10-13):** Serializable actions retry a lost write conflict via `runSerializable`; the retry re-validates stock, so the loser sees the normal stock message. Exhausted retries map P2034 to an actionable conflict message.
+- **Verification:** `npm run test:concurrency` asserts the losing request never receives the generic internal error.
+- **Status:** resolved in source.
 - **Evidence:** [[Comprehensive-Role-Verification-Checkpoint]].
 
 ## KB-006 — Cetak ulang invoice thermal mengabaikan pembayaran tersimpan

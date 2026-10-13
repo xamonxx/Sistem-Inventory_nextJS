@@ -19,8 +19,8 @@ Execute Phase 0 from the pre-production audit in this order:
 2. **Done (`249c400`):** CREDIT = unpaid receivable (ADR-004); all receipt paths print persisted paid/remaining values. Still needed: read-only production check for historical CREDIT Payment rows.
 3. **Done:** Make mutation outcomes atomic/idempotent so post-commit audit or verification helpers cannot produce a false failure.
    - Production prerequisite: create `idempotency_keys` before deploying (`docs/obsidian-vault/13-OPERATIONS/Idempotency-Schema-Rollout.md`). Local DB already has it; `next build` was not run in this step because another session's dev server held `.next`.
-4. **Next:** Serialize invoice-edit races and add missing stock-cache invalidation.
-5. Prove backup/restore and required production runtime env before deployment.
+4. **Done (`5b8d15b`):** invoice-edit races serialized with `runSerializable` retry; stock cache invalidated on invoice edit/delete; conflict losers get actionable messages; `npm run test:concurrency` 24/24.
+5. **Next:** prove backup/restore and required production runtime env before deployment (owner action), then Phase 1.
 
 Do not push or deploy until the audit exit criteria pass.
 
@@ -67,11 +67,12 @@ Do not push or deploy until the audit exit criteria pass.
 
 ## Release blockers
 - `PC00003`/`PC00004` receipt defects are fixed in source and verified locally with `PC00102` (split + tempo, PARTIAL 80k/75k) and `PC00103` (transfer, LUNAS).
-- Remaining Phase 0 blockers: production `idempotency_keys` table before deploy, invoice-edit races, stock-cache invalidation, deployment env/cutover, backup/restore.
+- Remaining Phase 0 blockers: production `idempotency_keys` table before deploy, deployment env/cutover, backup/restore.
 - Local test data added on 2026-10-13: `PC00102`/`INV-00063`, `PC00103`/`INV-00064`, and `PC00104`/`INV-00065` (customers `QA AUD-002 Split`, `QA AUD-002 Transfer`, `QA AUD-003 Retry`). Do not delete without approval.
 - Do not push/deploy until the audit exit criteria pass.
 
 ## Do not lose
+- Building in a git worktree with a `node_modules` junction: remove the junction with `cmd /c rmdir <junction>` BEFORE deleting the worktree. `git worktree remove --force` followed the junction on 2026-10-13 and deleted `node_modules/.bin`; it was restored with `npm rebuild --ignore-scripts`.
 - Dev port is 3000 everywhere except user-owned `.env` drift (`NEXT_PUBLIC_APP_URL` still points to 3001).
 - Dev DB contains pre-existing additive `DMY-`/`DMY ` dummy data; never clear it without approval.
 - `CustomSelect` overlay uses a body portal and z-index 2147483005.

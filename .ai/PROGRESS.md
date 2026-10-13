@@ -9,6 +9,7 @@
 - [x] AUD-003: audit rows inside transactions, best-effort post-commit helpers, idempotency keys for checkout, invoice payment, return, NG invoice, and NG payment.
 - [x] `npm run test:idempotency` 6/6 and browser retry-after-dropped-response verified (`PC00104`, no duplicate).
 - [ ] Create `idempotency_keys` in production before deploying.
+- [x] AUD-004/005/008/010: serializable invoice edits with retry, stock-cache invalidation, actionable conflict messages; `npm run test:concurrency` 24/24; isolated build 22 routes.
 
 ## 2026-10-13 — User guides by role
 - [x] Create separate `.docx` guides for `ADMIN_GUDANG`, `ADMIN_KASIR`, and `ADMIN_NONGUDANG`.

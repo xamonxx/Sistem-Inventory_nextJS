@@ -11,7 +11,7 @@
 - Compile gates are green: Prisma validation, type-check, ESLint, security 68/68 (10 checkout-rule cases added), production build with 22 routes, production-like browser smoke, and local database invariant sweeps.
 - Three-role authentication and workflow evidence from the comprehensive checkpoint remain current; this audit added source, dependency, deployment, recovery, and read-only production checks.
 - Three separate Word user guides now cover `ADMIN_GUDANG`, `ADMIN_KASIR`, and `ADMIN_NONGUDANG`; index: [`User Guides by Role`](../docs/obsidian-vault/13-OPERATIONS/User-Guides-by-Role.md).
-- Release is NO-GO: concurrency gaps, stale stock cache, deployment env/cutover, and unproven recovery must be resolved. Dependency critical/high and receipt-total blockers are cleared in source.
+- Release is NO-GO: production `idempotency_keys` table, deployment env/cutover, and unproven recovery must be resolved; Phase 1 items (inactive-item stock, logout, session revocation, verification semantics, audit-log retention) remain. Invoice-edit races, stale stock cache, and conflict messages are fixed in source (`5b8d15b`). Dependency critical/high and receipt-total blockers are cleared in source.
 - `CustomSelect`, POS category filtering, mobile work, and export changes remain as previously documented.
 - Dashboard `/` redesigned in a bento layout (`bento-*` CSS, split chart components); 30-day trend now keyed by local date.
 - UI/UX modernization pass (uncommitted until this checkpoint): 64px navbar, calmer tables, global tooltip engine, WhatsApp number dialog, modern checkboxes, unified `.field-surface` fields, redesigned Barang/Stok/Laporan layouts, sidebar drawer fixes, mobile notification bell, theme-aware 404. Details: daily changelog 2026-10-13.

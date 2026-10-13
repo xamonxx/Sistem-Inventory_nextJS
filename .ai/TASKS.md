@@ -8,8 +8,9 @@
 - [x] Make checkout/payment outcomes atomic and idempotent; prevent post-commit audit/token failures from returning mutation failure.
 - [ ] Create `idempotency_keys` in production (reviewed DDL, after backup) BEFORE deploying the AUD-003 code; see `docs/obsidian-vault/13-OPERATIONS/Idempotency-Schema-Rollout.md`.
 - [ ] Decide a retention policy for `idempotency_keys`.
-- [ ] Serialize Gudang invoice edit stock checks and Non-Gudang edit-vs-payment checks; add race regressions.
-- [ ] Invalidate stock cache/tag after invoice edit/delete ledger mutations.
+- [x] Serialize Gudang invoice edit stock checks and Non-Gudang edit-vs-payment checks; add race regressions.
+- [x] Invalidate stock cache/tag after invoice edit/delete ledger mutations.
+- [ ] Runtime smoke: prime the stock cache, edit/delete an invoice, confirm the balance refreshes immediately.
 - [ ] Enforce inactive-item stock rules in direct Server Actions.
 - [ ] Verify required Hostinger runtime env presence without exposing values; stage artifacts before restart.
 - [ ] Complete an isolated backup/restore rehearsal and introduce versioned Prisma migrations.
