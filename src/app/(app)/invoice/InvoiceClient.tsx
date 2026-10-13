@@ -480,11 +480,12 @@ export function InvoiceClient({ initialInvoices, canBayar, userName }: InvoiceCl
             />
           </div>
 
+          {/* Tablet: two equal columns; desktop: compact fixed widths in one row. */}
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:flex lg:flex-nowrap lg:items-center lg:gap-3">
             <Select
               value={statusFilter}
               onChange={(e) => setStatusFilter(e.target.value)}
-              className="h-11 w-full rounded-2xl text-xs font-bold sm:w-[200px] lg:shrink-0"
+              className="h-11 w-full rounded-2xl text-xs font-bold lg:w-[200px] lg:shrink-0"
             >
               <option value="ALL">Semua Tagihan</option>
               <option value="PENDING">Belum Lunas</option>
@@ -495,16 +496,18 @@ export function InvoiceClient({ initialInvoices, canBayar, userName }: InvoiceCl
             <PeriodFilter
               onChange={setDateRange}
               align="right"
-              className="w-full sm:w-auto lg:shrink-0"
+              className="w-full lg:w-auto lg:shrink-0"
+              selectClassName="w-full lg:w-[220px]"
             />
           </div>
 
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:ml-auto lg:flex lg:flex-nowrap lg:items-center lg:gap-3">
+          {/* Tablet: actions share one row with equal widths (2 or 3 buttons). */}
+          <div className="grid grid-cols-1 gap-3 sm:flex sm:flex-nowrap sm:items-center lg:ml-auto lg:gap-3">
             <Button
               variant="outline"
               size="sm"
               onClick={() => setShowConfig(!showConfig)}
-              className="h-11 w-full rounded-2xl px-4 sm:w-auto lg:shrink-0"
+              className="h-11 w-full rounded-2xl px-4 sm:w-auto sm:flex-1 lg:flex-none lg:shrink-0"
             >
               <SlidersHorizontal size={14} /> Kolom
             </Button>
@@ -514,7 +517,7 @@ export function InvoiceClient({ initialInvoices, canBayar, userName }: InvoiceCl
               size="sm"
               onClick={handleExportExcel}
               disabled={exporting}
-              className="h-11 w-full rounded-2xl border-primary-200 bg-primary-50 px-4 text-primary-700 hover:bg-primary-100 disabled:cursor-not-allowed disabled:opacity-60 sm:w-auto lg:shrink-0"
+              className="h-11 w-full rounded-2xl border-primary-200 bg-primary-50 px-4 text-primary-700 hover:bg-primary-100 disabled:cursor-not-allowed disabled:opacity-60 sm:w-auto sm:flex-1 lg:flex-none lg:shrink-0"
             >
               <Download size={14} /> {exporting ? "Mengunduh..." : "Unduh Excel"}
             </Button>
@@ -524,7 +527,7 @@ export function InvoiceClient({ initialInvoices, canBayar, userName }: InvoiceCl
                 variant="danger"
                 size="sm"
                 onClick={() => setIsBulkDeleteConfirmOpen(true)}
-                className="h-11 w-full rounded-2xl bg-red-600 px-4 font-bold text-white hover:bg-red-700 sm:w-auto lg:shrink-0"
+                className="h-11 w-full rounded-2xl bg-red-600 px-4 font-bold text-white hover:bg-red-700 sm:w-auto sm:flex-1 lg:flex-none lg:shrink-0"
               >
                 <Trash2 size={14} /> Hapus Terpilih ({selectedInvoiceIds.length})
               </Button>

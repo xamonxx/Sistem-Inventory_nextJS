@@ -257,23 +257,27 @@ function splitClasses(className?: string) {
   let hasRounded = false;
 
   words.forEach((word) => {
+    // Responsive variants (e.g. `sm:w-[200px]`, `lg:shrink-0`) are layout classes too:
+    // they must size the wrapper, otherwise the button shrinks inside a full-width wrapper.
+    const base = word.replace(/^(?:(?:sm|md|lg|xl|2xl):)+/, "");
     if (
-      word.startsWith("w-") ||
-      word.startsWith("flex-") ||
-      word.startsWith("grid-") ||
-      word.startsWith("col-") ||
-      word.startsWith("row-") ||
-      word.startsWith("m-") ||
-      word.startsWith("mx-") ||
-      word.startsWith("my-") ||
-      word.startsWith("mt-") ||
-      word.startsWith("mr-") ||
-      word.startsWith("mb-") ||
-      word.startsWith("ml-") ||
-      word === "flex" ||
-      word === "grid" ||
-      word === "grow" ||
-      word === "shrink"
+      base.startsWith("w-") ||
+      base.startsWith("flex-") ||
+      base.startsWith("grid-") ||
+      base.startsWith("col-") ||
+      base.startsWith("row-") ||
+      base.startsWith("m-") ||
+      base.startsWith("mx-") ||
+      base.startsWith("my-") ||
+      base.startsWith("mt-") ||
+      base.startsWith("mr-") ||
+      base.startsWith("mb-") ||
+      base.startsWith("ml-") ||
+      base === "flex" ||
+      base === "grid" ||
+      base === "grow" ||
+      base === "shrink" ||
+      base.startsWith("shrink-")
     ) {
       wrapperWords.push(word);
     } else {

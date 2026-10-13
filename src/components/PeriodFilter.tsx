@@ -68,6 +68,8 @@ interface PeriodFilterProps {
   onChange: (range: ResolvedPeriodRange) => void;
   align?: "left" | "right";
   className?: string;
+  /** Width classes for the preset select (default `w-full sm:w-[220px]`). */
+  selectClassName?: string;
 }
 
 export function PeriodFilter({
@@ -77,6 +79,7 @@ export function PeriodFilter({
   onChange,
   align = "left",
   className,
+  selectClassName = "w-full sm:w-[220px]",
 }: PeriodFilterProps) {
   const [preset, setPreset] = useState<PeriodPreset>(defaultPreset);
   const [customFrom, setCustomFrom] = useState<string>(defaultFrom);
@@ -120,7 +123,7 @@ export function PeriodFilter({
           onChange={(e) => handlePresetChange(e.target.value as PeriodPreset)}
           className={cn(
             "h-11 rounded-lg text-xs font-bold",
-            preset === "custom" ? "w-11 px-0" : "w-full sm:w-[220px]"
+            preset === "custom" ? "w-11 px-0" : selectClassName
           )}
           aria-label="Filter periode"
         >
