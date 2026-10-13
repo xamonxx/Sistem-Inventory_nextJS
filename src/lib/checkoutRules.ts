@@ -9,14 +9,29 @@ export type CheckoutLine = {
   qty: number;
 };
 
+/**
+ * CREDIT adalah piutang tempo yang BELUM dibayar, bukan uang masuk.
+ * `totalPaid` hanya berisi CASH + TRANSFER; porsi CREDIT menjadi sisa tagihan
+ * invoice (total - totalDibayar) dan tidak disimpan sebagai Payment.
+ */
 export type CheckoutValidationResult =
   | {
       ok: true;
       grandTotal: number;
       totalPaid: number;
+      creditAmount: number;
       hasCredit: boolean;
     }
   | { ok: false; error: string };
+
+export function isReceivedPayment(p: CheckoutPayment): boolean {
+  return p.tipe !== "CREDIT" && p.jumlah > 0;
+}
+
+export function invoiceStatusFor(total: number, totalDibayar: number): "LUNAS" | "PARTIAL" | "PENDING" {
+  if (totalDibayar >= total) return "LUNAS";
+  return totalDibayar > 0 ? "PARTIAL" : "PENDING";
+}
 
 function rupiah(n: number): number {
   return Math.round(n * 100) / 100;
@@ -44,10 +59,15 @@ export function validateCheckoutTotals(input: {
     return { ok: false, error: "Total transaksi tidak valid." };
   }
 
-  const totalPaid = rupiah(input.payments.reduce((sum, p) => sum + p.jumlah, 0));
+  const totalPaid = rupiah(
+    input.payments.filter(isReceivedPayment).reduce((sum, p) => sum + p.jumlah, 0)
+  );
+  const creditAmount = rupiah(
+    input.payments.filter((p) => p.tipe === "CREDIT").reduce((sum, p) => sum + p.jumlah, 0)
+  );
   const hasCredit = input.payments.some((p) => p.tipe === "CREDIT");
 
-  if (totalPaid > grandTotal) {
+  if (rupiah(totalPaid + creditAmount) > grandTotal) {
     return { ok: false, error: "Total pembayaran tidak boleh melebihi total transaksi." };
   }
 
@@ -55,5 +75,5 @@ export function validateCheckoutTotals(input: {
     return { ok: false, error: "Pembayaran tunai/transfer harus lunas bila tidak membuat invoice." };
   }
 
-  return { ok: true, grandTotal, totalPaid, hasCredit };
+  return { ok: true, grandTotal, totalPaid, creditAmount, hasCredit };
 }

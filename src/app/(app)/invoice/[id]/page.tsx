@@ -80,6 +80,8 @@ export default async function InvoiceDetailPage({ params }: { params: Promise<{ 
             namaWs: inv.namaWs,
             items,
             total: Number(inv.total),
+            bayar: Number(inv.totalDibayar),
+            sisaTagihan: Math.max(0, Number(inv.total) - Number(inv.totalDibayar)),
             judul: "INVOICE / TAGIHAN",
             catatan,
             verifyUrl,

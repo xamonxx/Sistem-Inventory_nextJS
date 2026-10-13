@@ -1164,6 +1164,8 @@ export function InvoiceClient({ initialInvoices, canBayar, userName }: InvoiceCl
                         subtotal: it.subtotal,
                       })),
                       total: selectedInvoice.total,
+                      bayar: selectedInvoice.totalDibayar,
+                      sisaTagihan: Math.max(0, selectedInvoice.total - selectedInvoice.totalDibayar),
                       judul: "INVOICE / TAGIHAN",
                       verifyUrl: selectedInvoice.verifyUrl,
                       qrDataUrl: selectedInvoice.qrDataUrl,

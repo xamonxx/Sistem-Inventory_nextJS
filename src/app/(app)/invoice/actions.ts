@@ -18,13 +18,18 @@ class InvoiceRuleError extends Error {
   }
 }
 
+// CREDIT = piutang tempo yang belum dibayar, jadi tidak boleh dicatat sebagai pelunasan.
 const bayarSchema = z.object({
   invoiceId: dbId,
   jumlah: money.refine((n) => n > 0, "Jumlah bayar harus lebih dari 0."),
-  tipe: z.nativeEnum(PaymentType),
+  tipe: z.enum(["CASH", "TRANSFER"], { message: "Metode pembayaran harus Tunai atau Transfer." }),
 });
 
-export async function bayarInvoice(invoiceId: number, jumlah: number, tipe: PaymentType = "CASH") {
+export async function bayarInvoice(
+  invoiceId: number,
+  jumlah: number,
+  tipe: Extract<PaymentType, "CASH" | "TRANSFER"> = "CASH"
+) {
   // Pembayaran/penagihan = domain kasir
   const user = await requireRole("ADMIN_KASIR");
 

@@ -9,7 +9,7 @@ import { nextDocNumber } from "@/lib/counters";
 import { logActivity } from "@/lib/activity";
 import { FIELD_LIMITS } from "@/lib/fieldLimits";
 import { dbId, money, qtyPositive, safeError } from "@/lib/validation";
-import { validateCheckoutTotals } from "@/lib/checkoutRules";
+import { invoiceStatusFor, isReceivedPayment, validateCheckoutTotals } from "@/lib/checkoutRules";
 import { validateStockDemand } from "@/lib/inventoryRules";
 import { createInvoiceVerifyUrl } from "@/lib/invoiceVerify";
 
@@ -231,30 +231,26 @@ export async function createTransaction(payload: KasirPayload) {
         data: { grandTotal },
       });
 
-      // 6. Create Payment records for split payments (BUG-002 fix)
-      if (effectivePayments.length > 0 && effectivePayments[0].jumlah > 0) {
-        for (const payment of effectivePayments) {
-          await tx.payment.create({
-            data: {
-              tipe: payment.tipe as any,
-              jumlah: payment.jumlah,
-              transactionId: trx.id,
-              keterangan: `Pembayaran ${payment.tipe} untuk ${noTransaksi}`,
-            },
-          });
-        }
+      // 6. Create Payment records for money actually received (CASH/TRANSFER).
+      // CREDIT is an unpaid receivable: it stays as invoice remaining balance, not a Payment.
+      const receivedPayments = effectivePayments.filter(isReceivedPayment);
+      for (const payment of receivedPayments) {
+        await tx.payment.create({
+          data: {
+            tipe: payment.tipe,
+            jumlah: payment.jumlah,
+            transactionId: trx.id,
+            keterangan: `Pembayaran ${payment.tipe} untuk ${noTransaksi}`,
+          },
+        });
       }
 
       // 7. Conditional Invoice creation
       let invoiceNo: string | null = null;
+      const totalDibayar = new Prisma.Decimal(checkoutValidation.totalPaid);
       if (d.buatInvoice || checkoutValidation.hasCredit) {
         invoiceNo = await nextDocNumber(tx, "invoice");
-        const totalDibayar = new Prisma.Decimal(checkoutValidation.totalPaid);
-        const invoiceStatus = totalDibayar.greaterThanOrEqualTo(grandTotal)
-          ? "LUNAS"
-          : totalDibayar.isZero()
-            ? "PENDING"
-            : "PARTIAL";
+        const invoiceStatus = invoiceStatusFor(Number(grandTotal), Number(totalDibayar));
 
         const invoice = await tx.invoice.create({
           data: {
@@ -272,7 +268,7 @@ export async function createTransaction(payload: KasirPayload) {
         });
 
         // Link payments to invoice
-        if (effectivePayments.length > 0 && effectivePayments[0].jumlah > 0) {
+        if (receivedPayments.length > 0) {
           await tx.payment.updateMany({
             where: { transactionId: trx.id, invoiceId: null },
             data: { invoiceId: invoice.id },
@@ -280,7 +276,15 @@ export async function createTransaction(payload: KasirPayload) {
         }
       }
 
-      return { ok: true as const, id: trx.id, noTransaksi, invoiceNo, grandTotal: Number(grandTotal) };
+      return {
+        ok: true as const,
+        id: trx.id,
+        noTransaksi,
+        invoiceNo,
+        grandTotal: Number(grandTotal),
+        totalDibayar: Number(totalDibayar),
+        sisaTagihan: Number(Prisma.Decimal.max(grandTotal.sub(totalDibayar), 0)),
+      };
     }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable });
 
     if (!result.ok) return { error: result.error };
@@ -290,7 +294,14 @@ export async function createTransaction(payload: KasirPayload) {
       aksi: "CREATE_TRANSAKSI",
       entitas: "Transaction",
       entitasId: result.id,
-      detail: { noTransaksi: result.noTransaksi, total: result.grandTotal, tipe: d.tipe, paymentCount: effectivePayments.length },
+      detail: {
+        noTransaksi: result.noTransaksi,
+        total: result.grandTotal,
+        tipe: d.tipe,
+        paymentCount: effectivePayments.length,
+        totalDibayar: result.totalDibayar,
+        piutangTempo: result.sisaTagihan,
+      },
     });
 
     // Invalidate caches after successful transaction
@@ -310,6 +321,8 @@ export async function createTransaction(payload: KasirPayload) {
       noTransaksi: result.noTransaksi,
       invoiceNo: result.invoiceNo,
       grandTotal: result.grandTotal,
+      totalDibayar: result.totalDibayar,
+      sisaTagihan: result.sisaTagihan,
       verifyUrl,
     };
   } catch (error) {

@@ -20,8 +20,9 @@ export type NotaData = {
   atasNama?: string | null; // opsional, untuk transfer/kredit
   items: NotaItem[];
   total: number;
-  bayar?: number; // uang diterima (tunai), opsional
+  bayar?: number; // total pembayaran masuk yang tersimpan (CASH + TRANSFER), bukan piutang tempo
   sisaTagihan?: number; // sisa piutang/tagihan setelah pembayaran masuk
+  tunaiDiterima?: number; // uang fisik yang diserahkan pelanggan (bisa > tagihan), opsional
   kembali?: number; // uang kembalian, opsional
   judul?: string;
   metodePembayaran?: string;
@@ -92,24 +93,16 @@ export function Nota({ data, showKode = true }: { data: NotaData; showKode?: boo
   const sisaTagihan =
     data.sisaTagihan != null ? Math.max(0, data.sisaTagihan) : Math.max(0, data.total - pembayaranMasuk);
 
-  // Status mapping
-  const isPartial = pembayaranMasuk > 0 && sisaTagihan > 0;
-  const isCredit =
-    sisaTagihan > 0 ||
-    data.catatan?.toLowerCase().includes("credit") ||
-    data.catatan?.toLowerCase().includes("tempo") ||
-    data.catatan?.toLowerCase().includes("piutang");
+  // Status mapping: derived from amounts only. Catatan text (e.g. a split note that
+  // mentions "Tempo: Rp 0") must not turn a fully paid receipt into TEMPO.
   const isReturn = data.total < 0;
-  const belumBayar = pembayaranMasuk <= 0 && data.total > 0;
   const stat = isReturn
     ? { label: "RETUR", fg: "#3730A3", bg: "#E0E7FF" }
-    : isPartial
+    : sisaTagihan <= 0
+    ? { label: "LUNAS", fg: "#166534", bg: "#DCFCE7" }
+    : pembayaranMasuk > 0
     ? { label: "SEBAGIAN", fg: "#1D4ED8", bg: "#DBEAFE" }
-    : isCredit
-    ? { label: "TEMPO", fg: "#991B1B", bg: "#FEE2E2" }
-    : belumBayar
-    ? { label: "BELUM LUNAS", fg: "#991B1B", bg: "#FEE2E2" }
-    : { label: "LUNAS", fg: "#166534", bg: "#DCFCE7" };
+    : { label: "TEMPO", fg: "#991B1B", bg: "#FEE2E2" };
 
   const lunas = stat.label === "LUNAS";
   const totalQty = data.items.reduce((a, it) => a + it.qty, 0);
@@ -181,6 +174,12 @@ export function Nota({ data, showKode = true }: { data: NotaData; showKode?: boo
             <div className="mt-1 flex justify-between font-bold">
               <span>Sisa Tagihan</span>
               <span>{formatRupiah(sisaTagihan)}</span>
+            </div>
+          )}
+          {data.tunaiDiterima != null && data.tunaiDiterima > 0 && (
+            <div className="mt-1 flex justify-between">
+              <span>Tunai Diterima</span>
+              <span>{formatRupiah(data.tunaiDiterima)}</span>
             </div>
           )}
           {data.kembali != null && (
@@ -353,12 +352,6 @@ export function Nota({ data, showKode = true }: { data: NotaData; showKode?: boo
                   <span>Subtotal</span>
                   <span className="tabular-nums">{formatRupiah(Math.abs(data.total))}</span>
                 </div>
-                {pembayaranMasuk > 0 && (
-                  <div className="hidden">
-                    <span>Pembayaran Masuk</span>
-                    <span className="tabular-nums">− {formatRupiah(Math.abs(data.total))}</span>
-                  </div>
-                )}
                 {pembayaranMasuk > 0 && (
                   <div className="flex justify-between text-[#475569]">
                     <span>Pembayaran Masuk</span>

@@ -24,6 +24,7 @@ import {
 } from "../src/lib/validation";
 import { FIELD_LIMITS } from "../src/lib/fieldLimits";
 import { validateStockDemand } from "../src/lib/inventoryRules";
+import { invoiceStatusFor, validateCheckoutTotals } from "../src/lib/checkoutRules";
 
 let passed = 0;
 let failed = 0;
@@ -180,6 +181,45 @@ ok(
     },
   ]).ok
 );
+
+console.log("\n=== checkoutRules (CREDIT = piutang tempo belum dibayar) ===");
+const LINE_100K = [{ itemId: 1, hargaJual: 100_000, qty: 1 }];
+const checkout = (payments: { tipe: "CASH" | "TRANSFER" | "CREDIT"; jumlah: number }[], buatInvoice = true) =>
+  validateCheckoutTotals({ lines: LINE_100K, payments, buatInvoice });
+const paidOf = (r: ReturnType<typeof validateCheckoutTotals>) => (r.ok ? r.totalPaid : NaN);
+const sisaOf = (r: ReturnType<typeof validateCheckoutTotals>) => (r.ok ? r.grandTotal - r.totalPaid : NaN);
+
+const splitCashTransferCredit = checkout([
+  { tipe: "CASH", jumlah: 30_000 },
+  { tipe: "TRANSFER", jumlah: 50_000 },
+  { tipe: "CREDIT", jumlah: 20_000 },
+]);
+ok("split cash+transfer+credit: dibayar 80k (CREDIT tidak dihitung)", paidOf(splitCashTransferCredit) === 80_000);
+ok("split cash+transfer+credit: sisa 20k", sisaOf(splitCashTransferCredit) === 20_000);
+ok("split cash+transfer+credit: status PARTIAL", invoiceStatusFor(100_000, paidOf(splitCashTransferCredit)) === "PARTIAL");
+
+const transferOnly = checkout([{ tipe: "TRANSFER", jumlah: 100_000 }], false);
+ok("transfer penuh: dibayar 100k, sisa 0", paidOf(transferOnly) === 100_000 && sisaOf(transferOnly) === 0);
+ok("transfer penuh: status LUNAS", invoiceStatusFor(100_000, paidOf(transferOnly)) === "LUNAS");
+
+const creditOnly = checkout([{ tipe: "CREDIT", jumlah: 0 }], false);
+ok("tempo penuh: dibayar 0, wajib invoice", paidOf(creditOnly) === 0 && creditOnly.ok && creditOnly.hasCredit);
+ok("tempo penuh: status PENDING", invoiceStatusFor(100_000, paidOf(creditOnly)) === "PENDING");
+
+const splitCashTransfer = checkout([
+  { tipe: "CASH", jumlah: 40_000 },
+  { tipe: "TRANSFER", jumlah: 60_000 },
+], false);
+ok("split cash+transfer penuh tanpa invoice: lunas", paidOf(splitCashTransfer) === 100_000);
+
+ok(
+  "tolak pembayaran + tempo melebihi total",
+  !checkout([
+    { tipe: "CASH", jumlah: 90_000 },
+    { tipe: "CREDIT", jumlah: 20_000 },
+  ]).ok
+);
+ok("tolak tunai kurang tanpa invoice", !checkout([{ tipe: "CASH", jumlah: 50_000 }], false).ok);
 
 console.log(`\n================ RINGKASAN ================`);
 console.log(`  LULUS : ${passed}`);

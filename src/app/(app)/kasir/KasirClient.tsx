@@ -316,7 +316,7 @@ export function KasirClient({ items }: { items: Item[] }) {
       return setError("Total pembayaran gabungan harus sama dengan Total Akhir.");
     }
 
-    const bayar = isCash ? cashReceived : isSplitActive ? splitCash : null;
+    const tunaiDiterima = isCash && cashReceived > 0 ? cashReceived : null;
     const kembali = isCash ? Math.max(0, cashReceived - grandTotalCost) : isSplitActive ? Math.max(0, splitCash - (grandTotalCost - splitTransfer - splitCredit)) : null;
 
     // Compose split description for notes if active
@@ -325,7 +325,12 @@ export function KasirClient({ items }: { items: Item[] }) {
       : `Metode: ${paymentMethod}`;
 
     if (isSplitActive) {
-      dynamicCatatan = `Gabungan Split -> Tunai: ${formatRupiah(splitCash)}, Transfer: ${formatRupiah(splitTransfer)}, Tempo: ${formatRupiah(splitCredit)}`;
+      const parts = [
+        splitCash > 0 ? `Tunai: ${formatRupiah(splitCash)}` : null,
+        splitTransfer > 0 ? `Transfer: ${formatRupiah(splitTransfer)}` : null,
+        splitCredit > 0 ? `Tempo (piutang): ${formatRupiah(splitCredit)}` : null,
+      ].filter(Boolean);
+      dynamicCatatan = `Gabungan Split -> ${parts.join(", ")}`;
     }
 
     start(async () => {
@@ -394,7 +399,11 @@ export function KasirClient({ items }: { items: Item[] }) {
             subtotal: computed.lines[i].finalSubtotal,
           })),
           total: res.grandTotal ?? 0,
-          bayar: bayar ?? undefined,
+          // Nilai pembayaran & sisa berasal dari data yang tersimpan di server,
+          // sehingga split/transfer/tempo tercetak sesuai invoice.
+          bayar: res.totalDibayar,
+          sisaTagihan: res.sisaTagihan,
+          tunaiDiterima: tunaiDiterima ?? undefined,
           kembali: kembali ?? undefined,
           judul: "NOTA TRANSAKSI",
           catatan: dynamicCatatan,
@@ -1236,7 +1245,7 @@ export function KasirClient({ items }: { items: Item[] }) {
                         <CreditCard size={32} className="text-slate-350 dark:text-slate-600 mb-2.5" />
                         <p className="text-xs font-bold text-slate-600 dark:text-slate-300">Pembayaran Non-Tunai / Tempo</p>
                         <p className="text-[10px] text-slate-400 mt-1 max-w-[220px] leading-relaxed">
-                          Transaksi diproses menggunakan metode {paymentMethod === "CREDIT" ? "Tempo (Hutang Dagang)" : "Transfer Bank"}. Kalkulator uang kembalian dinonaktifkan.
+                          Transaksi diproses menggunakan metode {paymentMethod === "CREDIT" ? "Tempo (Piutang)" : "Transfer Bank"}. Kalkulator uang kembalian dinonaktifkan.
                         </p>
                       </div>
                     )}

@@ -135,7 +135,7 @@ export function InvoiceActions({ inv, canBayar }: { inv: InvoiceRow; canBayar: b
     }
 
     start(async () => {
-      const res = await bayarInvoice(inv.id, jumlah);
+      const res = await bayarInvoice(inv.id, jumlah, metode);
       if (res && "error" in res && res.error) {
         toast.error(res.error);
         return;
