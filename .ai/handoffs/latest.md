@@ -31,7 +31,7 @@ Do not push or deploy until the audit exit criteria pass.
 
 ## Latest source change (UI/UX pass, committed 2026-10-13)
 - App-wide modernization: navbar 64px, `GlobalTooltip`, `WhatsAppDialog`, `.field-surface` for Input/Select/DatePicker, global checkbox style, calmer `Th`/`Td`, redesigned Barang/Stok/Laporan, sidebar collapsed-state fix, mobile notification bell via `useMediaQuery`, theme-aware 404.
-- Gotchas: `Select` forwards only un-prefixed `col-*`/`w-*` classes to its wrapper; `chrome-soft-panel` and `btn-liquid-*` are unlayered CSS and beat Tailwind utilities; never put `opacity` on `<td>`.
+- Gotchas: `Select` routes layout classes (`w-*`, `flex-*`, `shrink-*`, `col-*`, margins), including responsive variants such as `sm:w-*` since 2026-10-13, to its wrapper; `chrome-soft-panel` and `btn-liquid-*` are unlayered CSS and beat Tailwind utilities; never put `opacity` on `<td>`.
 - Pending: Kasir/Non-Gudang regression check, Laporan Excel/PDF click test, Retur WhatsApp path.
 
 ## Latest source change (dashboard)

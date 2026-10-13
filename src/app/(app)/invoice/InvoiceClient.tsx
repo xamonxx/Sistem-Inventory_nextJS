@@ -468,8 +468,9 @@ export function InvoiceClient({ initialInvoices, canBayar, userName }: InvoiceCl
 
       {/* 2. Filter & Actions Toolbar */}
       <Card className="rounded-2xl border border-border/90 p-4 md:p-5">
-        <div className="flex flex-col gap-3 lg:flex-row lg:flex-nowrap lg:items-center lg:gap-3">
-          <div className="relative w-full min-w-0 lg:w-[320px] lg:shrink-0 xl:w-[360px]">
+        {/* Desktop: one row when it fits; otherwise the action buttons wrap to a right-aligned second row. */}
+        <div className="flex flex-col gap-3 lg:flex-row lg:flex-wrap lg:items-center lg:gap-3">
+          <div className="relative w-full min-w-0 lg:w-auto lg:min-w-[260px] lg:flex-1">
             <Search size={17} className="pointer-events-none absolute left-4 top-1/2 z-10 -translate-y-1/2 text-[var(--text-soft)]" />
             <Input
               value={searchQuery}
