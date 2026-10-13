@@ -6,6 +6,7 @@ import { prisma } from "@/lib/prisma";
 import { requireRole } from "@/lib/auth";
 import { nextDocNumber } from "@/lib/counters";
 import { logActivity } from "@/lib/activity";
+import { runSerializable } from "@/lib/serializable";
 import { FIELD_LIMITS } from "@/lib/fieldLimits";
 import { dbId, money, qtyPositive, optionalText, safeError, firstIssue } from "@/lib/validation";
 import { buildReturnItemCreateData } from "@/lib/returnRules";
@@ -70,7 +71,7 @@ export async function createReturn(payload: ReturPayload) {
 
   let result;
   try {
-  result = await prisma.$transaction(async (tx) => {
+  result = await runSerializable(async (tx) => {
     // Retry of an already committed return: return it instead of moving stock twice.
     const stored = await findStoredResult<ReturnCommitted>(tx, d.idempotencyKey, "retur", user.id);
     if (stored) return { ...stored, replayed: true };
@@ -276,7 +277,7 @@ export async function createReturn(payload: ReturPayload) {
     const committed: ReturnCommitted = { ok: true, id: ret.id, noReturn, invoiceNo, selisih, replacementItems };
     await storeResult(tx, d.idempotencyKey, "retur", user.id, committed);
     return { ...committed, replayed: false };
-  }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable });
+  });
   } catch (e) {
     if (e instanceof IdempotencyMismatchError) return { error: e.message };
     // A concurrent request with the same key may have committed first.

@@ -5,6 +5,7 @@ import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { requireRole } from "@/lib/auth";
 import { logActivity } from "@/lib/activity";
+import { runSerializable } from "@/lib/serializable";
 import { invalidateAfterCommit } from "@/lib/postCommit";
 import { FIELD_LIMITS } from "@/lib/fieldLimits";
 import { dbId, qtyPositive, boundedInt, optionalText, safeError, firstIssue, type ActionResult } from "@/lib/validation";
@@ -68,7 +69,7 @@ export async function koreksiStok(_prev: unknown, formData: FormData): Promise<A
   const d = parsed.data;
 
   try {
-    const result = await prisma.$transaction(async (tx) => {
+    const result = await runSerializable(async (tx) => {
       const item = await tx.item.findUnique({
         where: { id: d.itemId },
         select: { id: true, stokAwal: true },
@@ -95,7 +96,7 @@ export async function koreksiStok(_prev: unknown, formData: FormData): Promise<A
       });
       await logActivity({ userId: user.id, aksi: "KOREKSI_STOK", entitas: "Item", entitasId: d.itemId, detail: { dari: stokSekarang, ke: d.stokSeharusnya } }, tx);
       return { ok: true, stokSekarang };
-    }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable });
+    });
 
     if (!result.ok) return result;
   } catch (e) {

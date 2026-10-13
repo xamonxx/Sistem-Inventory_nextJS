@@ -6,6 +6,7 @@ import { prisma } from "@/lib/prisma";
 import { requireRole } from "@/lib/auth";
 import { nextDocNumber } from "@/lib/counters";
 import { logActivity } from "@/lib/activity";
+import { runSerializable } from "@/lib/serializable";
 import { FIELD_LIMITS } from "@/lib/fieldLimits";
 import { dbId, money, qtyPositive, safeError } from "@/lib/validation";
 import { invoiceStatusFor, isReceivedPayment, validateCheckoutTotals } from "@/lib/checkoutRules";
@@ -82,7 +83,7 @@ export async function createTransaction(payload: KasirPayload) {
 
   let result;
   try {
-    result = await prisma.$transaction(async (tx) => {
+    result = await runSerializable(async (tx) => {
       // Retry of an already committed checkout: return it instead of selling twice.
       const stored = await findStoredResult<CheckoutCommitted>(tx, d.idempotencyKey, "checkout", user.id);
       if (stored) return { ...stored, replayed: true };
@@ -328,7 +329,7 @@ export async function createTransaction(payload: KasirPayload) {
       };
       await storeResult(tx, d.idempotencyKey, "checkout", user.id, committed);
       return { ...committed, replayed: false };
-    }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable });
+    });
   } catch (error) {
     if (error instanceof IdempotencyMismatchError) return { error: error.message };
     // A concurrent request with the same key may have committed first.

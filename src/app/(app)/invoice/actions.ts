@@ -1,12 +1,12 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { Prisma, PaymentType } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { requireRole } from "@/lib/auth";
 import { logActivity } from "@/lib/activity";
 import { invalidateAfterCommit } from "@/lib/postCommit";
+import { runSerializable } from "@/lib/serializable";
 import {
   findStoredResult,
   idempotencyKeySchema,
@@ -54,7 +54,7 @@ export async function bayarInvoice(
 
   let result;
   try {
-    result = await prisma.$transaction(async (tx) => {
+    result = await runSerializable(async (tx) => {
       // Retry of an already committed payment: return it instead of paying twice.
       const stored = await findStoredResult<BayarInvoiceCommitted>(tx, idempotencyKey, "bayar_invoice", user.id);
       if (stored) return { ...stored, replayed: true };
@@ -103,7 +103,7 @@ export async function bayarInvoice(
       };
       await storeResult(tx, idempotencyKey, "bayar_invoice", user.id, committed);
       return { ...committed, replayed: false };
-    }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable });
+    });
   } catch (e) {
     if (e instanceof IdempotencyMismatchError) return { error: e.message };
     // A concurrent request with the same key may have committed first.
@@ -159,30 +159,32 @@ export async function updateInvoice(
   }
 
   try {
-    await prisma.invoice.update({
-      where: { id: val.id },
-      data: {
-        noInvoice: val.noInvoice,
-        tanggal: val.tanggal,
-        namaClient: val.namaClient,
-        alamat: val.alamat,
-        namaWs: val.namaWs,
-      },
-    });
+    await prisma.$transaction(async (tx) => {
+      await tx.invoice.update({
+        where: { id: val.id },
+        data: {
+          noInvoice: val.noInvoice,
+          tanggal: val.tanggal,
+          namaClient: val.namaClient,
+          alamat: val.alamat,
+          namaWs: val.namaWs,
+        },
+      });
 
-    await logActivity({
-      userId: user.id,
-      aksi: "UPDATE_INVOICE",
-      entitas: "Invoice",
-      entitasId: val.id,
-      detail: { noInvoice: val.noInvoice },
+      await logActivity({
+        userId: user.id,
+        aksi: "UPDATE_INVOICE",
+        entitas: "Invoice",
+        entitasId: val.id,
+        detail: { noInvoice: val.noInvoice },
+      }, tx);
     });
-
-    revalidatePath("/invoice");
-    return { ok: true };
   } catch (e) {
     return safeError(e, "Gagal mengubah invoice.");
   }
+
+  invalidateAfterCommit({ paths: ["/invoice"] });
+  return { ok: true };
 }
 
 export async function deleteInvoice(id: number) {
@@ -191,14 +193,16 @@ export async function deleteInvoice(id: number) {
   if (!parsed.success) return { error: firstIssue(parsed.error) };
   id = parsed.data;
 
+  let deleted: { noInvoice: string } | null;
   try {
-    const inv = await prisma.invoice.findUnique({
-      where: { id },
-      select: { noInvoice: true, transactionId: true, returnId: true },
-    });
-    if (!inv) return { error: "Invoice tidak ditemukan." };
+    deleted = await runSerializable(async (tx) => {
+      // Read inside the transaction so links cannot change between read and delete.
+      const inv = await tx.invoice.findUnique({
+        where: { id },
+        select: { noInvoice: true, transactionId: true, returnId: true },
+      });
+      if (!inv) return null;
 
-    await prisma.$transaction(async (tx) => {
       // 1. Clean up transaction and all its dependencies if it exists
       if (inv.transactionId) {
         // Find any returns associated with this transaction
@@ -280,21 +284,26 @@ export async function deleteInvoice(id: number) {
       await tx.invoice.delete({
         where: { id },
       });
-    });
 
-    await logActivity({
-      userId: user.id,
-      aksi: "HAPUS_INVOICE",
-      entitas: "Invoice",
-      entitasId: id,
-      detail: { noInvoice: inv.noInvoice },
-    });
+      await logActivity({
+        userId: user.id,
+        aksi: "HAPUS_INVOICE",
+        entitas: "Invoice",
+        entitasId: id,
+        detail: { noInvoice: inv.noInvoice },
+      }, tx);
 
-    revalidatePath("/invoice");
-    return { ok: true };
+      return { noInvoice: inv.noInvoice };
+    });
   } catch (e) {
     return safeError(e, "Gagal menghapus invoice.");
   }
+
+  if (!deleted) return { error: "Invoice tidak ditemukan." };
+
+  // Ledger rows changed: stock, dashboard, and cashier availability must refresh now (AUD-008).
+  invalidateAfterCommit({ paths: ["/invoice", "/", "/stok", "/kasir", "/retur"], tags: ["stock"] });
+  return { ok: true };
 }
 
 export async function deleteInvoices(ids: number[]) {
@@ -304,19 +313,20 @@ export async function deleteInvoices(ids: number[]) {
   ids = Array.from(new Set(parsed.data));
 
   try {
-    const invoices = await prisma.invoice.findMany({
-      where: { id: { in: ids } },
-      select: { id: true, transactionId: true, returnId: true },
-    });
+    await runSerializable(async (tx) => {
+      // Read inside the transaction so links cannot change between read and delete.
+      const invoices = await tx.invoice.findMany({
+        where: { id: { in: ids } },
+        select: { id: true, transactionId: true, returnId: true },
+      });
 
-    const transactionIds = invoices
-      .map((inv) => inv.transactionId)
-      .filter((id): id is number => id !== null);
-    const directReturnIds = invoices
-      .map((inv) => inv.returnId)
-      .filter((id): id is number => id !== null);
+      const transactionIds = invoices
+        .map((inv) => inv.transactionId)
+        .filter((id): id is number => id !== null);
+      const directReturnIds = invoices
+        .map((inv) => inv.returnId)
+        .filter((id): id is number => id !== null);
 
-    await prisma.$transaction(async (tx) => {
       // 1. Handle transactionIds
       if (transactionIds.length > 0) {
         // Find returns linked to these transactions
@@ -401,20 +411,21 @@ export async function deleteInvoices(ids: number[]) {
       await tx.invoice.deleteMany({
         where: { id: { in: ids } },
       });
-    });
 
-    await logActivity({
-      userId: user.id,
-      aksi: "HAPUS_INVOICE_MASSAL",
-      entitas: "Invoice",
-      detail: { count: ids.length, ids },
+      await logActivity({
+        userId: user.id,
+        aksi: "HAPUS_INVOICE_MASSAL",
+        entitas: "Invoice",
+        detail: { count: ids.length, ids },
+      }, tx);
     });
-
-    revalidatePath("/invoice");
-    return { ok: true };
   } catch (e) {
     return safeError(e, "Gagal menghapus beberapa invoice.");
   }
+
+  // Ledger rows changed: stock, dashboard, and cashier availability must refresh now (AUD-008).
+  invalidateAfterCommit({ paths: ["/invoice", "/", "/stok", "/kasir", "/retur"], tags: ["stock"] });
+  return { ok: true };
 }
 
 export async function updateInvoiceAndItems(
@@ -450,14 +461,16 @@ export async function updateInvoiceAndItems(
     return { error: `Nomor invoice "${val.noInvoice}" sudah dipakai.` };
   }
 
-  const inv = await prisma.invoice.findUnique({
-    where: { id: val.id },
-    include: { transaction: true, return: true },
-  });
-  if (!inv) return { error: "Invoice tidak ditemukan." };
-
   try {
-    await prisma.$transaction(async (tx) => {
+    // AUD-004: the whole read-check-write runs Serializable (retried on conflict),
+    // so a concurrent checkout cannot consume the same stock between the check and the write.
+    await runSerializable(async (tx) => {
+      const inv = await tx.invoice.findUnique({
+        where: { id: val.id },
+        include: { transaction: true, return: true },
+      });
+      if (!inv) throw new InvoiceRuleError("Invoice tidak ditemukan.");
+
       await tx.invoice.update({
         where: { id: val.id },
         data: {
@@ -662,20 +675,21 @@ export async function updateInvoiceAndItems(
           },
         });
       }
-    });
 
-    await logActivity({
-      userId: user.id,
-      aksi: "UPDATE_INVOICE_DAN_BARANG",
-      entitas: "Invoice",
-      entitasId: val.id,
-      detail: { noInvoice: val.noInvoice, itemsCount: invoiceItems.length },
+      await logActivity({
+        userId: user.id,
+        aksi: "UPDATE_INVOICE_DAN_BARANG",
+        entitas: "Invoice",
+        entitasId: val.id,
+        detail: { noInvoice: val.noInvoice, itemsCount: invoiceItems.length },
+      }, tx);
     });
-
-    revalidatePath("/invoice");
-    return { ok: true };
   } catch (e) {
     if (e instanceof InventoryRuleError || e instanceof InvoiceRuleError) return { error: e.message };
     return safeError(e, "Gagal mengubah rincian invoice.");
   }
+
+  // Ledger rows changed: stock, dashboard, and cashier availability must refresh now (AUD-008).
+  invalidateAfterCommit({ paths: ["/invoice", "/", "/stok", "/kasir", "/retur"], tags: ["stock"] });
+  return { ok: true };
 }

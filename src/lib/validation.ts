@@ -137,6 +137,12 @@ export function safeError(
       return {
         error: "Ada isian wajib yang masih kosong. Lengkapi seluruh field yang diperlukan lalu coba lagi.",
       };
+    // Kalah bentrok dengan transaksi lain pada data yang sama (setelah retry otomatis habis).
+    case "P2034":
+      return {
+        error:
+          "Data yang sama sedang diproses transaksi lain (mis. stok terakhir atau invoice yang sama). Tidak ada yang tersimpan. Muat ulang untuk melihat stok/saldo terbaru, lalu coba lagi.",
+      };
   }
 
   // Gagal terhubung ke database.

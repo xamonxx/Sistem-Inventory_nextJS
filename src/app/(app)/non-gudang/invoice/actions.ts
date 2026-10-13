@@ -6,6 +6,7 @@ import { z } from "zod";
 import { requireRole } from "@/lib/auth";
 import { logActivity } from "@/lib/activity";
 import { invalidateAfterCommit } from "@/lib/postCommit";
+import { runSerializable } from "@/lib/serializable";
 import {
   findStoredResult,
   idempotencyKeySchema,
@@ -65,7 +66,7 @@ export async function bayarNgInvoice(input: BayarNgInvoiceInput) {
 
   let result;
   try {
-    result = await prisma.$transaction(async (tx) => {
+    result = await runSerializable(async (tx) => {
       // Retry of an already committed payment: return it instead of paying twice.
       const stored = await findStoredResult<BayarNgCommitted>(tx, data.idempotencyKey, "ng_bayar", user.id);
       if (stored) return { ...stored, replayed: true };
@@ -128,7 +129,7 @@ export async function bayarNgInvoice(input: BayarNgInvoiceInput) {
       };
       await storeResult(tx, data.idempotencyKey, "ng_bayar", user.id, committed);
       return { ...committed, replayed: false };
-    }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable });
+    });
   } catch (error) {
     if (error instanceof IdempotencyMismatchError) return { error: error.message };
     // A concurrent request with the same key may have committed first.
@@ -149,6 +150,13 @@ const DB_PERCENT_MAX = 9999.99;
 
 function percentDecimalForDb(value: number) {
   return new Prisma.Decimal(Math.min(DB_PERCENT_MAX, Math.max(0, value)));
+}
+
+class NgInvoiceRuleError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "NgInvoiceRuleError";
+  }
 }
 
 const updateNgInvoiceSchema = z.object({
@@ -214,43 +222,47 @@ export async function updateNgInvoice(input: UpdateNgInvoiceInput) {
     return { error: "Harga jual tidak boleh lebih kecil dari harga beli." };
   }
 
-  const inv = await prisma.ngInvoice.findUnique({
-    where: { id: data.invoiceId },
-    select: { id: true, noInvoice: true, namaToko: true, totalDibayar: true, jatuhTempo: true },
-  });
-  if (!inv) return { error: "Invoice non-gudang tidak ditemukan." };
-
-  const computed = computeNgCart(
-    data.items.map((it) => ({
-      produkId: it.produkId ?? undefined,
-      nama: it.nama,
-      namaToko: inv.namaToko,
-      hargaBeli: it.hargaBeli,
-      hargaJual: it.hargaJual,
-      qty: it.qty,
-    }))
-  );
-
-  const totalPenjualan = new Prisma.Decimal(computed.totalPenjualan);
-  const dibayar = new Prisma.Decimal(inv.totalDibayar);
-
-  // GUARD: total baru tidak boleh di bawah yang sudah dibayar.
-  if (totalPenjualan.lt(dibayar)) {
-    return {
-      error: `Total penjualan baru (${computed.totalPenjualan}) lebih kecil dari yang sudah dibayar. Kurangi pembayaran atau tambah barang terlebih dahulu.`,
-    };
-  }
-
-  const lunas = dibayar.gte(totalPenjualan);
-  const status: "PENDING" | "PARTIAL" | "LUNAS" = lunas ? "LUNAS" : dibayar.gt(0) ? "PARTIAL" : "PENDING";
-  // Jatuh tempo: LUNAS → null; belum lunas → pertahankan yang ada, atau set +7 hari bila belum ada.
-  const jatuhTempo = lunas
-    ? null
-    : inv.jatuhTempo ??
-      new Date(data.tanggal.getFullYear(), data.tanggal.getMonth(), data.tanggal.getDate() + 7);
-
+  let updated;
   try {
-    await prisma.$transaction(async (tx) => {
+    // AUD-005: read, paid-total guard, status, and write run in one Serializable
+    // transaction (retried on conflict), so a concurrent payment cannot slip in
+    // between the guard and the write.
+    updated = await runSerializable(async (tx) => {
+      const inv = await tx.ngInvoice.findUnique({
+        where: { id: data.invoiceId },
+        select: { id: true, noInvoice: true, namaToko: true, totalDibayar: true, jatuhTempo: true },
+      });
+      if (!inv) throw new NgInvoiceRuleError("Invoice non-gudang tidak ditemukan.");
+
+      const computed = computeNgCart(
+        data.items.map((it) => ({
+          produkId: it.produkId ?? undefined,
+          nama: it.nama,
+          namaToko: inv.namaToko,
+          hargaBeli: it.hargaBeli,
+          hargaJual: it.hargaJual,
+          qty: it.qty,
+        }))
+      );
+
+      const totalPenjualan = new Prisma.Decimal(computed.totalPenjualan);
+      const dibayar = new Prisma.Decimal(inv.totalDibayar);
+
+      // GUARD: total baru tidak boleh di bawah yang sudah dibayar.
+      if (totalPenjualan.lt(dibayar)) {
+        throw new NgInvoiceRuleError(
+          `Total penjualan baru (${computed.totalPenjualan}) lebih kecil dari yang sudah dibayar. Kurangi pembayaran atau tambah barang terlebih dahulu.`
+        );
+      }
+
+      const lunas = dibayar.gte(totalPenjualan);
+      const status: "PENDING" | "PARTIAL" | "LUNAS" = lunas ? "LUNAS" : dibayar.gt(0) ? "PARTIAL" : "PENDING";
+      // Jatuh tempo: LUNAS → null; belum lunas → pertahankan yang ada, atau set +7 hari bila belum ada.
+      const jatuhTempo = lunas
+        ? null
+        : inv.jatuhTempo ??
+          new Date(data.tanggal.getFullYear(), data.tanggal.getMonth(), data.tanggal.getDate() + 7);
+
       await tx.ngInvoiceItem.deleteMany({ where: { invoiceId: inv.id } });
 
       await tx.ngInvoice.update({
@@ -286,114 +298,116 @@ export async function updateNgInvoice(input: UpdateNgInvoiceInput) {
           },
         },
       });
-    });
 
-    const updated = await prisma.ngInvoice.findUniqueOrThrow({
-      where: { id: inv.id },
-      select: {
-        id: true,
-        noInvoice: true,
-        tanggal: true,
-        status: true,
-        namaToko: true,
-        jatuhTempo: true,
-        namaKonsumen: true,
-        namaGrup: true,
-        alamat: true,
-        namaWorkshop: true,
-        namaBank: true,
-        noRekening: true,
-        atasNama: true,
-        totalModal: true,
-        totalPenjualan: true,
-        totalProfit: true,
-        margin: true,
-        markup: true,
-        totalDibayar: true,
-        items: {
-          select: {
-            id: true,
-            namaSnapshot: true,
-            namaTokoSnapshot: true,
-            hargaBeliSnapshot: true,
-            hargaJualSnapshot: true,
-            qty: true,
-            subtotalModal: true,
-            subtotalPenjualan: true,
-            subtotalProfit: true,
+      // Audit row commits atomically with the edit.
+      await logActivity({
+        userId: user.id,
+        aksi: "UPDATE_NG_INVOICE",
+        entitas: "NgInvoice",
+        entitasId: inv.id,
+        detail: {
+          noInvoice: inv.noInvoice,
+          totalPenjualan: computed.totalPenjualan,
+          totalProfit: computed.totalProfit,
+          itemCount: computed.lines.length,
+          status,
+        },
+      }, tx);
+
+      return tx.ngInvoice.findUniqueOrThrow({
+        where: { id: inv.id },
+        select: {
+          id: true,
+          noInvoice: true,
+          tanggal: true,
+          status: true,
+          namaToko: true,
+          jatuhTempo: true,
+          namaKonsumen: true,
+          namaGrup: true,
+          alamat: true,
+          namaWorkshop: true,
+          namaBank: true,
+          noRekening: true,
+          atasNama: true,
+          totalModal: true,
+          totalPenjualan: true,
+          totalProfit: true,
+          margin: true,
+          markup: true,
+          totalDibayar: true,
+          items: {
+            select: {
+              id: true,
+              namaSnapshot: true,
+              namaTokoSnapshot: true,
+              hargaBeliSnapshot: true,
+              hargaJualSnapshot: true,
+              qty: true,
+              subtotalModal: true,
+              subtotalPenjualan: true,
+              subtotalProfit: true,
+            },
+          },
+          payments: {
+            orderBy: { id: "desc" },
+            select: { id: true, tanggal: true, tipe: true, jumlah: true, keterangan: true },
           },
         },
-        payments: {
-          orderBy: { id: "desc" },
-          select: { id: true, tanggal: true, tipe: true, jumlah: true, keterangan: true },
-        },
-      },
+      });
     });
-
-    await logActivity({
-      userId: user.id,
-      aksi: "UPDATE_NG_INVOICE",
-      entitas: "NgInvoice",
-      entitasId: inv.id,
-      detail: {
-        noInvoice: inv.noInvoice,
-        totalPenjualan: computed.totalPenjualan,
-        totalProfit: computed.totalProfit,
-        itemCount: computed.lines.length,
-        status,
-      },
-    });
-
-    revalidatePath("/non-gudang/invoice");
-    revalidatePath("/non-gudang");
-
-    const totPenjualan = Number(updated.totalPenjualan);
-    const totDibayar = Number(updated.totalDibayar);
-
-    return {
-      ok: true as const,
-      row: {
-        id: updated.id,
-        noInvoice: updated.noInvoice,
-        tanggal: updated.tanggal.toISOString(),
-        status: updated.status,
-        namaToko: updated.namaToko,
-        jatuhTempo: updated.jatuhTempo?.toISOString() ?? null,
-        namaKonsumen: updated.namaKonsumen ?? "",
-        namaGrup: updated.namaGrup ?? "",
-        alamat: updated.alamat ?? "",
-        namaWorkshop: updated.namaWorkshop ?? "",
-        namaBank: updated.namaBank ?? "",
-        noRekening: updated.noRekening ?? "",
-        atasNama: updated.atasNama ?? "",
-        totalModal: Number(updated.totalModal),
-        totalPenjualan: totPenjualan,
-        totalProfit: Number(updated.totalProfit),
-        margin: Number(updated.margin),
-        markup: Number(updated.markup),
-        totalDibayar: totDibayar,
-        sisa: totPenjualan - totDibayar,
-        items: updated.items.map((it) => ({
-          id: it.id,
-          nama: it.namaSnapshot,
-          namaToko: it.namaTokoSnapshot ?? updated.namaToko,
-          hargaBeli: Number(it.hargaBeliSnapshot),
-          hargaJual: Number(it.hargaJualSnapshot),
-          qty: it.qty,
-          subtotalModal: Number(it.subtotalModal),
-          subtotalPenjualan: Number(it.subtotalPenjualan),
-          subtotalProfit: Number(it.subtotalProfit),
-        })),
-        payments: updated.payments.map((p) => ({
-          id: p.id,
-          tanggal: p.tanggal.toISOString(),
-          tipe: p.tipe,
-          jumlah: Number(p.jumlah),
-          keterangan: p.keterangan ?? "",
-        })),
-      },
-    };
   } catch (error) {
+    if (error instanceof NgInvoiceRuleError) return { error: error.message };
     return safeError(error, "Gagal mengubah invoice non-gudang.");
   }
+
+  // Committed. Cache invalidation is best-effort and cannot report a failure.
+  invalidateAfterCommit({ paths: ["/non-gudang/invoice", "/non-gudang"] });
+
+  const totPenjualan = Number(updated.totalPenjualan);
+  const totDibayar = Number(updated.totalDibayar);
+
+  return {
+    ok: true as const,
+    row: {
+      id: updated.id,
+      noInvoice: updated.noInvoice,
+      tanggal: updated.tanggal.toISOString(),
+      status: updated.status,
+      namaToko: updated.namaToko,
+      jatuhTempo: updated.jatuhTempo?.toISOString() ?? null,
+      namaKonsumen: updated.namaKonsumen ?? "",
+      namaGrup: updated.namaGrup ?? "",
+      alamat: updated.alamat ?? "",
+      namaWorkshop: updated.namaWorkshop ?? "",
+      namaBank: updated.namaBank ?? "",
+      noRekening: updated.noRekening ?? "",
+      atasNama: updated.atasNama ?? "",
+      totalModal: Number(updated.totalModal),
+      totalPenjualan: totPenjualan,
+      totalProfit: Number(updated.totalProfit),
+      margin: Number(updated.margin),
+      markup: Number(updated.markup),
+      totalDibayar: totDibayar,
+      sisa: totPenjualan - totDibayar,
+      items: updated.items.map((it) => ({
+        id: it.id,
+        nama: it.namaSnapshot,
+        namaToko: it.namaTokoSnapshot ?? updated.namaToko,
+        hargaBeli: Number(it.hargaBeliSnapshot),
+        hargaJual: Number(it.hargaJualSnapshot),
+        qty: it.qty,
+        subtotalModal: Number(it.subtotalModal),
+        subtotalPenjualan: Number(it.subtotalPenjualan),
+        subtotalProfit: Number(it.subtotalProfit),
+      })),
+      payments: updated.payments.map((p) => ({
+        id: p.id,
+        tanggal: p.tanggal.toISOString(),
+        tipe: p.tipe,
+        jumlah: Number(p.jumlah),
+        keterangan: p.keterangan ?? "",
+      })),
+    },
+  };
 }

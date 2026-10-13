@@ -5,6 +5,7 @@ import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { requireRole } from "@/lib/auth";
 import { logActivity } from "@/lib/activity";
+import { runSerializable } from "@/lib/serializable";
 import { invalidateAfterCommit } from "@/lib/postCommit";
 import { FIELD_LIMITS } from "@/lib/fieldLimits";
 import { dbId, money, qtyPositive, optionalText, safeError, firstIssue } from "@/lib/validation";
@@ -36,7 +37,7 @@ export async function submitStockIn(payload: StockInPayload) {
 
   let result;
   try {
-    result = await prisma.$transaction(async (tx) => {
+    result = await runSerializable(async (tx) => {
       let totalAmount = new Prisma.Decimal(0);
       const itemIds = Array.from(new Set(d.items.map((line) => line.itemId)));
       const items = await tx.item.findMany({ where: { id: { in: itemIds }, aktif: true } });
@@ -96,7 +97,7 @@ export async function submitStockIn(payload: StockInPayload) {
         totalAmount: Number(totalAmount),
         entries: ledgerEntries,
       };
-    }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable });
+    });
   } catch (error) {
     if (error instanceof InventoryRuleError) return { error: error.message };
     return safeError(error, "Gagal menyimpan batch stock-in.");
