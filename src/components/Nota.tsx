@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import QRCode from "qrcode";
 import { formatRupiah, formatTanggal } from "@/lib/utils";
+import { COMPANY_ADDRESS } from "@/lib/company";
 import { AppLogo } from "./AppLogo";
 
 export type NotaItem = { kode?: string; nama: string; harga: number; qty: number; subtotal: number };
@@ -32,7 +33,7 @@ export type NotaData = {
 };
 
 const COMPANY = "PUTRA CORPORATION";
-const ADDRESS = process.env.NEXT_PUBLIC_COMPANY_ADDRESS ?? "Jl. Nasional III, Cipatat, Bandung Barat, Jawa Barat (40554)";
+const ADDRESS = COMPANY_ADDRESS;
 const PHONE = "0822-1234-5678";
 const EMAIL = "info@putracorp.co.id";
 

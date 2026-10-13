@@ -28,7 +28,6 @@ jobs:
           AUTH_SECRET="${{ secrets.AUTH_SECRET }}"
           NEXT_PUBLIC_APP_URL="${{ secrets.NEXT_PUBLIC_APP_URL }}"
           NEXT_PUBLIC_COMPANY_NAME="${{ secrets.NEXT_PUBLIC_COMPANY_NAME }}"
-          NEXT_PUBLIC_COMPANY_ADDRESS="${{ secrets.NEXT_PUBLIC_COMPANY_ADDRESS }}"
           COOKIE_SECURE="true"
           NODE_ENV="production"
           EOF

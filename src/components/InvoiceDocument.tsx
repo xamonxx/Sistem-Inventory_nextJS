@@ -1,13 +1,12 @@
 import { formatRupiah, formatTanggal } from "@/lib/utils";
+import { COMPANY_ADDRESS } from "@/lib/company";
 import type { InvoiceRow } from "@/app/(app)/invoice/InvoiceActions";
 import { AppLogo } from "./AppLogo";
 
 const COMPANY = {
   nama: "PUTRA CORPORATION",
   tagline: "Building Materials Supplier",
-  alamat:
-    process.env.NEXT_PUBLIC_COMPANY_ADDRESS ??
-    "Jl. Nasional III, Cipatat, Bandung Barat, Jawa Barat (40554)",
+  alamat: COMPANY_ADDRESS,
   telepon: "0822-4035-2844",
   email: "info@menujukeindahan.id",
   website: "menujukeindahan.id",
